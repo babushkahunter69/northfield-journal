@@ -1,0 +1,15 @@
+<svg width="960" height="240" viewBox="0 0 960 240" fill="none" xmlns="http://www.w3.org/2000/svg">
+<rect width="960" height="240" fill="#F6F1E8"/>
+<rect x="32" y="32" width="176" height="176" rx="88" fill="url(#paint0_radial)"/>
+<path d="M80 166V74h18l48 57V74h18v92h-16L98 106v60H80Z" fill="white"/>
+<text x="248" y="110" fill="#16181D" font-size="64" font-family="Georgia, serif">Northfield</text>
+<text x="248" y="172" fill="#86522D" font-size="64" font-family="Georgia, serif">Journal</text>
+<text x="252" y="204" fill="#5E6470" font-size="16" font-family="Arial, sans-serif" letter-spacing="4">EDUCATION, CAREFULLY EDITED</text>
+<defs>
+<radialGradient id="paint0_radial" cx="0" cy="0" r="1" gradientUnits="userSpaceOnUse" gradientTransform="translate(87 56) rotate(50) scale(152)">
+<stop stop-color="#D9BF86"/>
+<stop offset="0.62" stop-color="#8C6836"/>
+<stop offset="1" stop-color="#221B11"/>
+</radialGradient>
+</defs>
+</svg>
