@@ -11,7 +11,7 @@ import { getSiteUrl } from '@/lib/utils';
 
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
-  const post = await getPostBySlug(slug);
+const normalizedSlug = decodeURIComponent(slug).toLowerCase().trim();
   if (!post) return {};
 
   const url = `${getSiteUrl()}/blog/${slug}`;
@@ -37,7 +37,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
 export default async function PostPage({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params;
-  const [post, structuredData] = await Promise.all([getPostBySlug(slug), getStructuredDataForPost(slug)]);
+  const [post, structuredData] = await Promise.all([getPostBySlug(normalizedSlug), getStructuredDataForPost(slug)]);
 
   if (!post) notFound();
 

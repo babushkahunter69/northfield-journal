@@ -122,10 +122,13 @@ export default function HomePage() {
 
         <div className="mt-10 grid gap-6 md:grid-cols-3">
           <div className="rounded-3xl border border-amber-200 bg-gradient-to-br from-white to-amber-50 p-6 shadow-sm">
-            <h3 className="text-lg font-semibold text-neutral-950">Strong editorial standards</h3>
-            <p className="mt-3 text-sm leading-6 text-neutral-600">
-              Articles are selected and edited for clarity, substance, and usefulness.
-            </p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
+  About this article
+</p>
+
+<p className="mt-3 text-sm leading-7 text-slate-600">
+  This article was written to be clear, practical, and useful for readers.
+</p>
           </div>
 
           <div className="rounded-3xl border border-orange-200 bg-gradient-to-br from-white to-orange-50 p-6 shadow-sm">
