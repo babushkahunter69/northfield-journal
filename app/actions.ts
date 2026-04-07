@@ -7,7 +7,10 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { estimateReadingTime, excerptFromContent, makeSlug } from '@/lib/utils';
 import { requireAdmin } from '@/lib/auth';
 
-export async function signInWithMagicLink(_: { error?: string; success?: string }, formData: FormData) {
+export async function signInWithMagicLink(
+  _: { error?: string; success?: string },
+  formData: FormData
+) {
   const email = String(formData.get('email') || '').trim().toLowerCase();
 
   if (email !== process.env.ADMIN_EMAIL?.toLowerCase()) {
@@ -26,13 +29,13 @@ export async function signInWithMagicLink(_: { error?: string; success?: string 
   return { success: 'Check your email for the secure sign-in link.' };
 }
 
-export async function signOut() {
+export async function signOut(): Promise<void> {
   const supabase = await createClient();
   await supabase.auth.signOut();
   redirect('/');
 }
 
-export async function approveSubmission(formData: FormData) {
+export async function approveSubmission(formData: FormData): Promise<void> {
   await requireAdmin();
 
   const submissionId = String(formData.get('submissionId'));
@@ -46,7 +49,7 @@ export async function approveSubmission(formData: FormData) {
     .single();
 
   if (fetchError || !submission) {
-    return { error: 'Submission not found.' };
+    throw new Error('Submission not found.');
   }
 
   const slugBase = makeSlug(submission.proposed_title);
@@ -70,23 +73,26 @@ export async function approveSubmission(formData: FormData) {
   };
 
   const { error: insertError } = await supabaseAdmin.from('posts').insert(postPayload);
-  if (insertError) return { error: insertError.message };
+  if (insertError) {
+    throw new Error(insertError.message);
+  }
 
   const { error: updateError } = await supabaseAdmin
     .from('guest_post_submissions')
     .update({ status: 'accepted' })
     .eq('id', submissionId);
 
-  if (updateError) return { error: updateError.message };
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
 
   revalidatePath('/');
   revalidatePath('/blog');
   revalidatePath('/admin/submissions');
   revalidatePath('/admin/editor');
-  return { success: 'Submission approved and published.' };
 }
 
-export async function rejectSubmission(formData: FormData) {
+export async function rejectSubmission(formData: FormData): Promise<void> {
   await requireAdmin();
 
   const submissionId = String(formData.get('submissionId'));
@@ -95,8 +101,9 @@ export async function rejectSubmission(formData: FormData) {
     .update({ status: 'rejected' })
     .eq('id', submissionId);
 
-  if (error) return { error: error.message };
+  if (error) {
+    throw new Error(error.message);
+  }
 
   revalidatePath('/admin/submissions');
-  return { success: 'Submission rejected.' };
 }
