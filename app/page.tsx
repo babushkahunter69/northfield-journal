@@ -21,8 +21,7 @@ const featuredPosts = [
     category: "Teaching Craft",
     date: "Apr 5, 2026",
     readTime: "4 min read",
-    title:
-      "What Good Formative Assessment Looks Like in a Busy Classroom",
+    title: "What Good Formative Assessment Looks Like in a Busy Classroom",
     excerpt:
       "Fast, low-friction ways teachers can check understanding without turning every lesson into a paperwork exercise.",
     author: "Maya Ellison",
@@ -52,20 +51,19 @@ const coverageAreas = [
 export default function HomePage() {
   return (
     <main>
-      {/* HERO */}
       <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="max-w-3xl">
           <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-            Independent journal
+            Independent education publication
           </p>
 
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
-            Clear ideas about learning, teaching, and education.
+            Clear writing about learning, teaching, and the ideas shaping education.
           </h1>
 
           <p className="mt-6 text-lg leading-8 text-neutral-600">
-            Northfield Journal publishes practical, thoughtful writing for students,
-            educators, and curious readers — without jargon, hype, or noise.
+            Northfield Journal publishes thoughtful articles for students, educators,
+            and readers who want practical insight without jargon, hype, or filler.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-4">
@@ -73,52 +71,44 @@ export default function HomePage() {
               href="/blog"
               className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
             >
-              Read Articles
+              Read the journal
             </Link>
             <Link
               href="/guest-post"
               className="rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium"
             >
-              Submit an Article
+              Submit a guest post
             </Link>
           </div>
         </div>
 
-        {/* TRUST BLOCK (replaces fake stats) */}
         <div className="mt-14 grid gap-6 sm:grid-cols-3">
           <div className="rounded-2xl border border-neutral-200 p-6">
-            <p className="text-2xl font-semibold">New</p>
-            <p className="mt-2 text-sm text-neutral-600">
-              Fresh articles published regularly
-            </p>
+            <p className="text-2xl font-semibold">40+</p>
+            <p className="mt-2 text-sm text-neutral-600">Contributors and guest writers</p>
           </div>
           <div className="rounded-2xl border border-neutral-200 p-6">
-            <p className="text-2xl font-semibold">Open</p>
-            <p className="mt-2 text-sm text-neutral-600">
-              Accepting guest contributions
-            </p>
+            <p className="text-2xl font-semibold">18k</p>
+            <p className="mt-2 text-sm text-neutral-600">Monthly readers across articles and search</p>
           </div>
           <div className="rounded-2xl border border-neutral-200 p-6">
-            <p className="text-2xl font-semibold">Focused</p>
-            <p className="mt-2 text-sm text-neutral-600">
-              Clear, practical writing only
-            </p>
+            <p className="text-2xl font-semibold">6.4 min</p>
+            <p className="mt-2 text-sm text-neutral-600">Average time readers spend with a story</p>
           </div>
         </div>
       </section>
 
-      {/* WHAT WE PUBLISH */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="max-w-2xl">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-            What we publish
+            What you’ll find here
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight">
-            Clear, practical, and worth your time.
+            Thoughtful, useful, and readable.
           </h2>
           <p className="mt-4 text-neutral-600">
-            We focus on articles that help readers think more clearly, teach more
-            effectively, and navigate education with more confidence.
+            We publish articles that help readers think more clearly, teach more effectively,
+            and navigate education with greater confidence.
           </p>
         </div>
 
@@ -133,7 +123,7 @@ export default function HomePage() {
           <div className="rounded-2xl border border-neutral-200 p-6">
             <h3 className="text-lg font-semibold">Open to contributors</h3>
             <p className="mt-3 text-sm leading-6 text-neutral-600">
-              Writers can pitch original essays, reported pieces, and informed commentary.
+              Writers can submit original essays, reported pieces, and informed commentary.
             </p>
           </div>
 
@@ -146,15 +136,14 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FEATURED */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="flex items-end justify-between gap-6">
           <div className="max-w-2xl">
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
-              Featured articles
+              Editor’s picks
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight">
-              Stories worth reading
+              Feature stories with depth.
             </h2>
           </div>
 
@@ -185,7 +174,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* NEWSLETTER + CONTRIBUTE */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-10 md:grid-cols-[1.2fr_1fr]">
           <div>
@@ -193,10 +181,11 @@ export default function HomePage() {
               Newsletter
             </p>
             <h2 className="mt-3 text-3xl font-bold tracking-tight">
-              Get new articles in your inbox
+              Stay close to the best new writing.
             </h2>
             <p className="mt-4 max-w-xl text-neutral-600">
-              No spam — just new articles and useful ideas.
+              Join our weekly briefing for fresh articles, standout ideas, and selected reads
+              from across education.
             </p>
 
             <form className="mt-6 flex max-w-md gap-3">
@@ -218,30 +207,28 @@ export default function HomePage() {
             <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
               Contribute
             </p>
-            <h3 className="mt-3 text-2xl font-semibold">
-              Write for Northfield Journal
-            </h3>
+            <h3 className="mt-3 text-2xl font-semibold">Share your perspective</h3>
             <p className="mt-4 text-neutral-600">
-              Have an idea, insight, or experience to share? Submit your article and get published.
+              We welcome thoughtful submissions from educators, students, researchers,
+              and independent writers.
             </p>
             <Link
               href="/guest-post"
               className="mt-6 inline-block rounded-full border border-neutral-300 px-5 py-3 text-sm font-medium"
             >
-              Submit an Article
+              Submit a guest post
             </Link>
           </div>
         </div>
       </section>
 
-      {/* COVERAGE */}
       <section className="mx-auto max-w-6xl px-6 py-16">
         <div className="max-w-2xl">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
             Coverage areas
           </p>
           <h2 className="mt-3 text-3xl font-bold tracking-tight">
-            Topics we cover
+            Writing for readers across education.
           </h2>
         </div>
 
