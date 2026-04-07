@@ -44,20 +44,34 @@ export const getLatestPosts = cache(async (limit = 4) => {
 
 export const getPostBySlug = cache(async (slug: string) => {
   const supabase = await createClient();
+
+  const normalizedSlug = slug
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, '-');
+
   const { data, error } = await supabase
     .from('posts')
     .select('*, categories(*)')
-    .eq('slug', slug)
+    .eq('slug', normalizedSlug)
     .eq('status', 'published')
-    .single();
+    .maybeSingle();
 
-  if (error) return null;
+  if (error) {
+    console.error('Error fetching post:', error);
+    return null;
+  }
+
   return data;
 });
 
 export const getCategories = cache(async () => {
   const supabase = await createClient();
-  const { data, error } = await supabase.from('categories').select('*').order('name');
+  const { data, error } = await supabase
+    .from('categories')
+    .select('*')
+    .order('name');
+
   if (error) throw error;
   return data ?? [];
 });
@@ -65,6 +79,7 @@ export const getCategories = cache(async () => {
 export async function getStructuredDataForPost(slug: string) {
   const post = await getPostBySlug(slug);
   if (!post) return null;
+
   const siteUrl = getSiteUrl();
 
   return {
