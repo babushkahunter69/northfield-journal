@@ -1,171 +1,259 @@
-import Link from 'next/link';
-import { ArrowRight, BookOpen, BriefcaseBusiness, ChartColumn, Newspaper, PenSquare, Sparkles } from 'lucide-react';
-import { PostCard } from '@/components/post-card';
-import { AdSenseSlot } from '@/components/adsense-slot';
-import { NewsletterForm } from '@/components/newsletter-form';
-import { editorialPillars, monetizationChannels, siteConfig } from '@/lib/constants';
-import { getFeaturedPosts, getLatestPosts, getPublishedPosts } from '@/lib/data';
+import Link from "next/link";
 
-const highlights = [
-  { title: 'Reported and useful', description: 'Built to feel like a publication, not a thin affiliate blog.', icon: Newspaper },
-  { title: 'Editorial intake', description: 'Accept guest drafts and manage approvals in an admin dashboard.', icon: PenSquare },
-  { title: 'Organic search ready', description: 'Metadata, structured data, sitemap, internal linking, and article pages are already in place.', icon: ChartColumn },
-  { title: 'Monetization paths', description: 'Ads, sponsors, affiliates, and email capture are all supported.', icon: BriefcaseBusiness }
+export const metadata = {
+  title: "Northfield Journal | Ideas, stories, and commentary on education",
+  description:
+    "Northfield Journal publishes thoughtful writing on student success, teaching craft, education systems, and practical EdTech.",
+};
+
+const featuredPosts = [
+  {
+    category: "Student Success",
+    date: "Apr 7, 2026",
+    readTime: "5 min read",
+    title: "How to Build a Weekly Study Routine That Actually Sticks",
+    excerpt:
+      "A practical framework students can use to study consistently without turning every evening into a guilt spiral.",
+    author: "Editorial Team",
+    href: "/blog/how-to-build-a-weekly-study-routine-that-actually-sticks",
+  },
+  {
+    category: "Teaching Craft",
+    date: "Apr 5, 2026",
+    readTime: "4 min read",
+    title:
+      "What Good Formative Assessment Looks Like in a Busy Classroom",
+    excerpt:
+      "Fast, low-friction ways teachers can check understanding without turning every lesson into a paperwork exercise.",
+    author: "Maya Ellison",
+    href: "/blog/what-good-formative-assessment-looks-like-in-a-busy-classroom",
+  },
 ];
 
-export default async function HomePage() {
-  const [featuredPosts, latestPosts, allPosts] = await Promise.all([
-    getFeaturedPosts(),
-    getLatestPosts(4),
-    getPublishedPosts()
-  ]);
+const coverageAreas = [
+  {
+    title: "Student success",
+    text: "Study systems, revision habits, focus, memory, exam prep, and academic confidence.",
+  },
+  {
+    title: "Teaching craft",
+    text: "Lesson design, formative assessment, classroom culture, tutoring, and practical pedagogy.",
+  },
+  {
+    title: "Education systems",
+    text: "School leadership, parent communication, scholarships, college access, and clear policy explainers.",
+  },
+  {
+    title: "EdTech that helps",
+    text: "Careful, non-hype coverage of digital tools that genuinely improve learning outcomes.",
+  },
+];
 
+export default function HomePage() {
   return (
-    <div>
-      <section className="container-shell pt-10 sm:pt-14">
-        <div className="paper overflow-hidden px-6 py-10 sm:px-10 sm:py-14">
-          <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
-            <div>
-              <span className="eyebrow">Luxury editorial identity</span>
-              <h1 className="display-font mt-6 max-w-4xl text-5xl font-semibold tracking-tight text-slate-900 sm:text-6xl lg:text-7xl">
-                A smarter education publication with a custom brand system and a real editor’s desk.
-              </h1>
-              <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-600">
-                This version adds a warmer luxury palette, custom wordmark treatment, featured image uploads, an actual CMS workflow,
-                and polished dark mode readiness without losing SEO or monetization readiness.
-              </p>
-              <div className="mt-8 flex flex-wrap gap-4">
-                <Link href="/blog" className="rounded-full bg-slate-900 px-6 py-3 font-semibold text-white transition hover:bg-slate-700">
-                  Read the journal
-                </Link>
-                <Link href="/admin/editor" className="rounded-full border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-900 transition hover:border-slate-400">
-                  Open CMS editor
-                </Link>
-              </div>
-            </div>
+    <main>
+      {/* HERO */}
+      <section className="mx-auto max-w-6xl px-6 py-20">
+        <div className="max-w-3xl">
+          <p className="mb-4 text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Independent journal
+          </p>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {Object.entries(siteConfig.socialProof).map(([label, value]) => (
-                <div key={label} className="rounded-[24px] border border-slate-200 bg-stone-50 p-5">
-                  <p className="display-font text-4xl font-semibold text-slate-900">{value}</p>
-                  <p className="mt-2 text-sm uppercase tracking-[0.18em] text-slate-500">{label.replace(/([A-Z])/g, ' $1')}</p>
-                </div>
-              ))}
-              <div className="rounded-[24px] border border-brand-200 bg-brand-50 p-5 sm:col-span-2">
-                <p className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
-                  <Sparkles className="h-4 w-4" />
-                  What is new
-                </p>
-                <p className="mt-3 text-base leading-7 text-slate-700">
-                  Richer identity, editable posts, image uploads, premium article cards, and a better night-reading experience.
-                </p>
-              </div>
-            </div>
+          <h1 className="text-4xl font-bold tracking-tight sm:text-6xl">
+            Clear ideas about learning, teaching, and education.
+          </h1>
+
+          <p className="mt-6 text-lg leading-8 text-neutral-600">
+            Northfield Journal publishes practical, thoughtful writing for students,
+            educators, and curious readers — without jargon, hype, or noise.
+          </p>
+
+          <div className="mt-8 flex flex-wrap gap-4">
+            <Link
+              href="/blog"
+              className="rounded-full bg-black px-6 py-3 text-sm font-medium text-white"
+            >
+              Read Articles
+            </Link>
+            <Link
+              href="/guest-post"
+              className="rounded-full border border-neutral-300 px-6 py-3 text-sm font-medium"
+            >
+              Submit an Article
+            </Link>
+          </div>
+        </div>
+
+        {/* TRUST BLOCK (replaces fake stats) */}
+        <div className="mt-14 grid gap-6 sm:grid-cols-3">
+          <div className="rounded-2xl border border-neutral-200 p-6">
+            <p className="text-2xl font-semibold">New</p>
+            <p className="mt-2 text-sm text-neutral-600">
+              Fresh articles published regularly
+            </p>
+          </div>
+          <div className="rounded-2xl border border-neutral-200 p-6">
+            <p className="text-2xl font-semibold">Open</p>
+            <p className="mt-2 text-sm text-neutral-600">
+              Accepting guest contributions
+            </p>
+          </div>
+          <div className="rounded-2xl border border-neutral-200 p-6">
+            <p className="text-2xl font-semibold">Focused</p>
+            <p className="mt-2 text-sm text-neutral-600">
+              Clear, practical writing only
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="container-shell py-14">
-        <div className="grid gap-6 lg:grid-cols-4">
-          {highlights.map((item) => {
-            const Icon = item.icon;
-            return (
-              <div key={item.title} className="paper p-6">
-                <Icon className="h-8 w-8 text-brand-700" />
-                <h2 className="mt-5 text-xl font-bold text-slate-900">{item.title}</h2>
-                <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
-              </div>
-            );
-          })}
+      {/* WHAT WE PUBLISH */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="max-w-2xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            What we publish
+          </p>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight">
+            Clear, practical, and worth your time.
+          </h2>
+          <p className="mt-4 text-neutral-600">
+            We focus on articles that help readers think more clearly, teach more
+            effectively, and navigate education with more confidence.
+          </p>
         </div>
-      </section>
 
-      <section className="container-shell py-4">
-        <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr]">
-          <div>
-            <span className="eyebrow">Editor’s picks</span>
-            <h2 className="display-font mt-5 text-4xl font-semibold tracking-tight text-slate-900">Feature stories with depth, not filler</h2>
-            <div className="mt-8 grid gap-6">
-              {(featuredPosts.length > 0 ? featuredPosts : latestPosts.slice(0, 3)).map((post) => (
-                <PostCard key={post.id} post={post} />
-              ))}
-            </div>
+        <div className="mt-10 grid gap-6 md:grid-cols-3">
+          <div className="rounded-2xl border border-neutral-200 p-6">
+            <h3 className="text-lg font-semibold">Strong editorial standards</h3>
+            <p className="mt-3 text-sm leading-6 text-neutral-600">
+              Articles are selected and edited for clarity, substance, and usefulness.
+            </p>
           </div>
 
-          <div className="space-y-6">
-            <NewsletterForm />
-            <div className="paper p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">Coverage areas</p>
-              <div className="mt-5 grid gap-4">
-                {editorialPillars.map((pillar) => (
-                  <div key={pillar.title} className="rounded-2xl border border-slate-200 bg-stone-50 p-4">
-                    <h3 className="font-semibold text-slate-900">{pillar.title}</h3>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">{pillar.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="rounded-2xl border border-neutral-200 p-6">
+            <h3 className="text-lg font-semibold">Open to contributors</h3>
+            <p className="mt-3 text-sm leading-6 text-neutral-600">
+              Writers can pitch original essays, reported pieces, and informed commentary.
+            </p>
+          </div>
+
+          <div className="rounded-2xl border border-neutral-200 p-6">
+            <h3 className="text-lg font-semibold">Built for discovery</h3>
+            <p className="mt-3 text-sm leading-6 text-neutral-600">
+              Every article is structured to be readable, searchable, and easy to share.
+            </p>
           </div>
         </div>
       </section>
 
-      <section className="container-shell py-6">
-        <AdSenseSlot className="min-h-[120px]" />
-      </section>
-
-      <section className="container-shell py-14">
-        <div className="flex flex-wrap items-end justify-between gap-4">
-          <div>
-            <span className="eyebrow">Latest</span>
-            <h2 className="display-font mt-5 text-4xl font-semibold tracking-tight text-slate-900">Fresh stories for search and trust</h2>
+      {/* FEATURED */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="flex items-end justify-between gap-6">
+          <div className="max-w-2xl">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+              Featured articles
+            </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">
+              Stories worth reading
+            </h2>
           </div>
-          <Link href="/blog" className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700">
-            Browse all articles <ArrowRight className="h-4 w-4" />
+
+          <Link href="/blog" className="text-sm font-medium underline underline-offset-4">
+            Browse all articles
           </Link>
         </div>
-        <div className="mt-8 grid gap-6 lg:grid-cols-2">
-          {latestPosts.map((post) => (
-            <PostCard key={post.id} post={post} />
+
+        <div className="mt-10 grid gap-8 md:grid-cols-2">
+          {featuredPosts.map((post) => (
+            <article key={post.href} className="rounded-2xl border border-neutral-200 p-6">
+              <p className="text-sm text-neutral-500">
+                {post.category} · {post.date} · {post.readTime}
+              </p>
+              <h3 className="mt-3 text-2xl font-semibold">
+                <Link href={post.href}>{post.title}</Link>
+              </h3>
+              <p className="mt-4 text-neutral-600">{post.excerpt}</p>
+              <p className="mt-4 text-sm text-neutral-500">By {post.author}</p>
+              <Link
+                href={post.href}
+                className="mt-6 inline-block text-sm font-medium underline underline-offset-4"
+              >
+                Read story
+              </Link>
+            </article>
           ))}
         </div>
       </section>
 
-      <section className="container-shell py-10">
-        <div className="paper grid gap-8 px-6 py-8 sm:px-8 lg:grid-cols-[1fr_1fr] lg:items-center">
+      {/* NEWSLETTER + CONTRIBUTE */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="grid gap-10 md:grid-cols-[1.2fr_1fr]">
           <div>
-            <span className="eyebrow">Monetization</span>
-            <h2 className="display-font mt-5 text-4xl font-semibold text-slate-900">Designed to monetize once the audience is real</h2>
-            <p className="mt-4 max-w-xl text-base leading-8 text-slate-600">
-              You do not need to rely on display ads alone. This starter supports the most common revenue channels used by focused media brands.
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+              Newsletter
             </p>
+            <h2 className="mt-3 text-3xl font-bold tracking-tight">
+              Get new articles in your inbox
+            </h2>
+            <p className="mt-4 max-w-xl text-neutral-600">
+              No spam — just new articles and useful ideas.
+            </p>
+
+            <form className="mt-6 flex max-w-md gap-3">
+              <input
+                type="email"
+                placeholder="Enter your email"
+                className="min-w-0 flex-1 rounded-full border border-neutral-300 px-4 py-3 text-sm"
+              />
+              <button
+                type="submit"
+                className="rounded-full bg-black px-5 py-3 text-sm font-medium text-white"
+              >
+                Subscribe
+              </button>
+            </form>
           </div>
-          <div className="grid gap-3">
-            {monetizationChannels.map((item) => (
-              <div key={item} className="flex gap-3 rounded-2xl border border-slate-200 bg-stone-50 px-4 py-4 text-sm text-slate-700">
-                <BookOpen className="mt-0.5 h-5 w-5 text-brand-700" />
-                <span>{item}</span>
-              </div>
-            ))}
+
+          <div className="rounded-2xl border border-neutral-200 p-6">
+            <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+              Contribute
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold">
+              Write for Northfield Journal
+            </h3>
+            <p className="mt-4 text-neutral-600">
+              Have an idea, insight, or experience to share? Submit your article and get published.
+            </p>
+            <Link
+              href="/guest-post"
+              className="mt-6 inline-block rounded-full border border-neutral-300 px-5 py-3 text-sm font-medium"
+            >
+              Submit an Article
+            </Link>
           </div>
         </div>
       </section>
 
-      <section className="container-shell py-14">
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="paper p-7 lg:col-span-2">
-            <span className="eyebrow">Identity system</span>
-            <h2 className="display-font mt-5 text-4xl font-semibold text-slate-900">Obsidian, parchment, and brass gold.</h2>
-            <p className="mt-4 text-base leading-8 text-slate-600">
-              The visual system leans away from startup blues and toward a warmer publication aesthetic, with a monogram mark and serif-led hierarchy.
-            </p>
-          </div>
-          <div className="paper p-7">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">Current article inventory</p>
-            <p className="display-font mt-4 text-5xl font-semibold text-slate-900">{allPosts.length}</p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">Seed articles are included, but this will look truly premium once you replace them with your own editorial pieces.</p>
-          </div>
+      {/* COVERAGE */}
+      <section className="mx-auto max-w-6xl px-6 py-16">
+        <div className="max-w-2xl">
+          <p className="text-sm font-medium uppercase tracking-[0.2em] text-neutral-500">
+            Coverage areas
+          </p>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight">
+            Topics we cover
+          </h2>
+        </div>
+
+        <div className="mt-10 grid gap-6 sm:grid-cols-2">
+          {coverageAreas.map((area) => (
+            <div key={area.title} className="rounded-2xl border border-neutral-200 p-6">
+              <h3 className="text-lg font-semibold">{area.title}</h3>
+              <p className="mt-3 text-sm leading-6 text-neutral-600">{area.text}</p>
+            </div>
+          ))}
         </div>
       </section>
-    </div>
+    </main>
   );
 }
