@@ -58,12 +58,12 @@ export function EditorStudio({
       Link.configure({
         openOnClick: false,
         autolink: true,
-        linkOnPaste: true
+        linkOnPaste: true, // ✅ ← IMPORTANT comma here
         HTMLAttributes: {
           rel: 'noopener noreferrer',
           target: '_blank'
       }
-    ]),
+    })
     content: form.content,
     immediatelyRender: false,
     editorProps: {
