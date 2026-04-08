@@ -24,6 +24,9 @@ const blankPost: EditorPayload = {
   status: 'draft'
 };
 
+const ARTICLE_PROSE =
+  'prose prose-lg max-w-none prose-p:leading-8 prose-p:my-5 prose-headings:tracking-tight prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900';
+
 export function EditorStudio({
   posts,
   categories
@@ -62,8 +65,7 @@ export function EditorStudio({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class:
-          'prose prose-lg max-w-none focus:outline-none'
+        class: `${ARTICLE_PROSE} min-h-[360px] focus:outline-none`
       }
     },
     onUpdate: ({ editor }) => {
@@ -412,7 +414,7 @@ export function EditorStudio({
                     </ToolbarButton>
                   </div>
 
-                  <div className="min-h-[360px] px-6 py-5 bg-white">
+                  <div className="min-h-[360px] px-6 py-5">
                     <EditorContent editor={editor} />
                   </div>
                 </div>
@@ -504,7 +506,7 @@ export function EditorStudio({
                   {form.excerpt || 'Your excerpt will appear here.'}
                 </p>
                 <div
-                  className="prose prose-lg mt-6 max-w-none"
+                  className={`${ARTICLE_PROSE} mt-6`}
                   dangerouslySetInnerHTML={{ __html: form.content }}
                 />
               </div>
