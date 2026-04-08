@@ -12,7 +12,7 @@ export function AdSenseSlot({ slot = '1234567890', className }: Props) {
 
   if (!client) {
     return (
-      <div className={`paper border-dashed px-6 py-8 text-center text-sm text-slate-500 dark:text-slate-400 ${className || ''}`}>
+      return <div className={className} />;
         Premium ad inventory placeholder. Add NEXT_PUBLIC_ADSENSE_CLIENT and your live slot IDs when you're approved.
       </div>
     );
