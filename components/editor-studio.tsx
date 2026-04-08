@@ -70,7 +70,7 @@ export function EditorStudio({
 
     const currentHtml = editor.getHTML();
     if (form.content !== currentHtml) {
-      editor.commands.setContent(form.content || '', false);
+      editor.commands.setContent(form.content || '');
     }
   }, [editor, form.content]);
 
