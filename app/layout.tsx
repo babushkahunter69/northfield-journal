@@ -1,58 +1,34 @@
-import type { Metadata } from "next";
-import "./globals.css";
+import type { Metadata } from 'next';
+import { Fraunces, Inter } from 'next/font/google';
+import './globals.css';
+import { SiteHeader } from '@/components/site-header';
+import { SiteFooter } from '@/components/site-footer';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-sans'
+});
+
+const fraunces = Fraunces({
+  subsets: ['latin'],
+  variable: '--font-serif'
+});
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://northfield-journal.vercel.app"),
-
-  title: {
-    default:
-      "Northfield Journal | Thoughtful writing on education, learning, and teaching",
-    template: "%s | Northfield Journal",
-  },
-
-  description:
-    "Northfield Journal publishes clear, practical writing on student success, teaching strategies, education systems, and EdTech.",
-
-  keywords: [
-    "education blog",
-    "education journal",
-    "student success tips",
-    "study habits",
-    "teaching strategies",
-    "education system insights",
-    "edtech tools",
-    "learning techniques",
-  ],
-
-  openGraph: {
-    title: "Northfield Journal",
-    description:
-      "Clear writing on learning, teaching, and education systems.",
-    url: "https://northfield-journal.vercel.app",
-    siteName: "Northfield Journal",
-    type: "website",
-  },
-
-  twitter: {
-    card: "summary_large_image",
-    title: "Northfield Journal",
-    description:
-      "Clear writing on learning, teaching, and education systems.",
-  },
-
-  alternates: {
-    canonical: "https://northfield-journal.vercel.app",
-  },
+  title: 'Northfield Journal',
+  description: 'Test layout'
 };
 
 export default function RootLayout({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body>{children}</body>
+    <html lang="en" className={`${inter.variable} ${fraunces.variable}`}>
+      <body>
+        <SiteHeader />
+        <main>{children}</main>
+        <SiteFooter />
+      </body>
     </html>
   );
 }
