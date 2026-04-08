@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from 'next/link';
 
 export function SiteHeader() {
   return (
@@ -9,7 +9,7 @@ export function SiteHeader() {
             Northfield <span className="text-brand-700">Journal</span>
           </div>
           <p className="hidden text-xs uppercase tracking-[0.24em] text-slate-500 md:block">
-            Thoughtful writing on education
+            Education, carefully edited
           </p>
         </Link>
 
@@ -36,7 +36,7 @@ export function SiteHeader() {
             href="/guest-post"
             className="hidden rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 sm:inline-flex"
           >
-            Submit a guest post
+            Pitch an article
           </Link>
           <Link
             href="/admin/login"
