@@ -59,8 +59,11 @@ export function EditorStudio({
         openOnClick: false,
         autolink: true,
         linkOnPaste: true
-      })
-    ],
+        HTMLAttributes: {
+          rel: 'noopener noreferrer',
+          target: '_blank'
+      }
+    ]),
     content: form.content,
     immediatelyRender: false,
     editorProps: {
