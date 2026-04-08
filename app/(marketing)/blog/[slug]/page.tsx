@@ -5,7 +5,6 @@ import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import { AdSenseSlot } from '@/components/adsense-slot';
 import { NewsletterForm } from '@/components/newsletter-form';
-import { MarkdownPreview } from '@/components/markdown-preview';
 import { getPostBySlug, getStructuredDataForPost } from '@/lib/data';
 import { getSiteUrl } from '@/lib/utils';
 
@@ -107,6 +106,7 @@ export default async function PostPage({
             <h1 className="display-font text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
               {post.title}
             </h1>
+
             <p className="mt-5 max-w-3xl text-xl leading-9 text-slate-600">
               {post.excerpt}
             </p>
@@ -120,7 +120,11 @@ export default async function PostPage({
               <AdSenseSlot className="min-h-[120px]" />
             </div>
 
-            <MarkdownPreview content={post.content} />
+            {/* ✅ THIS IS THE IMPORTANT CHANGE */}
+            <div
+              className="prose prose-lg max-w-none"
+              dangerouslySetInnerHTML={{ __html: post.content }}
+            />
 
             <div className="mt-12 border-t border-slate-200 pt-8">
               <Link
