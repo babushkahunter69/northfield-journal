@@ -53,29 +53,30 @@ export function EditorStudio({
   }
 
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      Link.configure({
-        openOnClick: false,
-        autolink: true,
-        linkOnPaste: true, // ✅ ← IMPORTANT comma here
-        HTMLAttributes: {
-          rel: 'noopener noreferrer',
-          target: '_blank'
+  extensions: [
+    StarterKit,
+    Link.configure({
+      openOnClick: false,
+      autolink: true,
+      linkOnPaste: true,
+      HTMLAttributes: {
+        rel: 'noopener noreferrer',
+        target: '_blank'
       }
-    })
-    content: form.content,
-    immediatelyRender: false,
-    editorProps: {
-      attributes: {
-        class: `${ARTICLE_PROSE} min-h-[360px] focus:outline-none`
-      }
-    },
-    onUpdate: ({ editor }) => {
-      const html = editor.getHTML();
-      setForm((prev) => ({ ...prev, content: html }));
+    }), // ✅ ← THIS comma fixes everything
+  ],
+  content: form.content,
+  immediatelyRender: false,
+  editorProps: {
+    attributes: {
+      class: 'prose prose-lg max-w-none focus:outline-none'
     }
-  });
+  },
+  onUpdate: ({ editor }) => {
+    const html = editor.getHTML();
+    setForm((prev) => ({ ...prev, content: html }));
+  }
+});
 
   useEffect(() => {
     if (!editor) return;
