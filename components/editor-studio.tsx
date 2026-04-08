@@ -25,7 +25,18 @@ const blankPost: EditorPayload = {
 };
 
 const ARTICLE_PROSE =
-  'prose prose-lg max-w-none prose-p:leading-8 prose-p:my-5 prose-headings:tracking-tight prose-h2:mt-10 prose-h2:mb-4 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mt-8 prose-h3:mb-3 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900';
+  'journal-prose prose prose-lg max-w-none prose-p:leading-8 prose-p:my-4 prose-headings:tracking-tight prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mt-6 prose-h3:mb-2 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-blockquote:my-5 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900';
+
+function stripNofollowFromHtml(html: string) {
+  return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
+    const cleaned = String(value)
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((token) => token.toLowerCase() !== 'nofollow');
+
+    return cleaned.length ? ` rel=${quote}${cleaned.join(' ')}${quote}` : '';
+  });
+}
 
 export function EditorStudio({
   posts,
@@ -53,30 +64,29 @@ export function EditorStudio({
   }
 
   const editor = useEditor({
-  extensions: [
-    StarterKit,
-    Link.configure({
-      openOnClick: false,
-      autolink: true,
-      linkOnPaste: true,
-      HTMLAttributes: {
-        rel: 'noopener noreferrer',
-        target: '_blank'
+    extensions: [
+      StarterKit,
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer'
+        }
+      })
+    ],
+    content: form.content,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: 'journal-prose prose prose-lg max-w-none focus:outline-none'
       }
-    }), // ✅ ← THIS comma fixes everything
-  ],
-  content: form.content,
-  immediatelyRender: false,
-  editorProps: {
-    attributes: {
-      class: 'prose prose-lg max-w-none focus:outline-none'
+    },
+    onUpdate: ({ editor }) => {
+      const html = stripNofollowFromHtml(editor.getHTML());
+      setForm((prev) => ({ ...prev, content: html }));
     }
-  },
-  onUpdate: ({ editor }) => {
-    const html = editor.getHTML();
-    setForm((prev) => ({ ...prev, content: html }));
-  }
-});
+  });
 
   useEffect(() => {
     if (!editor) return;
@@ -103,7 +113,7 @@ export function EditorStudio({
       title: post.title,
       slug: post.slug,
       excerpt: post.excerpt,
-      content: post.content,
+      content: stripNofollowFromHtml(post.content),
       featured_image_url: post.featured_image_url || '',
       author_name: post.author_name,
       author_bio: post.author_bio || '',
@@ -135,6 +145,7 @@ export function EditorStudio({
 
     const payload = {
       ...form,
+      content: stripNofollowFromHtml(form.content),
       slug: form.slug || makeSlug(form.title),
       excerpt: form.excerpt || excerptFromContent(stripHtml(form.content), 180),
       meta_title: form.meta_title || form.title,
@@ -207,7 +218,15 @@ export function EditorStudio({
       return;
     }
 
-    editor.chain().focus().extendMarkRange('link').setLink({ href: url.trim() }).run();
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange('link')
+      .setLink({
+        href: url.trim(),
+        rel: 'noopener noreferrer'
+      })
+      .run();
   }
 
   return (
@@ -511,7 +530,9 @@ export function EditorStudio({
                 </p>
                 <div
                   className={`${ARTICLE_PROSE} mt-6`}
-                  dangerouslySetInnerHTML={{ __html: form.content }}
+                  dangerouslySetInnerHTML={{
+                    __html: stripNofollowFromHtml(form.content)
+                  }}
                 />
               </div>
             </div>

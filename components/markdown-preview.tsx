@@ -1,12 +1,19 @@
-export function MarkdownPreview({ content }: { content: string }) {
-  return <div className="prose-article">{content.split('\n').map((line, index) => renderLine(line, index))}</div>;
+function stripNofollowFromHtml(html: string) {
+  return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
+    const cleaned = String(value)
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((token) => token.toLowerCase() !== 'nofollow');
+
+    return cleaned.length ? ` rel=${quote}${cleaned.join(' ')}${quote}` : '';
+  });
 }
 
-function renderLine(line: string, index: number) {
-  if (line.startsWith('> ')) return <blockquote key={index}>{line.replace('> ', '')}</blockquote>;
-  if (line.startsWith('### ')) return <h3 key={index}>{line.replace('### ', '')}</h3>;
-  if (line.startsWith('## ')) return <h2 key={index}>{line.replace('## ', '')}</h2>;
-  if (line.startsWith('- ')) return <ul key={index}><li>{line.replace('- ', '')}</li></ul>;
-  if (!line.trim()) return <div key={index} className="h-2" />;
-  return <p key={index}>{line}</p>;
+export function MarkdownPreview({ content }: { content: string }) {
+  return (
+    <div
+      className="journal-prose prose prose-lg max-w-none prose-p:leading-8 prose-p:my-4 prose-headings:tracking-tight prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mt-6 prose-h3:mb-2 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-blockquote:my-5 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900"
+      dangerouslySetInnerHTML={{ __html: stripNofollowFromHtml(content || '') }}
+    />
+  );
 }
