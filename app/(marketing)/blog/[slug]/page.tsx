@@ -127,7 +127,7 @@ export default async function PostPage({
                 href="/guest-post"
                 className="text-sm font-semibold text-brand-700 hover:text-brand-900"
               >
-                Enjoyed this piece? Submit a guest post for the journal →
+                Enjoyed this article? Contribute to the journal →
               </Link>
             </div>
           </div>

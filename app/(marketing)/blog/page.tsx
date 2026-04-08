@@ -17,9 +17,9 @@ export default async function BlogPage() {
       <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
         <div>
           <span className="eyebrow">Journal archive</span>
-          <h1 className="display-font mt-5 text-5xl font-semibold tracking-tight text-slate-900">Education stories with a sharper editorial lens</h1>
+          <h1 className="display-font mt-5 text-5xl font-semibold tracking-tight text-slate-900">Essays, ideas, and practical writing on education</h1>
           <p className="mt-4 max-w-3xl text-lg leading-8 text-slate-600">
-            Written to rank, yes, but also written to be read. This archive balances discoverability with substance.
+            Thoughtful articles for students, educators, and readers who want useful insight without noise.
           </p>
 
           <div className="mt-8 flex flex-wrap gap-3">
@@ -44,7 +44,7 @@ export default async function BlogPage() {
         <aside className="space-y-6">
           <NewsletterForm />
           <div className="paper p-6">
-            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">What wins here</p>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">What we publish</p>
             <ul className="mt-4 space-y-3 text-sm leading-7 text-slate-600">
               <li>Strong angles over generic “tips” posts</li>
               <li>Clear intros, useful subheads, and honest examples</li>

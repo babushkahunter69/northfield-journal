@@ -19,7 +19,7 @@ export default function ContactPage() {
             </a>.
           </p>
           <p>
-            For guest contributions, use the submission form so pitches land in the dashboard rather than getting lost in inbox triage.
+            For guest contributions, use the form so your submission is properly reviewed.
           </p>
         </div>
       </div>

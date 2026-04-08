@@ -14,7 +14,7 @@ export default function AdminLoginPage() {
   return (
     <div className="container-shell py-16">
       <div className="mx-auto max-w-xl paper p-8 sm:p-10">
-        <p className="eyebrow">Private editorial access</p>
+        <p className="eyebrow">Editor access</p>
         <h1 className="display-font mt-5 text-5xl font-semibold tracking-tight text-slate-900">Editor login</h1>
         <p className="mt-4 text-slate-600">
           Use a passwordless magic link for secure admin access to the submission dashboard and CMS editor.

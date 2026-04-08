@@ -36,7 +36,7 @@ export function SiteHeader() {
             href="/guest-post"
             className="hidden rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 sm:inline-flex"
           >
-            Pitch an article
+            Submit a guest post
           </Link>
           <Link
             href="/admin/login"

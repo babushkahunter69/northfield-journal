@@ -14,7 +14,7 @@ export default function GuestPostPage() {
         <section className="space-y-6">
           <div className="paper p-7">
             <span className="eyebrow">Contribute</span>
-            <h1 className="display-font mt-5 text-5xl font-semibold tracking-tight text-slate-900">Pitch the kind of education article people actually remember</h1>
+            <h1 className="display-font mt-5 text-5xl font-semibold tracking-tight text-slate-900">Submit an article to Northfield Journal</h1>
             <p className="mt-4 text-lg leading-8 text-slate-600">
               We welcome teachers, tutors, researchers, coaches, school leaders, counselors, and informed practitioners.
               The strongest submissions have a distinct point of view and something real to say.
@@ -39,7 +39,7 @@ export default function GuestPostPage() {
               <p>Bring a clear thesis, not a vague topic.</p>
               <p>Use examples, screenshots, anecdotes, or sources that make the piece feel lived-in.</p>
               <p>Strip out filler, keyword stuffing, and generic intros.</p>
-              <p>The admin dashboard lets you review, reject, or publish accepted submissions instantly.</p>
+              <p>Submissions are reviewed before publication.</p>
             </div>
           </div>
         </section>

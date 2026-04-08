@@ -12,8 +12,8 @@ export default function AboutPage() {
         <span className="eyebrow">About the publication</span>
         <h1 className="display-font mt-5 text-5xl font-semibold tracking-tight text-slate-900">Northfield Journal exists for people who want education coverage with some texture.</h1>
         <p className="mt-6 text-lg leading-8 text-slate-600">
-          This template is positioned like an independent education publication rather than a generic content site. That matters, because trust, editorial taste,
-          and perceived quality affect both reader loyalty and monetization.
+          Northfield Journal is an independent publication focused on thoughtful, well-edited writing about education. 
+          We prioritize clarity, depth, and usefulness over volume.
         </p>
         <div className="mt-8 grid gap-6 md:grid-cols-2">
           <div className="rounded-[24px] border border-slate-200 bg-stone-50 p-6">
