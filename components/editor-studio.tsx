@@ -12,7 +12,8 @@ const blankPost: EditorPayload = {
   title: '',
   slug: '',
   excerpt: '',
-  content: '<h2>Start writing</h2><p>Use headings, paragraphs, lists, links, and quotes.</p>',
+  content:
+    '<h2>Start writing</h2><p>Use headings, paragraphs, lists, links, and quotes.</p>',
   featured_image_url: '',
   author_name: 'Editorial Team',
   author_bio: '',
@@ -36,6 +37,156 @@ function stripNofollowFromHtml(html: string) {
 
     return cleaned.length ? ` rel=${quote}${cleaned.join(' ')}${quote}` : '';
   });
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function normalizeText(text: string) {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function cleanTiptapHtml(input: string) {
+  if (!input || typeof window === 'undefined') return input || '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(input, 'text/html');
+
+  const allowedTags = new Set([
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'ul',
+    'ol',
+    'li',
+    'blockquote',
+    'strong',
+    'b',
+    'em',
+    'i',
+    'a',
+    'br'
+  ]);
+
+  const unwrapTags = new Set([
+    'div',
+    'section',
+    'article',
+    'main',
+    'header',
+    'footer',
+    'span',
+    'font'
+  ]);
+
+  function cleanNode(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return escapeHtml(node.textContent ?? '');
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return '';
+    }
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === 'script' || tag === 'style' || tag === 'meta') {
+      return '';
+    }
+
+    const children = Array.from(el.childNodes).map(cleanNode).join('');
+
+    if (unwrapTags.has(tag)) {
+      return children;
+    }
+
+    if (!allowedTags.has(tag)) {
+      return children;
+    }
+
+    if (tag === 'a') {
+      const rawHref = el.getAttribute('href')?.trim() || '';
+      const safeHref =
+        rawHref.startsWith('http://') ||
+        rawHref.startsWith('https://') ||
+        rawHref.startsWith('/') ||
+        rawHref.startsWith('#')
+          ? rawHref
+          : '';
+
+      if (!safeHref) {
+        return children;
+      }
+
+      return `<a href="${escapeHtml(safeHref)}" rel="noopener noreferrer">${children}</a>`;
+    }
+
+    if (tag === 'strong' || tag === 'b') {
+      return `<strong>${children}</strong>`;
+    }
+
+    if (tag === 'em' || tag === 'i') {
+      return `<em>${children}</em>`;
+    }
+
+    if (tag === 'br') {
+      return '<br>';
+    }
+
+    if (tag === 'p') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly && !children.includes('<br>')) return '';
+      return `<p>${children}</p>`;
+    }
+
+    if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly) return '';
+      return `<${tag}>${children}</${tag}>`;
+    }
+
+    if (tag === 'blockquote') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly) return '';
+      return `<blockquote>${children}</blockquote>`;
+    }
+
+    if (tag === 'ul' || tag === 'ol') {
+      const items = Array.from(el.children)
+        .filter((child) => child.tagName.toLowerCase() === 'li')
+        .map((child) => cleanNode(child))
+        .join('');
+
+      return items ? `<${tag}>${items}</${tag}>` : '';
+    }
+
+    if (tag === 'li') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly) return '';
+      return `<li>${children}</li>`;
+    }
+
+    return children;
+  }
+
+  let html = Array.from(doc.body.childNodes).map(cleanNode).join('');
+
+  html = html
+    .replace(/<p>\s*<\/p>/g, '')
+    .replace(/<h1>\s*<\/h1>/g, '')
+    .replace(/<h2>\s*<\/h2>/g, '')
+    .replace(/<h3>\s*<\/h3>/g, '')
+    .replace(/\n+/g, '')
+    .trim();
+
+  return stripNofollowFromHtml(html);
 }
 
 export function EditorStudio({
@@ -63,6 +214,15 @@ export function EditorStudio({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
+  function setEditorHtml(rawHtml: string) {
+    if (!editor) return;
+
+    const cleaned = cleanTiptapHtml(rawHtml);
+    editor.commands.setContent(cleaned || '<p></p>');
+    setForm((prev) => ({ ...prev, content: cleaned || '<p></p>' }));
+    setMessage('HTML cleaned and inserted.');
+  }
+
   const editor = useEditor({
     extensions: [
       StarterKit,
@@ -80,6 +240,18 @@ export function EditorStudio({
     editorProps: {
       attributes: {
         class: 'journal-prose prose prose-lg max-w-none focus:outline-none'
+      },
+      handlePaste(view, event) {
+        const html = event.clipboardData?.getData('text/html');
+
+        if (!html) return false;
+
+        event.preventDefault();
+        const cleaned = cleanTiptapHtml(html);
+        view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text('')));
+        editor?.commands.insertContent(cleaned || '<p></p>');
+        setMessage('Pasted content was cleaned automatically.');
+        return true;
       }
     },
     onUpdate: ({ editor }) => {
@@ -229,6 +401,12 @@ export function EditorStudio({
       .run();
   }
 
+  function pasteHtmlFromPrompt() {
+    const rawHtml = window.prompt('Paste article HTML here');
+    if (!rawHtml) return;
+    setEditorHtml(rawHtml);
+  }
+
   return (
     <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
       <aside className="paper p-5">
@@ -290,13 +468,22 @@ export function EditorStudio({
                   {selectedPost ? 'Edit article' : 'Create article'}
                 </h2>
               </div>
-              <button
-                type="button"
-                onClick={autoGenerateSeo}
-                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
-              >
-                Auto-fill SEO
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={autoGenerateSeo}
+                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                >
+                  Auto-fill SEO
+                </button>
+                <button
+                  type="button"
+                  onClick={pasteHtmlFromPrompt}
+                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                >
+                  Paste cleaned HTML
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-5">
@@ -407,13 +594,17 @@ export function EditorStudio({
                     </ToolbarButton>
                     <ToolbarButton
                       active={!!editor?.isActive('heading', { level: 2 })}
-                      onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
+                      onClick={() =>
+                        editor?.chain().focus().toggleHeading({ level: 2 }).run()
+                      }
                     >
                       H2
                     </ToolbarButton>
                     <ToolbarButton
                       active={!!editor?.isActive('heading', { level: 3 })}
-                      onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
+                      onClick={() =>
+                        editor?.chain().focus().toggleHeading({ level: 3 }).run()
+                      }
                     >
                       H3
                     </ToolbarButton>
