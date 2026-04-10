@@ -16,12 +16,12 @@ export function AdminLoginForm() {
           name="email"
           type="email"
           required
-          className="w-full rounded-2xl border border-slate-300 px-4 py-3"
+          className="input-field"
         />
       </div>
       <button
         disabled={pending}
-        className="rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-700"
+        className="button-primary rounded-2xl"
       >
         {pending ? 'Sending link...' : 'Send magic link'}
       </button>

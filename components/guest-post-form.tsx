@@ -52,33 +52,33 @@ export function GuestPostForm() {
     <form onSubmit={handleSubmit} className="paper space-y-5 p-6 md:p-8">
       <div className="grid gap-5 md:grid-cols-2">
         <Field label="Full name">
-          <input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+          <input required value={form.full_name} onChange={(e) => setForm({ ...form, full_name: e.target.value })} className="input-field" />
         </Field>
         <Field label="Email">
-          <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+          <input type="email" required value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} className="input-field" />
         </Field>
       </div>
 
       <Field label="Short bio">
-        <textarea rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+        <textarea rows={3} value={form.bio} onChange={(e) => setForm({ ...form, bio: e.target.value })} className="input-field" />
       </Field>
 
       <div className="grid gap-5 md:grid-cols-2">
         <Field label="Portfolio or website">
-          <input value={form.portfolio_url} onChange={(e) => setForm({ ...form, portfolio_url: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+          <input value={form.portfolio_url} onChange={(e) => setForm({ ...form, portfolio_url: e.target.value })} className="input-field" />
         </Field>
         <Field label="LinkedIn profile">
-          <input value={form.linkedin_url} onChange={(e) => setForm({ ...form, linkedin_url: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+          <input value={form.linkedin_url} onChange={(e) => setForm({ ...form, linkedin_url: e.target.value })} className="input-field" />
         </Field>
       </div>
 
       <Field label="Proposed title">
-        <input required value={form.proposed_title} onChange={(e) => setForm({ ...form, proposed_title: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+        <input required value={form.proposed_title} onChange={(e) => setForm({ ...form, proposed_title: e.target.value })} className="input-field" />
       </Field>
 
       <div className="grid gap-5 md:grid-cols-2">
         <Field label="Section">
-          <select value={form.topic_category} onChange={(e) => setForm({ ...form, topic_category: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3">
+          <select value={form.topic_category} onChange={(e) => setForm({ ...form, topic_category: e.target.value })} className="input-field">
             <option>Student Success</option>
             <option>Teaching Craft</option>
             <option>Higher Education</option>
@@ -89,29 +89,29 @@ export function GuestPostForm() {
           </select>
         </Field>
         <Field label="Primary SEO keyword">
-          <input value={form.target_keyword} onChange={(e) => setForm({ ...form, target_keyword: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+          <input value={form.target_keyword} onChange={(e) => setForm({ ...form, target_keyword: e.target.value })} className="input-field" />
         </Field>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">
         <Field label="Editorial angle">
-          <textarea rows={3} value={form.article_angle} onChange={(e) => setForm({ ...form, article_angle: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+          <textarea rows={3} value={form.article_angle} onChange={(e) => setForm({ ...form, article_angle: e.target.value })} className="input-field" />
         </Field>
         <Field label="Target audience">
-          <textarea rows={3} value={form.target_audience} onChange={(e) => setForm({ ...form, target_audience: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+          <textarea rows={3} value={form.target_audience} onChange={(e) => setForm({ ...form, target_audience: e.target.value })} className="input-field" />
         </Field>
       </div>
 
       <Field label="Sources or reference links">
-        <textarea rows={3} value={form.source_links} onChange={(e) => setForm({ ...form, source_links: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+        <textarea rows={3} value={form.source_links} onChange={(e) => setForm({ ...form, source_links: e.target.value })} className="input-field" />
       </Field>
 
       <Field label="Article draft (Markdown or plain text)">
-        <textarea required rows={16} value={form.article_content} onChange={(e) => setForm({ ...form, article_content: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+        <textarea required rows={16} value={form.article_content} onChange={(e) => setForm({ ...form, article_content: e.target.value })} className="input-field" />
       </Field>
 
       <Field label="Notes for the editor">
-        <textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="w-full rounded-2xl border border-slate-300 px-4 py-3" />
+        <textarea rows={3} value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} className="input-field" />
       </Field>
 
       <label className="flex items-start gap-3 rounded-2xl border border-slate-200 bg-stone-50 px-4 py-4 text-sm text-slate-700">
@@ -126,7 +126,7 @@ export function GuestPostForm() {
         </span>
       </label>
 
-      <button disabled={loading} className="rounded-2xl bg-brand-700 px-5 py-3 font-semibold text-white transition hover:bg-brand-800 disabled:opacity-70">
+      <button disabled={loading} className="button-primary rounded-2xl disabled:opacity-70">
         {loading ? 'Submitting...' : 'Submit editorial pitch'}
       </button>
 

@@ -1,47 +1,34 @@
 import Link from 'next/link';
+import { siteConfig } from '@/lib/constants';
+import { ThemeToggler } from '@/components/theme-toggler';
 
 export function SiteHeader() {
   return (
-    <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-stone-50/85 backdrop-blur-xl">
-      <div className="container-shell flex h-20 items-center justify-between gap-6">
-        <Link href="/" className="min-w-0">
-          <div className="display-font text-2xl font-semibold tracking-tight text-slate-900 sm:text-3xl">
-            Northfield <span className="text-brand-700">Journal</span>
+    <header className="site-header">
+      <div className="container-shell site-header__inner">
+        <Link href="/" className="site-header__brand">
+          <div className="display-font site-header__title">
+            Northfield <span className="site-header__title-accent">Journal</span>
           </div>
-          <p className="hidden text-xs uppercase tracking-[0.24em] text-slate-500 md:block">
-            Education, carefully edited
-          </p>
+          <p className="site-header__tagline">Thoughtful education coverage</p>
         </Link>
 
-        <nav className="hidden items-center gap-7 lg:flex">
-          <Link href="/" className="text-sm font-medium text-slate-600 transition hover:text-slate-900">
-            Home
-          </Link>
-          <Link href="/blog" className="text-sm font-medium text-slate-600 transition hover:text-slate-900">
-            Journal
-          </Link>
-          <Link href="/about" className="text-sm font-medium text-slate-600 transition hover:text-slate-900">
-            About
-          </Link>
-          <Link href="/guest-post" className="text-sm font-medium text-slate-600 transition hover:text-slate-900">
-            Contribute
-          </Link>
-          <Link href="/contact" className="text-sm font-medium text-slate-600 transition hover:text-slate-900">
-            Contact
-          </Link>
+        <nav className="site-header__nav">
+          {siteConfig.nav.map((item) => (
+            <Link key={item.href} href={item.href} className="site-header__nav-link">
+              {item.label}
+            </Link>
+          ))}
         </nav>
 
-        <div className="flex items-center gap-3">
-          <Link
-            href="/guest-post"
-            className="hidden rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:border-slate-400 sm:inline-flex"
-          >
-            Submit a guest post
+        <div className="site-header__actions">
+          <ThemeToggler />
+
+          <Link href="/guest-post" className="button-secondary">
+            Submit a piece
           </Link>
-          <Link
-            href="/admin/login"
-            className="rounded-full bg-slate-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
-          >
+
+          <Link href="/admin/login" className="button-primary">
             Editor login
           </Link>
         </div>

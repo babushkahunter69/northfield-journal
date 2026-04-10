@@ -9,6 +9,15 @@ export type Category = {
   description: string | null;
 };
 
+export type Author = {
+  name: string;
+  slug: string;
+  bio: string | null;
+  avatarInitials: string;
+  articleCount?: number;
+  latestPublishedAt?: string | null;
+};
+
 export type Post = {
   id: string;
   title: string;
@@ -18,6 +27,7 @@ export type Post = {
   featured_image_url: string | null;
   author_name: string;
   author_bio: string | null;
+  author?: Author;
   category_id: string | null;
   meta_title: string | null;
   meta_description: string | null;

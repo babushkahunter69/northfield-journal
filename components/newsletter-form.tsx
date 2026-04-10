@@ -29,37 +29,50 @@ export function NewsletterForm() {
 
     setEmail('');
     setFullName('');
-    setStatus('You are in. Use this list for launches, sponsorships, and audience building.');
+    setStatus('You are in. Expect thoughtful weekly writing.');
     setLoading(false);
   }
 
   return (
-    <form onSubmit={handleSubmit} className="paper p-6">
-      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700 dark:text-brand-300">Newsletter</p>
-      <h3 className="display-font mt-3 text-3xl font-semibold text-slate-900 dark:text-white">Build an owned audience from day one</h3>
-      <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-400">
-        Capture readers who are not ready to buy or inquire yet. This makes monetization far easier later.
+    <form onSubmit={handleSubmit} className="paper p-8">
+      <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
+        Weekly briefing
       </p>
+
+      <h3 className="display-font mt-4 text-[2.2rem] leading-tight text-slate-900">
+        Thoughtful writing,<br />delivered weekly.
+      </h3>
+
+      <p className="mt-4 text-[15px] leading-7 text-slate-600 max-w-md">
+        Essays, classroom insights, and practical education strategies — curated, not cluttered.
+      </p>
+
       <div className="mt-6 grid gap-3">
         <input
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
           placeholder="Full name"
-          className="rounded-2xl border border-slate-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950"
         />
+
         <input
           required
           type="email"
           value={email}
           onChange={(e) => setEmail(e.target.value)}
           placeholder="Email address"
-          className="rounded-2xl border border-slate-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950"
         />
-        <button disabled={loading} className="rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:opacity-70 dark:bg-brand-700 dark:hover:bg-brand-600">
+
+        <button
+          disabled={loading}
+          className="button-primary mt-2"
+        >
           {loading ? 'Joining...' : 'Join the weekly briefing'}
         </button>
       </div>
-      {status ? <p className="mt-4 text-sm text-slate-600 dark:text-slate-400">{status}</p> : null}
+
+      {status ? (
+        <p className="mt-4 text-sm text-slate-600">{status}</p>
+      ) : null}
     </form>
   );
 }
