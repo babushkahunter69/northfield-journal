@@ -189,11 +189,10 @@ function cleanTiptapHtml(input: string) {
   return stripNofollowFromHtml(html);
 }
 
-function normalizeEditorHtmlForInsert(html: string) {
-  if (typeof window === 'undefined') return html;
-  const wrapper = document.createElement('div');
-  wrapper.innerHTML = html;
-  return wrapper.innerHTML;
+function htmlStringToBody(html: string) {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(html, 'text/html');
+  return doc.body;
 }
 
 export function EditorStudio({
@@ -251,10 +250,10 @@ export function EditorStudio({
 
         event.preventDefault();
 
-        const cleaned = cleanTiptapHtml(html);
-        const normalized = normalizeEditorHtmlForInsert(cleaned || '<p></p>');
+        const cleaned = cleanTiptapHtml(html) || '<p></p>';
+        const body = htmlStringToBody(cleaned);
 
-        editor.commands.insertContent(normalized, {
+        editor.commands.insertContent(body, {
           parseOptions: {
             preserveWhitespace: false
           }
@@ -346,15 +345,15 @@ export function EditorStudio({
       return;
     }
 
-    const normalized = normalizeEditorHtmlForInsert(cleaned);
+    const body = htmlStringToBody(cleaned);
 
-    editor.commands.setContent(normalized, {
+    editor.commands.setContent(body, {
       parseOptions: {
         preserveWhitespace: false
       }
     });
 
-    setForm((prev) => ({ ...prev, content: normalized }));
+    setForm((prev) => ({ ...prev, content: cleaned }));
     setMessage('HTML cleaned and inserted.');
     closePasteModal();
   }
