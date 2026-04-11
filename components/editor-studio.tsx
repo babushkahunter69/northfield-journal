@@ -201,6 +201,8 @@ export function EditorStudio({
   const [message, setMessage] = useState<string>('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [isPasteModalOpen, setIsPasteModalOpen] = useState(false);
+  const [pasteInput, setPasteInput] = useState('');
 
   const selectedPost = useMemo(
     () => posts.find((post) => post.id === selectedId),
@@ -236,7 +238,7 @@ export function EditorStudio({
       attributes: {
         class: 'journal-prose prose prose-lg max-w-none focus:outline-none'
       },
-      handlePaste(view, event) {
+      handlePaste(_view, event) {
         const html = event.clipboardData?.getData('text/html');
 
         if (!html) return false;
@@ -244,7 +246,6 @@ export function EditorStudio({
         event.preventDefault();
 
         const cleaned = cleanTiptapHtml(html);
-        view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text('')));
         editor?.commands.insertContent(cleaned || '<p></p>');
         setMessage('Pasted content was cleaned automatically.');
 
@@ -308,16 +309,31 @@ export function EditorStudio({
     }));
   }
 
-  function pasteHtmlFromPrompt() {
+  function openPasteModal() {
+    setPasteInput('');
+    setIsPasteModalOpen(true);
+    setMessage('');
+  }
+
+  function closePasteModal() {
+    setIsPasteModalOpen(false);
+    setPasteInput('');
+  }
+
+  function insertCleanedHtmlFromModal() {
     if (!editor) return;
 
-    const rawHtml = window.prompt('Paste article HTML here');
-    if (!rawHtml) return;
+    const cleaned = cleanTiptapHtml(pasteInput);
 
-    const cleaned = cleanTiptapHtml(rawHtml);
-    editor.commands.setContent(cleaned || '<p></p>');
-    setForm((prev) => ({ ...prev, content: cleaned || '<p></p>' }));
+    if (!cleaned) {
+      setMessage('Paste some HTML first.');
+      return;
+    }
+
+    editor.commands.setContent(cleaned);
+    setForm((prev) => ({ ...prev, content: cleaned }));
     setMessage('HTML cleaned and inserted.');
+    closePasteModal();
   }
 
   async function savePost() {
@@ -411,335 +427,405 @@ export function EditorStudio({
   }
 
   return (
-    <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
-      <aside className="paper p-5">
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-            Posts
-          </p>
-          <button
-            type="button"
-            onClick={() => loadPost('new')}
-            className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-800"
-          >
-            New post
-          </button>
-        </div>
-
-        <div className="grid gap-2">
-          <button
-            type="button"
-            onClick={() => loadPost('new')}
-            className={`rounded-2xl px-4 py-3 text-left ${
-              selectedId === 'new'
-                ? 'bg-brand-700 text-white'
-                : 'bg-stone-50 text-slate-700'
-            }`}
-          >
-            Draft a new article
-          </button>
-
-          {posts.map((post) => (
+    <>
+      <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
+        <aside className="paper p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+              Posts
+            </p>
             <button
-              key={post.id}
               type="button"
-              onClick={() => loadPost(post.id)}
-              className={`rounded-2xl px-4 py-3 text-left transition ${
-                selectedId === post.id
+              onClick={() => loadPost('new')}
+              className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-800"
+            >
+              New post
+            </button>
+          </div>
+
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={() => loadPost('new')}
+              className={`rounded-2xl px-4 py-3 text-left ${
+                selectedId === 'new'
                   ? 'bg-brand-700 text-white'
-                  : 'bg-stone-50 text-slate-700 hover:bg-stone-100'
+                  : 'bg-stone-50 text-slate-700'
               }`}
             >
-              <p className="font-semibold">{post.title}</p>
-              <p className="mt-1 text-xs uppercase tracking-[0.18em] opacity-70">
-                {post.status}
-              </p>
+              Draft a new article
             </button>
-          ))}
-        </div>
-      </aside>
 
-      <section className="space-y-8">
-        <div className="grid gap-8 2xl:grid-cols-[1.1fr_0.9fr]">
-          <div className="paper p-6">
-            <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+            {posts.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => loadPost(post.id)}
+                className={`rounded-2xl px-4 py-3 text-left transition ${
+                  selectedId === post.id
+                    ? 'bg-brand-700 text-white'
+                    : 'bg-stone-50 text-slate-700 hover:bg-stone-100'
+                }`}
+              >
+                <p className="font-semibold">{post.title}</p>
+                <p className="mt-1 text-xs uppercase tracking-[0.18em] opacity-70">
+                  {post.status}
+                </p>
+              </button>
+            ))}
+          </div>
+        </aside>
+
+        <section className="space-y-8">
+          <div className="grid gap-8 2xl:grid-cols-[1.1fr_0.9fr]">
+            <div className="paper p-6">
+              <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    Content
+                  </p>
+                  <h2 className="display-font mt-2 text-3xl font-semibold text-slate-900">
+                    {selectedPost ? 'Edit article' : 'Create article'}
+                  </h2>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={autoGenerateSeo}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                  >
+                    Auto-fill SEO
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={openPasteModal}
+                    className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                  >
+                    Paste cleaned HTML
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid gap-5">
+                <Field label="Title">
+                  <input
+                    value={form.title}
+                    onChange={(e) => updateField('title', e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                  />
+                </Field>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Field label="Slug">
+                    <input
+                      value={form.slug}
+                      onChange={(e) => updateField('slug', e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    />
+                  </Field>
+
+                  <Field label="Category">
+                    <select
+                      value={form.category_id}
+                      onChange={(e) => updateField('category_id', e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    >
+                      <option value="">No category</option>
+                      {categories.map((category) => (
+                        <option key={category.id} value={category.id}>
+                          {category.name}
+                        </option>
+                      ))}
+                    </select>
+                  </Field>
+                </div>
+
+                <div className="grid gap-5 md:grid-cols-2">
+                  <Field label="Author name">
+                    <input
+                      value={form.author_name}
+                      onChange={(e) => updateField('author_name', e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    />
+                  </Field>
+
+                  <Field label="Author bio">
+                    <input
+                      value={form.author_bio}
+                      onChange={(e) => updateField('author_bio', e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    />
+                  </Field>
+                </div>
+
+                <Field label="Excerpt">
+                  <textarea
+                    rows={3}
+                    value={form.excerpt}
+                    onChange={(e) => updateField('excerpt', e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                  />
+                </Field>
+
+                <Field label="Featured image">
+                  <div className="grid gap-3">
+                    <input
+                      value={form.featured_image_url}
+                      onChange={(e) => updateField('featured_image_url', e.target.value)}
+                      placeholder="Paste image URL or upload below"
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    />
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={uploadImage}
+                      className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm"
+                    />
+                    {uploading ? (
+                      <p className="text-sm text-slate-500">Uploading image...</p>
+                    ) : null}
+                    {form.featured_image_url ? (
+                      <div className="relative aspect-[16/8] overflow-hidden rounded-[20px] border border-slate-200 bg-stone-50">
+                        <Image
+                          src={form.featured_image_url}
+                          alt={form.title || 'Featured image preview'}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                    ) : null}
+                  </div>
+                </Field>
+
+                <Field label="Body">
+                  <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white">
+                    <div className="flex flex-wrap gap-2 border-b border-slate-200 bg-stone-50 px-4 py-3">
+                      <ToolbarButton
+                        active={!!editor?.isActive('bold')}
+                        onClick={() => editor?.chain().focus().toggleBold().run()}
+                      >
+                        Bold
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('italic')}
+                        onClick={() => editor?.chain().focus().toggleItalic().run()}
+                      >
+                        Italic
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('heading', { level: 2 })}
+                        onClick={() =>
+                          editor?.chain().focus().toggleHeading({ level: 2 }).run()
+                        }
+                      >
+                        H2
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('heading', { level: 3 })}
+                        onClick={() =>
+                          editor?.chain().focus().toggleHeading({ level: 3 }).run()
+                        }
+                      >
+                        H3
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('bulletList')}
+                        onClick={() => editor?.chain().focus().toggleBulletList().run()}
+                      >
+                        List
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('blockquote')}
+                        onClick={() => editor?.chain().focus().toggleBlockquote().run()}
+                      >
+                        Quote
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('link')}
+                        onClick={insertLink}
+                      >
+                        Link
+                      </ToolbarButton>
+                    </div>
+
+                    <div className="min-h-[360px] px-6 py-5">
+                      <EditorContent editor={editor} />
+                    </div>
+                  </div>
+                </Field>
+              </div>
+            </div>
+
+            <div className="space-y-8">
+              <div className="paper p-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  SEO and publishing
+                </p>
+
+                <div className="mt-5 grid gap-5">
+                  <Field label="Meta title">
+                    <input
+                      value={form.meta_title}
+                      onChange={(e) => updateField('meta_title', e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    />
+                  </Field>
+
+                  <Field label="Meta description">
+                    <textarea
+                      rows={4}
+                      value={form.meta_description}
+                      onChange={(e) => updateField('meta_description', e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    />
+                  </Field>
+
+                  <Field label="Keywords (comma-separated)">
+                    <input
+                      value={form.keywords}
+                      onChange={(e) => updateField('keywords', e.target.value)}
+                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    />
+                  </Field>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-stone-50 px-4 py-4 text-sm text-slate-700">
+                      <input
+                        type="checkbox"
+                        checked={form.is_featured}
+                        onChange={(e) => updateField('is_featured', e.target.checked)}
+                        className="h-4 w-4"
+                      />
+                      Featured post
+                    </label>
+
+                    <label className="block">
+                      <span className="mb-2 block text-sm font-semibold text-slate-700">
+                        Status
+                      </span>
+                      <select
+                        value={form.status}
+                        onChange={(e) =>
+                          updateField('status', e.target.value as 'draft' | 'published')
+                        }
+                        className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="published">Published</option>
+                      </select>
+                    </label>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={savePost}
+                    disabled={saving}
+                    className="rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:opacity-70"
+                  >
+                    {saving ? 'Saving...' : form.id ? 'Save changes' : 'Create post'}
+                  </button>
+
+                  {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+                </div>
+              </div>
+
+              <div className="paper p-6">
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Live preview
+                </p>
+
+                <div className="mt-5">
+                  <h3 className="display-font text-4xl font-semibold text-slate-900">
+                    {form.title || 'Untitled article'}
+                  </h3>
+                  <p className="mt-4 text-lg leading-8 text-slate-600">
+                    {form.excerpt || 'Your excerpt will appear here.'}
+                  </p>
+                  <div
+                    className={`${ARTICLE_PROSE} mt-6`}
+                    dangerouslySetInnerHTML={{
+                      __html: stripNofollowFromHtml(form.content)
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {isPasteModalOpen ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/45 p-4">
+          <div className="paper w-full max-w-3xl rounded-[28px] p-6 shadow-2xl">
+            <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  Content
+                  Paste article HTML
                 </p>
-                <h2 className="display-font mt-2 text-3xl font-semibold text-slate-900">
-                  {selectedPost ? 'Edit article' : 'Create article'}
-                </h2>
+                <h3 className="display-font mt-2 text-3xl font-semibold text-slate-900">
+                  Clean and insert content
+                </h3>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+                  Paste full article HTML below. Headings, paragraphs, lists, quotes,
+                  emphasis, and links will be preserved. Junk wrappers and inline styles
+                  will be removed.
+                </p>
               </div>
+
+              <button
+                type="button"
+                onClick={closePasteModal}
+                className="rounded-full border border-slate-300 px-3 py-1.5 text-sm font-semibold text-slate-700"
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-6">
+              <textarea
+                rows={16}
+                value={pasteInput}
+                onChange={(e) => setPasteInput(e.target.value)}
+                placeholder="<h1>Your title</h1><h2>Section</h2><p>Paragraph...</p>"
+                className="w-full rounded-[20px] border border-slate-300 bg-white px-4 py-4 font-mono text-sm leading-7 text-slate-800"
+              />
+            </div>
+
+            <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-xs leading-6 text-slate-500">
+                Tip: paste full HTML here instead of using browser prompts. It preserves
+                multiline structure correctly.
+              </p>
 
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
-                  onClick={autoGenerateSeo}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                  onClick={closePasteModal}
+                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-700"
                 >
-                  Auto-fill SEO
+                  Cancel
                 </button>
-
                 <button
                   type="button"
-                  onClick={pasteHtmlFromPrompt}
-                  className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800"
+                  onClick={insertCleanedHtmlFromModal}
+                  className="rounded-full bg-slate-900 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700"
                 >
-                  Paste cleaned HTML
+                  Insert cleaned HTML
                 </button>
-              </div>
-            </div>
-
-            <div className="grid gap-5">
-              <Field label="Title">
-                <input
-                  value={form.title}
-                  onChange={(e) => updateField('title', e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                />
-              </Field>
-
-              <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Slug">
-                  <input
-                    value={form.slug}
-                    onChange={(e) => updateField('slug', e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  />
-                </Field>
-
-                <Field label="Category">
-                  <select
-                    value={form.category_id}
-                    onChange={(e) => updateField('category_id', e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  >
-                    <option value="">No category</option>
-                    {categories.map((category) => (
-                      <option key={category.id} value={category.id}>
-                        {category.name}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-              </div>
-
-              <div className="grid gap-5 md:grid-cols-2">
-                <Field label="Author name">
-                  <input
-                    value={form.author_name}
-                    onChange={(e) => updateField('author_name', e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  />
-                </Field>
-
-                <Field label="Author bio">
-                  <input
-                    value={form.author_bio}
-                    onChange={(e) => updateField('author_bio', e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  />
-                </Field>
-              </div>
-
-              <Field label="Excerpt">
-                <textarea
-                  rows={3}
-                  value={form.excerpt}
-                  onChange={(e) => updateField('excerpt', e.target.value)}
-                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                />
-              </Field>
-
-              <Field label="Featured image">
-                <div className="grid gap-3">
-                  <input
-                    value={form.featured_image_url}
-                    onChange={(e) => updateField('featured_image_url', e.target.value)}
-                    placeholder="Paste image URL or upload below"
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  />
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={uploadImage}
-                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm"
-                  />
-                  {uploading ? (
-                    <p className="text-sm text-slate-500">Uploading image...</p>
-                  ) : null}
-                  {form.featured_image_url ? (
-                    <div className="relative aspect-[16/8] overflow-hidden rounded-[20px] border border-slate-200 bg-stone-50">
-                      <Image
-                        src={form.featured_image_url}
-                        alt={form.title || 'Featured image preview'}
-                        fill
-                        className="object-cover"
-                      />
-                    </div>
-                  ) : null}
-                </div>
-              </Field>
-
-              <Field label="Body">
-                <div className="overflow-hidden rounded-2xl border border-slate-300 bg-white">
-                  <div className="flex flex-wrap gap-2 border-b border-slate-200 bg-stone-50 px-4 py-3">
-                    <ToolbarButton
-                      active={!!editor?.isActive('bold')}
-                      onClick={() => editor?.chain().focus().toggleBold().run()}
-                    >
-                      Bold
-                    </ToolbarButton>
-
-                    <ToolbarButton
-                      active={!!editor?.isActive('italic')}
-                      onClick={() => editor?.chain().focus().toggleItalic().run()}
-                    >
-                      Italic
-                    </ToolbarButton>
-
-                    <ToolbarButton
-                      active={!!editor?.isActive('heading', { level: 2 })}
-                      onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
-                    >
-                      H2
-                    </ToolbarButton>
-
-                    <ToolbarButton
-                      active={!!editor?.isActive('heading', { level: 3 })}
-                      onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
-                    >
-                      H3
-                    </ToolbarButton>
-
-                    <ToolbarButton
-                      active={!!editor?.isActive('bulletList')}
-                      onClick={() => editor?.chain().focus().toggleBulletList().run()}
-                    >
-                      List
-                    </ToolbarButton>
-
-                    <ToolbarButton
-                      active={!!editor?.isActive('blockquote')}
-                      onClick={() => editor?.chain().focus().toggleBlockquote().run()}
-                    >
-                      Quote
-                    </ToolbarButton>
-
-                    <ToolbarButton
-                      active={!!editor?.isActive('link')}
-                      onClick={insertLink}
-                    >
-                      Link
-                    </ToolbarButton>
-                  </div>
-
-                  <div className="min-h-[360px] px-6 py-5">
-                    <EditorContent editor={editor} />
-                  </div>
-                </div>
-              </Field>
-            </div>
-          </div>
-
-          <div className="space-y-8">
-            <div className="paper p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                SEO and publishing
-              </p>
-
-              <div className="mt-5 grid gap-5">
-                <Field label="Meta title">
-                  <input
-                    value={form.meta_title}
-                    onChange={(e) => updateField('meta_title', e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  />
-                </Field>
-
-                <Field label="Meta description">
-                  <textarea
-                    rows={4}
-                    value={form.meta_description}
-                    onChange={(e) => updateField('meta_description', e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  />
-                </Field>
-
-                <Field label="Keywords (comma-separated)">
-                  <input
-                    value={form.keywords}
-                    onChange={(e) => updateField('keywords', e.target.value)}
-                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                  />
-                </Field>
-
-                <div className="grid gap-4 md:grid-cols-2">
-                  <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-stone-50 px-4 py-4 text-sm text-slate-700">
-                    <input
-                      type="checkbox"
-                      checked={form.is_featured}
-                      onChange={(e) => updateField('is_featured', e.target.checked)}
-                      className="h-4 w-4"
-                    />
-                    Featured post
-                  </label>
-
-                  <label className="block">
-                    <span className="mb-2 block text-sm font-semibold text-slate-700">
-                      Status
-                    </span>
-                    <select
-                      value={form.status}
-                      onChange={(e) =>
-                        updateField('status', e.target.value as 'draft' | 'published')
-                      }
-                      className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
-                    >
-                      <option value="draft">Draft</option>
-                      <option value="published">Published</option>
-                    </select>
-                  </label>
-                </div>
-
-                <button
-                  type="button"
-                  onClick={savePost}
-                  disabled={saving}
-                  className="rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:opacity-70"
-                >
-                  {saving ? 'Saving...' : form.id ? 'Save changes' : 'Create post'}
-                </button>
-
-                {message ? <p className="text-sm text-slate-600">{message}</p> : null}
-              </div>
-            </div>
-
-            <div className="paper p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
-                Live preview
-              </p>
-
-              <div className="mt-5">
-                <h3 className="display-font text-4xl font-semibold text-slate-900">
-                  {form.title || 'Untitled article'}
-                </h3>
-                <p className="mt-4 text-lg leading-8 text-slate-600">
-                  {form.excerpt || 'Your excerpt will appear here.'}
-                </p>
-                <div
-                  className={`${ARTICLE_PROSE} mt-6`}
-                  dangerouslySetInnerHTML={{
-                    __html: stripNofollowFromHtml(form.content)
-                  }}
-                />
               </div>
             </div>
           </div>
         </div>
-      </section>
-    </div>
+      ) : null}
+    </>
   );
 }
 
