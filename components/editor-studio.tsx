@@ -189,12 +189,6 @@ function cleanTiptapHtml(input: string) {
   return stripNofollowFromHtml(html);
 }
 
-function htmlStringToBody(html: string) {
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(html, 'text/html');
-  return doc.body;
-}
-
 export function EditorStudio({
   posts,
   categories
@@ -251,9 +245,8 @@ export function EditorStudio({
         event.preventDefault();
 
         const cleaned = cleanTiptapHtml(html) || '<p></p>';
-        const body = htmlStringToBody(cleaned);
 
-        editor.commands.insertContent(body, {
+        editor.commands.insertContent(cleaned, {
           parseOptions: {
             preserveWhitespace: false
           }
@@ -345,9 +338,7 @@ export function EditorStudio({
       return;
     }
 
-    const body = htmlStringToBody(cleaned);
-
-    editor.commands.setContent(body, {
+    editor.commands.setContent(cleaned, {
       parseOptions: {
         preserveWhitespace: false
       }
