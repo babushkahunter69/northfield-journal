@@ -1,13 +1,18 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
 
 export default function AdminLoginPage() {
-  const router = useRouter();
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [from, setFrom] = useState('/admin/posts');
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const nextFrom = params.get('from');
+    if (nextFrom) setFrom(nextFrom);
+  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -27,13 +32,12 @@ export default function AdminLoginPage() {
       return;
     }
 
-    router.push('/admin/posts');
+    window.location.href = from;
   }
 
   return (
     <div className="min-h-screen bg-[#f7f4ee] flex items-center justify-center px-6">
       <div className="w-full max-w-xl">
-        {/* Logo / Heading */}
         <div className="text-center mb-10">
           <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#0f1b3d] text-white font-bold mb-4">
             N
@@ -48,7 +52,6 @@ export default function AdminLoginPage() {
           </p>
         </div>
 
-        {/* Card */}
         <div className="rounded-[28px] border border-[#e2d9cb] bg-[#fffdfa] p-8 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
           <h2 className="font-serif text-2xl font-semibold text-[#0f172a] mb-2">
             Sign in
@@ -73,9 +76,7 @@ export default function AdminLoginPage() {
               />
             </div>
 
-            {error && (
-              <p className="text-sm text-red-600">{error}</p>
-            )}
+            {error && <p className="text-sm text-red-600">{error}</p>}
 
             <button
               type="submit"

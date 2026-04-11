@@ -16,6 +16,7 @@ export function AdminSidebar() {
     <aside className="hidden w-64 shrink-0 border-r border-[#e2d9cb] bg-[#f3eee4] lg:flex lg:flex-col">
       <Link
         href="/admin/posts"
+        prefetch={false}
         className="flex items-center gap-3 border-b border-[#e2d9cb] px-6 py-6"
       >
         <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0f1b3d] text-sm font-bold text-white">
@@ -42,6 +43,7 @@ export function AdminSidebar() {
             <Link
               key={item.href}
               href={item.href}
+              prefetch={false}
               className={`block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
                 active
                   ? 'bg-[#0f1b3d] text-white'
@@ -57,6 +59,7 @@ export function AdminSidebar() {
       <div className="border-t border-[#e2d9cb] p-4">
         <Link
           href="/api/auth/logout"
+          prefetch={false}
           className="block text-center text-sm font-medium text-slate-500 transition hover:text-red-600"
         >
           Sign out
