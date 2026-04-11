@@ -4,6 +4,17 @@ import { DeletePostButton } from '@/components/admin/delete-post-button';
 
 export const dynamic = 'force-dynamic';
 
+type PostRow = {
+  id: string;
+  title: string;
+  slug: string;
+  author_name: string;
+  status: 'draft' | 'published';
+  published_at: string | null;
+  updated_at: string | null;
+  categories: { name: string }[] | null;
+};
+
 function formatDate(value: string | null | undefined) {
   if (!value) return '—';
 
@@ -24,7 +35,7 @@ export default async function AdminPostsPage() {
     .select('id, title, slug, author_name, status, published_at, updated_at, categories(name)')
     .order('updated_at', { ascending: false });
 
-  const posts = postsResponse.data ?? [];
+  const posts = (postsResponse.data ?? []) as PostRow[];
 
   return (
     <div className="space-y-8">
@@ -65,65 +76,69 @@ export default async function AdminPostsPage() {
             </thead>
 
             <tbody>
-              {posts.map((post) => (
-                <tr
-                  key={post.id}
-                  className="border-b border-white/10 last:border-b-0"
-                >
-                  <td className="px-6 py-5">
-                    <div className="max-w-[360px]">
-                      <p className="truncate text-base font-medium text-white">
-                        {post.title}
-                      </p>
-                      <p className="mt-1 truncate text-sm text-white/40">
-                        /blog/{post.slug}
-                      </p>
-                    </div>
-                  </td>
+              {posts.map((post) => {
+                const categoryName = post.categories?.[0]?.name || '—';
 
-                  <td className="px-6 py-5 text-sm text-white/65">
-                    {post.categories?.name || '—'}
-                  </td>
+                return (
+                  <tr
+                    key={post.id}
+                    className="border-b border-white/10 last:border-b-0"
+                  >
+                    <td className="px-6 py-5">
+                      <div className="max-w-[360px]">
+                        <p className="truncate text-base font-medium text-white">
+                          {post.title}
+                        </p>
+                        <p className="mt-1 truncate text-sm text-white/40">
+                          /blog/{post.slug}
+                        </p>
+                      </div>
+                    </td>
 
-                  <td className="px-6 py-5 text-sm text-white/65">
-                    {post.author_name}
-                  </td>
+                    <td className="px-6 py-5 text-sm text-white/65">
+                      {categoryName}
+                    </td>
 
-                  <td className="px-6 py-5">
-                    <span
-                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
-                        post.status === 'published'
-                          ? 'bg-emerald-500/15 text-emerald-300'
-                          : 'bg-white/10 text-white/65'
-                      }`}
-                    >
-                      {post.status === 'published' ? 'Live' : 'Draft'}
-                    </span>
-                  </td>
+                    <td className="px-6 py-5 text-sm text-white/65">
+                      {post.author_name}
+                    </td>
 
-                  <td className="px-6 py-5 text-sm text-white/50">
-                    {formatDate(post.published_at || post.updated_at)}
-                  </td>
-
-                  <td className="px-6 py-5">
-                    <div className="flex flex-wrap items-center gap-4 text-sm">
-                      <Link
-                        href={`/blog/${post.slug}`}
-                        className="text-white/55 transition hover:text-white"
+                    <td className="px-6 py-5">
+                      <span
+                        className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                          post.status === 'published'
+                            ? 'bg-emerald-500/15 text-emerald-300'
+                            : 'bg-white/10 text-white/65'
+                        }`}
                       >
-                        View
-                      </Link>
-                      <Link
-                        href={`/admin/posts/${post.id}/edit`}
-                        className="font-medium text-[#e0bb42] transition hover:text-[#f0ce64]"
-                      >
-                        Edit
-                      </Link>
-                      <DeletePostButton postId={post.id} compact />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                        {post.status === 'published' ? 'Live' : 'Draft'}
+                      </span>
+                    </td>
+
+                    <td className="px-6 py-5 text-sm text-white/50">
+                      {formatDate(post.published_at || post.updated_at)}
+                    </td>
+
+                    <td className="px-6 py-5">
+                      <div className="flex flex-wrap items-center gap-4 text-sm">
+                        <Link
+                          href={`/blog/${post.slug}`}
+                          className="text-white/55 transition hover:text-white"
+                        >
+                          View
+                        </Link>
+                        <Link
+                          href={`/admin/posts/${post.id}/edit`}
+                          className="font-medium text-[#e0bb42] transition hover:text-[#f0ce64]"
+                        >
+                          Edit
+                        </Link>
+                        <DeletePostButton postId={post.id} compact />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
 
               {!posts.length ? (
                 <tr>
