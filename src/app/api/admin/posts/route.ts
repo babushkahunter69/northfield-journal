@@ -1,77 +1,144 @@
-import { NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
-import { supabaseAdmin } from '@/lib/supabase/admin'
+import { NextResponse } from 'next/server';
+import { isCookieAdmin } from '@/lib/admin-auth';
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import {
+  estimateReadingTime,
+  excerptFromContent,
+  makeSlug,
+  splitKeywords
+} from '@/lib/utils';
 
-export async function POST(req: Request) {
+export async function POST(request: Request) {
+  const allowed = await isCookieAdmin();
+
+  if (!allowed) {
+    return NextResponse.json(
+      { error: 'Unauthorized: admin cookie missing or invalid.' },
+      { status: 401 }
+    );
+  }
+
   try {
-    const supabase = await createClient()
+    const body = await request.json();
+    const title = String(body.title || '').trim();
+    const content = String(body.content || '').trim();
 
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError) {
+    if (!title || !content) {
       return NextResponse.json(
-        { ok: false, step: 'auth.getUser', error: authError.message },
-        { status: 401 }
-      )
+        { error: 'Title and content are required.' },
+        { status: 400 }
+      );
     }
 
-    if (!user) {
-      return NextResponse.json(
-        { ok: false, step: 'no-user-session', error: 'No logged-in user found' },
-        { status: 401 }
-      )
-    }
+    const slug = String(body.slug || '').trim() || makeSlug(title);
+    const requestedPublishedAt = String(body.published_at || '').trim();
 
-    if (!process.env.ADMIN_EMAIL) {
-      return NextResponse.json(
-        { ok: false, step: 'missing-admin-email', error: 'ADMIN_EMAIL is not set' },
-        { status: 500 }
-      )
-    }
+    const payload = {
+      title,
+      slug,
+      excerpt:
+        String(body.excerpt || '').trim() ||
+        excerptFromContent(content, 180),
+      content,
+      featured_image_url:
+        String(body.featured_image_url || '').trim() || null,
+      author_name: String(body.author_name || 'Editorial Team').trim(),
+      author_bio: String(body.author_bio || '').trim() || null,
+      category_id: String(body.category_id || '').trim() || null,
+      meta_title: String(body.meta_title || '').trim() || title,
+      meta_description:
+        String(body.meta_description || '').trim() ||
+        excerptFromContent(content, 155),
+      keywords: splitKeywords(String(body.keywords || '')),
+      is_featured: Boolean(body.is_featured),
+      status: body.status === 'published' ? 'published' : 'draft',
+      reading_time_minutes: estimateReadingTime(content)
+    };
 
-    if (user.email !== process.env.ADMIN_EMAIL) {
-      return NextResponse.json(
-        {
-          ok: false,
-          step: 'admin-email-mismatch',
-          error: `Logged in as ${user.email}, but ADMIN_EMAIL is ${process.env.ADMIN_EMAIL}`,
-        },
-        { status: 401 }
-      )
-    }
+    if (body.id) {
+      const existingResponse = await supabaseAdmin
+        .from('posts')
+        .select('published_at')
+        .eq('id', body.id)
+        .single();
 
-    const body = await req.json()
+      const existingPublishedAt = existingResponse.data?.published_at || null;
+
+      const nextPublishedAt =
+        payload.status === 'published'
+          ? requestedPublishedAt || existingPublishedAt || new Date().toISOString()
+          : null;
+
+      const { data, error } = await supabaseAdmin
+        .from('posts')
+        .update({
+          ...payload,
+          published_at: nextPublishedAt
+        })
+        .eq('id', body.id)
+        .select()
+        .single();
+
+      if (error) {
+        return NextResponse.json({ error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({ success: true, post: data });
+    }
 
     const { data, error } = await supabaseAdmin
       .from('posts')
       .insert({
-        title: body.title,
-        slug: body.slug,
-        content: body.content,
-        updated_at: new Date().toISOString(),
+        ...payload,
+        published_at:
+          payload.status === 'published'
+            ? requestedPublishedAt || new Date().toISOString()
+            : null
       })
       .select()
-      .single()
+      .single();
 
     if (error) {
-      return NextResponse.json(
-        { ok: false, step: 'db-insert', error: error.message },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json({ ok: true, post: data })
-  } catch (error) {
+    return NextResponse.json({ success: true, post: data });
+  } catch {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  const allowed = await isCookieAdmin();
+
+  if (!allowed) {
     return NextResponse.json(
-      {
-        ok: false,
-        step: 'server-catch',
-        error: error instanceof Error ? error.message : 'Unknown server error',
-      },
-      { status: 500 }
-    )
+      { error: 'Unauthorized: admin cookie missing or invalid.' },
+      { status: 401 }
+    );
+  }
+
+  try {
+    const { id } = await request.json();
+
+    if (!id) {
+      return NextResponse.json(
+        { error: 'Post ID is required.' },
+        { status: 400 }
+      );
+    }
+
+    const { error } = await supabaseAdmin
+      .from('posts')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ success: true });
+  } catch {
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
 }
