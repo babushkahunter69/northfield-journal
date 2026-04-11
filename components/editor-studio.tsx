@@ -193,6 +193,18 @@ function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
 }
 
+function getAuthorInitials(name: string) {
+  const parts = name
+    .split(' ')
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .slice(0, 2);
+
+  if (!parts.length) return 'NJ';
+
+  return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
+}
+
 export function EditorStudio({
   posts,
   categories
@@ -493,6 +505,11 @@ export function EditorStudio({
 
   const previewCategory =
     categories.find((category) => category.id === form.category_id)?.name || 'Journal';
+
+  const previewAuthorName = form.author_name || 'Editorial Team';
+  const previewAuthorBio =
+    form.author_bio || 'Read more from this contributor in the Northfield Journal.';
+  const previewAuthorInitials = getAuthorInitials(previewAuthorName);
 
   return (
     <div className="space-y-10">
@@ -871,13 +888,14 @@ export function EditorStudio({
             Preview it like a reader would
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
-            This is no longer a cramped sidebar card. It uses the wider editorial shell so you can judge title scale, body rhythm, and overall readability before publishing.
+            This version mirrors the public article page much more closely, including
+            the author card and end-of-article call to action.
           </p>
         </div>
 
         <div className="px-4 py-6 sm:px-6 lg:px-8">
           <article className="container-shell article-page py-8 sm:py-10">
-            <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,1fr)_340px]">
               <div className="article-main">
                 <div className="paper article-shell overflow-hidden">
                   <div className="article-hero">
@@ -903,7 +921,7 @@ export function EditorStudio({
                     <div className="article-meta-row mb-6 flex flex-wrap items-center gap-3 text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
                       <span className="text-brand-700">{previewCategory}</span>
                       <span>{form.status}</span>
-                      <span>{form.author_name || 'Editorial Team'}</span>
+                      <span>{previewAuthorName}</span>
                     </div>
 
                     <h1 className="display-font article-title text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
@@ -914,12 +932,55 @@ export function EditorStudio({
                       {form.excerpt || 'Your excerpt will appear here.'}
                     </p>
 
+                    <div className="article-author-card mt-8 block rounded-[28px] border border-slate-200 bg-stone-50 p-5">
+                      <div className="flex items-start gap-4">
+                        <div className="article-author-avatar flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
+                          {previewAuthorInitials}
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-700">
+                            Contributor
+                          </p>
+                          <h2 className="mt-2 text-xl font-semibold text-slate-900">
+                            {previewAuthorName}
+                          </h2>
+                          <p className="mt-2 text-sm leading-7 text-slate-600">
+                            {previewAuthorBio}
+                          </p>
+
+                          <span className="mt-4 inline-flex items-center text-sm font-semibold text-brand-700">
+                            View contributor page →
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
                     <div
                       className={`${ARTICLE_PROSE} mt-12`}
                       dangerouslySetInnerHTML={{
                         __html: stripNofollowFromHtml(form.content)
                       }}
                     />
+
+                    <div className="article-end-cta mt-14 border-t border-slate-200 pt-8">
+                      <p className="text-sm uppercase tracking-[0.18em] text-brand-700">
+                        Continue the conversation
+                      </p>
+                      <h2 className="display-font mt-4 text-3xl font-semibold text-slate-900">
+                        Enjoyed this article?
+                      </h2>
+                      <p className="mt-3 max-w-2xl text-base leading-8 text-slate-600">
+                        Share your perspective with Northfield Journal. We welcome clear,
+                        practical, and thoughtful writing from educators, tutors,
+                        researchers, and contributors.
+                      </p>
+                      <div className="mt-6">
+                        <span className="inline-flex items-center gap-2 text-sm font-semibold text-brand-700">
+                          Contribute to the journal →
+                        </span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -930,7 +991,8 @@ export function EditorStudio({
                     About this preview
                   </p>
                   <p className="mt-3 text-sm leading-7 text-slate-600">
-                    This preview mirrors the public article feel much more closely than the old compact card layout.
+                    This preview mirrors the public article feel much more closely than
+                    the old compact card layout.
                   </p>
                 </div>
 
@@ -939,8 +1001,18 @@ export function EditorStudio({
                     Contributor
                   </p>
                   <p className="mt-3 text-sm leading-7 text-slate-600">
-                    Written by {form.author_name || 'Editorial Team'}
+                    Written by {previewAuthorName}
                     {form.author_bio ? ` — ${form.author_bio}` : '.'}
+                  </p>
+                </div>
+
+                <div className="paper p-6">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
+                    For readers
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    Save ideas that matter, share them with your team, and return when
+                    you need a sharper perspective.
                   </p>
                 </div>
               </aside>
