@@ -750,3 +750,6 @@ html.dark .site-footer__bottom {
     width: min(100%, calc(100% - 20px));
   }
 }
+.article-page {
+  min-height: auto;
+}

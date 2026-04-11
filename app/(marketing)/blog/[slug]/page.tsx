@@ -3,8 +3,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
-import { AdSenseSlot } from '@/components/adsense-slot';
 import { NewsletterForm } from '@/components/newsletter-form';
+import { ArticleEnhancements } from '@/components/article-enhancements';
 import {
   getPostBySlug,
   getRelatedPostsBySlug,
@@ -21,6 +21,15 @@ function stripNofollowFromHtml(html: string) {
 
     return cleaned.length ? ` rel=${quote}${cleaned.join(' ')}${quote}` : '';
   });
+}
+
+function cleanArticleHtml(html: string) {
+  return stripNofollowFromHtml(html)
+    .replace(/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '')
+    .replace(/<h2>(?:\s|&nbsp;|<br\s*\/?>)*<\/h2>/gi, '')
+    .replace(/<h3>(?:\s|&nbsp;|<br\s*\/?>)*<\/h3>/gi, '')
+    .replace(/^(?:\s|&nbsp;|<br\s*\/?>)+/gi, '')
+    .trim();
 }
 
 export async function generateMetadata({
@@ -80,8 +89,13 @@ export default async function PostPage({
 
   if (!post) notFound();
 
+  const cleanedContent = cleanArticleHtml(post.content);
+  const articleUrl = `${getSiteUrl()}/blog/${normalizedSlug}`;
+
   return (
-    <article className="container-shell article-page py-12 sm:py-14">
+    <article className="container-shell article-page pt-12 pb-6 sm:pt-14 sm:pb-8">
+      <ArticleEnhancements title={post.title} url={articleUrl} />
+
       {structuredData ? (
         <script
           type="application/ld+json"
@@ -132,7 +146,7 @@ export default async function PostPage({
 
               <Link
                 href={`/authors/${post.author?.slug ?? ''}`}
-                className="article-author-card mt-8 block rounded-[28px] border border-slate-200 bg-stone-50 p-5 transition duration-200 hover:-translate-y-[1px] hover:border-slate-300"
+                className="article-author-card mt-8 mb-8 block rounded-[28px] border border-slate-200 bg-stone-50 p-5 transition duration-200 hover:-translate-y-[1px] hover:border-slate-300"
               >
                 <div className="flex items-start gap-4">
                   <div className="article-author-avatar flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
@@ -163,19 +177,15 @@ export default async function PostPage({
                 </div>
               </Link>
 
-              <div className="my-10">
-                <AdSenseSlot className="min-h-[120px]" />
-              </div>
-
               <div
-                className="journal-prose prose prose-lg max-w-none prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900"
+                className="journal-prose prose prose-lg max-w-none prose-p:my-5 prose-p:leading-9 prose-headings:tracking-tight prose-h2:mb-5 prose-h2:mt-12 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-4 prose-h3:mt-8 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-6 prose-ol:my-6 prose-li:my-1 prose-blockquote:my-7 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900 [&>*:first-child]:mt-0 [&>*:last-child]:mb-0 [&>p:first-of-type]:text-[1.18rem] [&>p:first-of-type]:leading-9 [&>p:first-of-type:first-letter]:float-left [&>p:first-of-type:first-letter]:mr-3 [&>p:first-of-type:first-letter]:mt-2 [&>p:first-of-type:first-letter]:font-serif [&>p:first-of-type:first-letter]:text-6xl [&>p:first-of-type:first-letter]:font-semibold [&>p:first-of-type:first-letter]:leading-[0.8] [&>p:first-of-type:first-letter]:text-slate-900"
                 dangerouslySetInnerHTML={{
-                  __html: stripNofollowFromHtml(post.content)
+                  __html: cleanedContent
                 }}
               />
 
               {relatedPosts.length ? (
-                <section className="article-related mt-16 border-t border-slate-200 pt-8">
+                <section className="article-related mt-8 border-t border-slate-200 pt-8">
                   <div className="section-header-row">
                     <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
                       Related reading
@@ -251,7 +261,7 @@ export default async function PostPage({
                 </section>
               ) : null}
 
-              <div className="article-end-cta mt-14 border-t border-slate-200 pt-8">
+              <div className="article-end-cta mt-10 border-t border-slate-200 pt-6">
                 <p className="text-sm uppercase tracking-[0.18em] text-brand-700">
                   Continue the conversation
                 </p>
