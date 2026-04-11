@@ -6,52 +6,62 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/admin/posts', label: 'All Posts', icon: '🗂️' },
   { href: '/admin/posts/new', label: 'New Post', icon: '✍️' },
-  { href: '/admin/editor', label: 'Legacy Editor', icon: '🛠️' }
+  { href: '/admin/legacy-editor', label: 'Legacy Editor', icon: '🛠️' }
 ];
 
 export function AdminSidebar() {
   const pathname = usePathname();
 
   return (
-    <aside className="hidden w-[250px] shrink-0 border-r border-white/10 bg-[#0a0a0a] lg:flex lg:flex-col">
-      <div className="border-b border-white/10 px-6 py-7">
-        <Link href="/admin/posts" className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#e0bb42] text-sm font-bold text-black">
-            N
-          </div>
-          <div>
-            <p className="font-semibold text-white">Northfield Journal</p>
-            <p className="text-xs uppercase tracking-[0.18em] text-white/45">
-              Admin
-            </p>
-          </div>
+    <aside className="hidden w-64 shrink-0 border-r border-[#e2d9cb] bg-[#f3eee4] lg:flex lg:flex-col">
+      <Link
+        href="/admin/posts"
+        className="flex items-center gap-3 border-b border-[#e2d9cb] px-6 py-6"
+      >
+        <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[#0f1b3d] text-sm font-bold text-white">
+          N
+        </div>
+
+        <div>
+          <p className="font-serif text-xl font-semibold text-[#0f172a]">
+            Northfield <span className="text-[#9a6730]">Journal</span>
+          </p>
+          <p className="mt-1 text-[11px] uppercase tracking-[0.2em] text-slate-500">
+            Editorial desk
+          </p>
+        </div>
+      </Link>
+
+      <nav className="flex-1 space-y-1 px-4 py-5">
+        {navItems.map((item) => {
+          const active =
+            pathname === item.href ||
+            (item.href !== '/admin/posts' && pathname.startsWith(item.href));
+
+          return (
+            <Link
+              key={item.href}
+              href={item.href}
+              className={`block rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+                active
+                  ? 'bg-[#0f1b3d] text-white'
+                  : 'text-slate-700 hover:bg-white hover:text-[#0f172a]'
+              }`}
+            >
+              {item.icon} {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="border-t border-[#e2d9cb] p-4">
+        <Link
+          href="/api/auth/logout"
+          className="block text-center text-sm font-medium text-slate-500 transition hover:text-red-600"
+        >
+          Sign out
         </Link>
       </div>
-
-      <nav className="flex-1 px-4 py-5">
-        <div className="space-y-1.5">
-          {navItems.map((item) => {
-            const active =
-              pathname === item.href ||
-              (item.href !== '/admin/posts' && pathname.startsWith(item.href));
-
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition ${
-                  active
-                    ? 'bg-[#151515] text-white'
-                    : 'text-white/65 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <span>{item.icon}</span>
-                <span>{item.label}</span>
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
     </aside>
   );
 }

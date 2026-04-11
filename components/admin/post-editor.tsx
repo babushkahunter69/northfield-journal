@@ -28,8 +28,8 @@ const blankPost: EditorPayload = {
   status: 'draft'
 };
 
-const ARTICLE_PROSE =
-  'journal-prose prose prose-lg max-w-none prose-invert prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-headings:text-white prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-blockquote:text-white/80 prose-a:text-[#e0bb42] prose-a:underline prose-strong:text-white';
+const EDITOR_PROSE =
+  'journal-prose prose prose-lg max-w-none prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-headings:text-[#0f172a] prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-blockquote:text-slate-700 prose-a:text-[#9a6730] prose-a:underline prose-strong:text-[#0f172a]';
 
 function stripNofollowFromHtml(html: string) {
   return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
@@ -115,7 +115,7 @@ export function PostEditor({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: `${ARTICLE_PROSE} min-h-[420px] focus:outline-none`
+        class: `${EDITOR_PROSE} min-h-[420px] focus:outline-none`
       }
     },
     onUpdate: ({ editor }) => {
@@ -292,15 +292,15 @@ export function PostEditor({
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#e0bb42]">
+          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9a6730]">
             Publishing
           </p>
-          <h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-white">
+          <h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-[#0f172a]">
             {form.id ? 'Edit Post' : 'New Post'}
           </h1>
-          <p className="mt-3 max-w-2xl text-base leading-8 text-white/60">
+          <p className="mt-3 max-w-2xl text-base leading-8 text-slate-600">
             Write, refine, and publish an article that matches the Northfield Journal
-            brand.
+            tone and editorial style.
           </p>
         </div>
 
@@ -310,7 +310,7 @@ export function PostEditor({
             type="button"
             onClick={() => savePost('draft')}
             disabled={saving}
-            className="rounded-2xl border border-white/10 bg-transparent px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/75 transition hover:bg-white/5 hover:text-white disabled:opacity-60"
+            className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-[#fffdfa] disabled:opacity-60"
           >
             {saving ? 'Saving...' : 'Save Draft'}
           </button>
@@ -318,16 +318,16 @@ export function PostEditor({
             type="button"
             onClick={() => savePost('published')}
             disabled={saving}
-            className="rounded-2xl bg-[#e0bb42] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-black transition hover:brightness-105 disabled:opacity-60"
+            className="rounded-2xl bg-[#0f1b3d] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#16254f] disabled:opacity-60"
           >
             {form.id ? 'Update Live Post' : 'Publish'}
           </button>
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-white/10 bg-[#0d0d0d] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-8">
+      <div className="paper p-6 sm:p-8">
         <div className="grid gap-6">
-          <Field label="Title *" dark>
+          <Field label="Title *">
             <input
               value={form.title}
               onChange={(e) => updateField('title', e.target.value)}
@@ -336,7 +336,7 @@ export function PostEditor({
             />
           </Field>
 
-          <Field label="Excerpt *" dark>
+          <Field label="Excerpt *">
             <textarea
               rows={4}
               value={form.excerpt}
@@ -347,10 +347,10 @@ export function PostEditor({
           </Field>
 
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr_0.9fr]">
-            <Field label="Cover Image" dark>
+            <Field label="Cover Image">
               <div className="space-y-4">
                 {form.featured_image_url ? (
-                  <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-black">
+                  <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-[#e2d9cb] bg-stone-100">
                     <Image
                       src={form.featured_image_url}
                       alt={form.title || 'Featured image preview'}
@@ -359,7 +359,7 @@ export function PostEditor({
                     />
                   </div>
                 ) : (
-                  <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[#090909] text-sm text-white/30">
+                  <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-dashed border-[#d9cfbf] bg-[#fbf8f2] text-sm text-slate-400">
                     No image selected
                   </div>
                 )}
@@ -373,7 +373,7 @@ export function PostEditor({
                   className={inputClass}
                 />
 
-                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/80 transition hover:bg-white/5 hover:text-white">
+                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-[#d9cfbf] bg-white px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-[#fffdfa]">
                   <span>{uploading ? 'Uploading...' : 'Upload Cover'}</span>
                   <input
                     type="file"
@@ -385,7 +385,7 @@ export function PostEditor({
               </div>
             </Field>
 
-            <Field label="Category" dark>
+            <Field label="Category">
               <select
                 value={form.category_id}
                 onChange={(e) => updateField('category_id', e.target.value)}
@@ -400,7 +400,7 @@ export function PostEditor({
               </select>
             </Field>
 
-            <Field label="Author" dark>
+            <Field label="Author">
               <input
                 value={form.author_name}
                 onChange={(e) => updateField('author_name', e.target.value)}
@@ -411,7 +411,7 @@ export function PostEditor({
           </div>
 
           <div className="grid gap-6 md:grid-cols-2">
-            <Field label="Slug" dark>
+            <Field label="Slug">
               <input
                 value={form.slug}
                 onChange={(e) => updateField('slug', e.target.value)}
@@ -420,7 +420,7 @@ export function PostEditor({
               />
             </Field>
 
-            <Field label="Author Bio" dark>
+            <Field label="Author Bio">
               <input
                 value={form.author_bio}
                 onChange={(e) => updateField('author_bio', e.target.value)}
@@ -432,20 +432,20 @@ export function PostEditor({
 
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="mb-2 block text-sm font-semibold text-white/85">Body *</p>
+              <p className="mb-2 block text-sm font-semibold text-slate-700">Body *</p>
             </div>
 
             <button
               type="button"
               onClick={autoGenerateSeo}
-              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/5 hover:text-white"
+              className="rounded-full border border-[#d9cfbf] px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-white"
             >
               Auto-fill SEO
             </button>
           </div>
 
-          <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#111111]">
-            <div className="flex flex-wrap gap-2 border-b border-white/10 bg-white/[0.02] px-4 py-3">
+          <div className="overflow-hidden rounded-[24px] border border-[#e2d9cb] bg-[#fffdfa]">
+            <div className="flex flex-wrap gap-2 border-b border-[#e2d9cb] bg-[#f8f3ea] px-4 py-3">
               <ToolbarButton
                 active={!!editor?.isActive('bold')}
                 onClick={() => editor?.chain().focus().toggleBold().run()}
@@ -503,20 +503,20 @@ export function PostEditor({
               </ToolbarButton>
             </div>
 
-            <div className="px-6 py-6 text-white">
+            <div className="px-6 py-6 text-slate-800">
               <EditorContent editor={editor} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-white/10 bg-[#0d0d0d] p-6 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-8">
-        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/45">
+      <div className="paper p-6 sm:p-8">
+        <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
           SEO and Publishing
         </p>
 
         <div className="mt-6 grid gap-5">
-          <Field label="Meta Title" dark>
+          <Field label="Meta Title">
             <input
               value={form.meta_title}
               onChange={(e) => updateField('meta_title', e.target.value)}
@@ -524,7 +524,7 @@ export function PostEditor({
             />
           </Field>
 
-          <Field label="Meta Description" dark>
+          <Field label="Meta Description">
             <textarea
               rows={4}
               value={form.meta_description}
@@ -533,7 +533,7 @@ export function PostEditor({
             />
           </Field>
 
-          <Field label="Keywords" dark>
+          <Field label="Keywords">
             <input
               value={form.keywords}
               onChange={(e) => updateField('keywords', e.target.value)}
@@ -543,7 +543,7 @@ export function PostEditor({
           </Field>
 
           <div className="grid gap-4 md:grid-cols-2">
-            <label className="flex items-center gap-3 rounded-2xl border border-white/10 bg-white/[0.02] px-4 py-4 text-sm text-white/75">
+            <label className="flex items-center gap-3 rounded-2xl border border-[#e2d9cb] bg-[#fbf8f2] px-4 py-4 text-sm text-slate-700">
               <input
                 type="checkbox"
                 checked={form.is_featured}
@@ -554,7 +554,7 @@ export function PostEditor({
             </label>
 
             <label className="block">
-              <span className="mb-2 block text-sm font-semibold text-white/75">
+              <span className="mb-2 block text-sm font-semibold text-slate-700">
                 Status
               </span>
               <select
@@ -570,19 +570,19 @@ export function PostEditor({
             </label>
           </div>
 
-          {message ? <p className="text-sm text-white/55">{message}</p> : null}
+          {message ? <p className="text-sm text-slate-600">{message}</p> : null}
         </div>
       </div>
 
-      <div className="rounded-[28px] border border-white/10 bg-[#0d0d0d] p-4 shadow-[0_20px_60px_rgba(0,0,0,0.35)] sm:p-6">
-        <div className="mb-6 border-b border-white/10 pb-5">
-          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white/45">
+      <div className="paper overflow-hidden p-4 sm:p-6">
+        <div className="mb-6 border-b border-slate-200 pb-5">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
             Live Preview
           </p>
-          <h2 className="mt-2 font-serif text-3xl font-semibold text-white">
+          <h2 className="display-font mt-2 text-3xl font-semibold text-slate-900">
             Preview it like a reader would
           </h2>
-          <p className="mt-3 max-w-3xl text-sm leading-7 text-white/55">
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
             This mirrors the public article page while keeping the editor simple.
           </p>
         </div>
@@ -722,24 +722,18 @@ export function PostEditor({
 }
 
 const inputClass =
-  'w-full rounded-2xl border border-white/10 bg-[#090909] px-4 py-3 text-white placeholder:text-white/25 focus:border-[#e0bb42] focus:outline-none focus:ring-2 focus:ring-[#e0bb42]/20';
+  'w-full rounded-2xl border border-[#d6cebf] bg-[#fffdfa] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#a16207] focus:outline-none focus:ring-2 focus:ring-[#a16207]/12';
 
 function Field({
   label,
-  children,
-  dark = false
+  children
 }: {
   label: string;
   children: React.ReactNode;
-  dark?: boolean;
 }) {
   return (
     <label className="block">
-      <span
-        className={`mb-2 block text-sm font-semibold ${
-          dark ? 'text-white/85' : 'text-slate-700'
-        }`}
-      >
+      <span className="mb-2 block text-sm font-semibold text-slate-700">
         {label}
       </span>
       {children}
@@ -762,8 +756,8 @@ function ToolbarButton({
       onClick={onClick}
       className={`rounded-xl px-3 py-2 text-sm font-semibold transition ${
         active
-          ? 'bg-[#e0bb42] text-black'
-          : 'border border-white/10 bg-transparent text-white/75 hover:bg-white/5 hover:text-white'
+          ? 'bg-[#0f1b3d] text-white'
+          : 'border border-[#d9cfbf] bg-white text-slate-700 hover:bg-[#fffdfa]'
       }`}
     >
       {children}

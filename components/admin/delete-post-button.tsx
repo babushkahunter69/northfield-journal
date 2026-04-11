@@ -45,8 +45,8 @@ export function DeletePostButton({
       disabled={loading}
       className={
         compact
-          ? 'text-sm font-medium text-red-400 transition hover:text-red-300 disabled:opacity-60'
-          : 'rounded-xl border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:opacity-60'
+          ? 'text-sm font-medium text-red-600 transition hover:text-red-700 disabled:opacity-60'
+          : 'rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60'
       }
     >
       {loading ? 'Deleting...' : 'Delete'}

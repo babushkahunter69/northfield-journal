@@ -11,14 +11,9 @@ export default function AdminLoginPage() {
   const [from, setFrom] = useState('/admin/posts');
 
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
     const params = new URLSearchParams(window.location.search);
     const nextFrom = params.get('from');
-
-    if (nextFrom) {
-      setFrom(nextFrom);
-    }
+    if (nextFrom) setFrom(nextFrom);
   }, []);
 
   async function handleLogin(e: React.FormEvent) {
@@ -67,26 +62,6 @@ export default function AdminLoginPage() {
             Access your publishing dashboard, create articles, edit posts, upload
             cover images, and manage the journal from one place.
           </p>
-
-          <div className="mt-8 grid gap-4 sm:grid-cols-3">
-            {[
-              ['Write', 'Create and publish articles'],
-              ['Edit', 'Update existing content'],
-              ['Manage', 'Review and organize posts']
-            ].map(([title, text]) => (
-              <div
-                key={title}
-                className="rounded-2xl border border-white/10 bg-[#0d0d0d] p-5"
-              >
-                <div className="mb-2 text-xs font-bold uppercase tracking-widest text-[#e0bb42]">
-                  {title}
-                </div>
-                <div className="text-sm leading-relaxed text-white/50">
-                  {text}
-                </div>
-              </div>
-            ))}
-          </div>
         </div>
 
         <div className="w-full max-w-xl lg:ml-auto">
@@ -135,11 +110,6 @@ export default function AdminLoginPage() {
               </button>
             </form>
           </div>
-
-          <p className="mt-5 text-center text-xs leading-relaxed text-white/35 lg:text-left">
-            Set your password in <code className="text-[#e0bb42]">.env.local</code>{' '}
-            as <code className="text-[#e0bb42]">ADMIN_PASSWORD</code>.
-          </p>
         </div>
       </div>
     </div>
