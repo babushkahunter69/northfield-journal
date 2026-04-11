@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
 export default function AdminLoginPage() {
@@ -8,108 +8,83 @@ export default function AdminLoginPage() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [from, setFrom] = useState('/admin/posts');
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const nextFrom = params.get('from');
-    if (nextFrom) setFrom(nextFrom);
-  }, []);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError('');
 
-    try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password })
-      });
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
 
-      const data = await res.json().catch(() => null);
+    setLoading(false);
 
-      if (!res.ok) {
-        setError(data?.error || 'Invalid password');
-        setLoading(false);
-        return;
-      }
-
-      router.push(from);
-      router.refresh();
-    } catch {
-      setError('Unable to sign in right now.');
-      setLoading(false);
+    if (!res.ok) {
+      setError('Invalid password');
+      return;
     }
+
+    router.push('/admin/posts');
   }
 
   return (
-    <div className="min-h-screen bg-[#050505] px-6 py-16 lg:py-24">
-      <div className="mx-auto grid max-w-6xl gap-10 lg:grid-cols-[0.95fr_1.05fr] lg:items-center">
-        <div className="hidden lg:block">
-          <p className="mb-4 text-xs font-bold uppercase tracking-[0.18em] text-[#e0bb42]">
-            Admin Access
-          </p>
+    <div className="min-h-screen bg-[#f7f4ee] flex items-center justify-center px-6">
+      <div className="w-full max-w-xl">
+        {/* Logo / Heading */}
+        <div className="text-center mb-10">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-[#0f1b3d] text-white font-bold mb-4">
+            N
+          </div>
 
-          <h1 className="font-serif text-5xl font-black leading-[1.05] text-white">
-            Sign in to manage
-            <br />
-            <span className="text-[#e0bb42]">Northfield Journal</span>
+          <h1 className="font-serif text-3xl font-semibold text-[#0f172a]">
+            Northfield <span className="text-[#9a6730]">Journal</span>
           </h1>
 
-          <p className="mt-6 max-w-xl text-lg leading-relaxed text-white/55">
-            Access your publishing dashboard, create articles, edit posts, upload
-            cover images, and manage the journal from one place.
+          <p className="mt-3 text-sm text-slate-600">
+            Admin access to the editorial dashboard
           </p>
         </div>
 
-        <div className="w-full max-w-xl lg:ml-auto">
-          <div className="mb-8 flex items-center gap-3 justify-center lg:justify-start">
-            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#e0bb42] text-sm font-black text-black">
-              N
+        {/* Card */}
+        <div className="rounded-[28px] border border-[#e2d9cb] bg-[#fffdfa] p-8 shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
+          <h2 className="font-serif text-2xl font-semibold text-[#0f172a] mb-2">
+            Sign in
+          </h2>
+
+          <p className="text-sm text-slate-500 mb-6">
+            Enter your password to continue
+          </p>
+
+          <form onSubmit={handleLogin} className="space-y-5">
+            <div>
+              <label className="block text-sm font-semibold text-slate-700 mb-2">
+                Password
+              </label>
+
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="w-full rounded-2xl border border-[#d6cebf] bg-[#fffdfa] px-4 py-3 text-slate-800 placeholder:text-slate-400 focus:border-[#a16207] focus:outline-none focus:ring-2 focus:ring-[#a16207]/10"
+                placeholder="Enter admin password"
+              />
             </div>
-            <span className="font-serif text-2xl font-bold text-white">
-              Northfield <span className="text-[#e0bb42]">Journal</span>
-            </span>
-          </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-[#0d0d0d] p-8 shadow-[0_20px_60px_rgba(0,0,0,0.35)] lg:p-10">
-            <h2 className="font-serif text-3xl font-bold text-white">
-              Admin Login
-            </h2>
+            {error && (
+              <p className="text-sm text-red-600">{error}</p>
+            )}
 
-            <p className="mt-2 text-sm text-white/50">
-              Enter your password to access the publishing dashboard.
-            </p>
-
-            <form onSubmit={handleLogin} className="mt-8 space-y-5">
-              <div>
-                <label className="mb-2 block text-sm font-semibold text-white/80">
-                  Password
-                </label>
-                <input
-                  type="password"
-                  className="w-full rounded-2xl border border-white/10 bg-[#090909] px-4 py-3 text-white placeholder:text-white/25 focus:border-[#e0bb42] focus:outline-none focus:ring-2 focus:ring-[#e0bb42]/20"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  placeholder="Enter admin password"
-                  autoFocus
-                  required
-                />
-              </div>
-
-              {error ? <p className="text-sm text-red-400">{error}</p> : null}
-
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full rounded-2xl bg-[#e0bb42] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-black transition hover:brightness-105 disabled:opacity-60"
-              >
-                {loading ? 'Signing in...' : 'Sign In'}
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full rounded-2xl bg-[#0f1b3d] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#16254f] disabled:opacity-60"
+            >
+              {loading ? 'Signing in...' : 'Sign In'}
+            </button>
+          </form>
         </div>
       </div>
     </div>
