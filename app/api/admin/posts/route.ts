@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { isAdmin } from '@/lib/auth';
+import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
   estimateReadingTime,
@@ -8,14 +8,14 @@ import {
   splitKeywords
 } from '@/lib/utils';
 
-/* =========================
-   CREATE / UPDATE
-========================= */
-
 export async function POST(request: Request) {
-  const allowed = await isAdmin();
+  const allowed = await isCookieAdmin();
+
   if (!allowed) {
-    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized: admin cookie missing or invalid.' },
+      { status: 401 }
+    );
   }
 
   try {
@@ -80,10 +80,7 @@ export async function POST(request: Request) {
         .single();
 
       if (error) {
-        return NextResponse.json(
-          { error: error.message },
-          { status: 500 }
-        );
+        return NextResponse.json({ error: error.message }, { status: 500 });
       }
 
       return NextResponse.json({ success: true, post: data });
@@ -102,29 +99,23 @@ export async function POST(request: Request) {
       .single();
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true, post: data });
   } catch {
-    return NextResponse.json(
-      { error: 'Invalid request.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
 }
 
-/* =========================
-   DELETE
-========================= */
-
 export async function DELETE(request: Request) {
-  const allowed = await isAdmin();
+  const allowed = await isCookieAdmin();
+
   if (!allowed) {
-    return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized: admin cookie missing or invalid.' },
+      { status: 401 }
+    );
   }
 
   try {
@@ -143,17 +134,11 @@ export async function DELETE(request: Request) {
       .eq('id', id);
 
     if (error) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
     return NextResponse.json({ success: true });
   } catch {
-    return NextResponse.json(
-      { error: 'Invalid request.' },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
 }
