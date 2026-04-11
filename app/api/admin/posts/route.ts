@@ -31,6 +31,7 @@ export async function POST(request: Request) {
     }
 
     const slug = String(body.slug || '').trim() || makeSlug(title);
+    const requestedPublishedAt = String(body.published_at || '').trim();
 
     const payload = {
       title,
@@ -51,9 +52,7 @@ export async function POST(request: Request) {
       keywords: splitKeywords(String(body.keywords || '')),
       is_featured: Boolean(body.is_featured),
       status: body.status === 'published' ? 'published' : 'draft',
-      reading_time_minutes: estimateReadingTime(content),
-      published_at:
-        body.status === 'published' ? new Date().toISOString() : null
+      reading_time_minutes: estimateReadingTime(content)
     };
 
     if (body.id) {
@@ -63,17 +62,18 @@ export async function POST(request: Request) {
         .eq('id', body.id)
         .single();
 
-      const existingPublishedAt =
-        existingResponse.data?.published_at || null;
+      const existingPublishedAt = existingResponse.data?.published_at || null;
+
+      const nextPublishedAt =
+        payload.status === 'published'
+          ? requestedPublishedAt || existingPublishedAt || new Date().toISOString()
+          : null;
 
       const { data, error } = await supabaseAdmin
         .from('posts')
         .update({
           ...payload,
-          published_at:
-            payload.status === 'published'
-              ? existingPublishedAt || new Date().toISOString()
-              : null
+          published_at: nextPublishedAt
         })
         .eq('id', body.id)
         .select()
@@ -91,7 +91,13 @@ export async function POST(request: Request) {
 
     const { data, error } = await supabaseAdmin
       .from('posts')
-      .insert(payload)
+      .insert({
+        ...payload,
+        published_at:
+          payload.status === 'published'
+            ? requestedPublishedAt || new Date().toISOString()
+            : null
+      })
       .select()
       .single();
 

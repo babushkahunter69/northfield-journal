@@ -11,7 +11,7 @@ import StarterKit from '@tiptap/starter-kit';
 import LinkExtension from '@tiptap/extension-link';
 import { DeletePostButton } from '@/components/admin/delete-post-button';
 
-const blankPost: EditorPayload = {
+const blankPost: EditorPayload & { published_at?: string } = {
   title: '',
   slug: '',
   excerpt: '',
@@ -25,7 +25,8 @@ const blankPost: EditorPayload = {
   meta_description: '',
   keywords: '',
   is_featured: false,
-  status: 'draft'
+  status: 'draft',
+  published_at: ''
 };
 
 const EDITOR_PROSE =
@@ -65,7 +66,22 @@ function getAuthorInitials(name: string) {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
-function buildFormFromPost(post: Post): EditorPayload {
+function toDateTimeLocal(value?: string | null) {
+  if (!value) return '';
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const hours = String(date.getHours()).padStart(2, '0');
+  const minutes = String(date.getMinutes()).padStart(2, '0');
+
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+}
+
+function buildFormFromPost(post: Post): EditorPayload & { published_at?: string } {
   return {
     id: post.id,
     title: post.title,
@@ -80,11 +96,15 @@ function buildFormFromPost(post: Post): EditorPayload {
     meta_description: post.meta_description || '',
     keywords: (post.keywords || []).join(', '),
     is_featured: post.is_featured,
-    status: post.status
+    status: post.status,
+    published_at: toDateTimeLocal((post as Post & { published_at?: string }).published_at)
   };
 }
 
-function normalizePayload(form: EditorPayload, html: string) {
+function normalizePayload(
+  form: EditorPayload & { published_at?: string },
+  html: string
+) {
   return {
     ...form,
     content: html,
@@ -92,7 +112,8 @@ function normalizePayload(form: EditorPayload, html: string) {
     excerpt: form.excerpt || excerptFromContent(stripHtml(html), 180),
     meta_title: form.meta_title || form.title,
     meta_description:
-      form.meta_description || excerptFromContent(stripHtml(html), 155)
+      form.meta_description || excerptFromContent(stripHtml(html), 155),
+    published_at: form.published_at || ''
   };
 }
 
@@ -105,7 +126,7 @@ export function PostEditor({
 }) {
   const router = useRouter();
 
-  const [form, setForm] = useState<EditorPayload>(() => {
+  const [form, setForm] = useState<EditorPayload & { published_at?: string }>(() => {
     if (!initialPost) return blankPost;
     return buildFormFromPost(initialPost);
   });
@@ -119,6 +140,7 @@ export function PostEditor({
   const toastIdRef = useRef(1);
   const initialSignatureRef = useRef('');
   const redirectHandledRef = useRef(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   function showToast(
     title: string,
@@ -132,9 +154,9 @@ export function PostEditor({
     }, 2600);
   }
 
-  function updateField<K extends keyof EditorPayload>(
+  function updateField<K extends keyof (EditorPayload & { published_at?: string })>(
     key: K,
-    value: EditorPayload[K]
+    value: (EditorPayload & { published_at?: string })[K]
   ) {
     setForm((prev) => ({ ...prev, [key]: value }));
   }
@@ -193,7 +215,8 @@ export function PostEditor({
       meta_description: form.meta_description,
       keywords: form.keywords,
       is_featured: form.is_featured,
-      status: form.status
+      status: form.status,
+      published_at: form.published_at || ''
     });
   }, [form]);
 
@@ -221,8 +244,7 @@ export function PostEditor({
       ? stripNofollowFromHtml(editor.getHTML())
       : stripNofollowFromHtml(form.content);
 
-    const targetStatus =
-      mode === 'manual-publish' ? 'published' : 'draft';
+    const targetStatus = mode === 'manual-publish' ? 'published' : 'draft';
 
     const payload = normalizePayload(
       {
@@ -281,7 +303,8 @@ export function PostEditor({
         meta_description: merged.meta_description,
         keywords: merged.keywords,
         is_featured: merged.is_featured,
-        status: merged.status
+        status: merged.status,
+        published_at: merged.published_at || ''
       });
 
       setLastSavedAt(new Date());
@@ -492,7 +515,15 @@ export function PostEditor({
               </>
             ) : null}
 
-            {form.id ? <DeletePostButton postId={form.id} /> : null}
+            {form.id ? (
+              <DeletePostButton
+                postId={form.id}
+                onDeleted={() => {
+                  showToast('Article deleted.', 'success');
+                  router.replace('/admin/posts');
+                }}
+              />
+            ) : null}
 
             <button
               type="button"
@@ -536,7 +567,7 @@ export function PostEditor({
             />
           </Field>
 
-          <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr_0.9fr]">
+          <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr_0.85fr]">
             <Field label="Cover Image">
               <div className="space-y-4">
                 {form.featured_image_url ? (
@@ -547,31 +578,67 @@ export function PostEditor({
                       fill
                       className="object-cover"
                     />
+
+                    <div className="absolute inset-x-0 bottom-0 flex flex-wrap gap-2 bg-[linear-gradient(to_top,rgba(15,23,42,0.62),transparent)] p-4">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="rounded-full bg-white/90 px-3 py-2 text-xs font-semibold text-slate-800 transition hover:bg-white"
+                      >
+                        Replace image
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateField('featured_image_url', '');
+                          showToast('Cover image removed.', 'default');
+                        }}
+                        className="rounded-full bg-red-500/90 px-3 py-2 text-xs font-semibold text-white transition hover:bg-red-600"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 ) : (
-                  <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-dashed border-[#d9cfbf] bg-[#fbf8f2] text-sm text-slate-400">
-                    No image selected
-                  </div>
+                  <button
+                    type="button"
+                    onClick={() => fileInputRef.current?.click()}
+                    className="flex aspect-[16/10] w-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#d9cfbf] bg-[#fbf8f2] px-6 text-center transition hover:bg-white"
+                  >
+                    <span className="text-sm font-semibold text-slate-700">
+                      Upload a cover image
+                    </span>
+                    <span className="mt-2 text-xs leading-6 text-slate-500">
+                      Choose a file from your computer to give the story a stronger first impression.
+                    </span>
+                  </button>
                 )}
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*"
+                  onChange={uploadImage}
+                  className="hidden"
+                />
 
                 <input
                   value={form.featured_image_url}
                   onChange={(e) =>
                     updateField('featured_image_url', e.target.value)
                   }
-                  placeholder="Paste image URL"
+                  placeholder="Or paste image URL"
                   className={inputClass}
                 />
 
-                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-[#d9cfbf] bg-white px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-[#fffdfa]">
-                  <span>{uploading ? 'Uploading...' : 'Upload Cover'}</span>
-                  <input
-                    type="file"
-                    accept="image/*"
-                    onChange={uploadImage}
-                    className="hidden"
-                  />
-                </label>
+                <div className="flex flex-wrap gap-3 text-xs text-slate-500">
+                  <span className="rounded-full bg-[#f5efe4] px-3 py-1.5">
+                    {uploading ? 'Uploading image...' : 'Upload supported'}
+                  </span>
+                  <span className="rounded-full bg-[#f5efe4] px-3 py-1.5">
+                    JPG, PNG, WebP
+                  </span>
+                </div>
               </div>
             </Field>
 
@@ -757,6 +824,20 @@ export function PostEditor({
               </select>
             </label>
           </div>
+
+          <Field label="Publish Date">
+            <input
+              type="datetime-local"
+              value={form.published_at || ''}
+              onChange={(e) => updateField('published_at', e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+
+          <p className="text-sm leading-7 text-slate-500">
+            Set the article’s publication timestamp here. This controls the saved
+            publish date used by the CMS. It does not automate future publishing yet.
+          </p>
         </div>
       </div>
 
