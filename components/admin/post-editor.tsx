@@ -15,8 +15,7 @@ const blankPost: EditorPayload & { published_at?: string } = {
   title: '',
   slug: '',
   excerpt: '',
-  content:
-    '<h2>Start writing</h2><p>Use headings, paragraphs, lists, links, and quotes.</p>',
+  content: '',
   featured_image_url: '',
   author_name: 'Editorial Team',
   author_bio: '',
