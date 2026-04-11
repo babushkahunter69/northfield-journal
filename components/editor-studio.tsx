@@ -26,7 +26,168 @@ const blankPost: EditorPayload = {
 };
 
 const ARTICLE_PROSE =
-  'journal-prose prose prose-lg max-w-none prose-headings:tracking-tight prose-h2:mt-10 prose-h2:text-3xl prose-h3:mt-7 prose-h3:text-2xl prose-p:my-4 prose-p:leading-8 prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5';
+  'journal-prose prose prose-lg max-w-none prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900';
+
+type EditorMode = 'visual' | 'html';
+
+function stripNofollowFromHtml(html: string) {
+  return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
+    const cleaned = String(value)
+      .split(/\s+/)
+      .filter(Boolean)
+      .filter((token) => token.toLowerCase() !== 'nofollow');
+
+    return cleaned.length ? ` rel=${quote}${cleaned.join(' ')}${quote}` : '';
+  });
+}
+
+function escapeHtml(text: string) {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
+
+function normalizeText(text: string) {
+  return text.replace(/\s+/g, ' ').trim();
+}
+
+function cleanTiptapHtml(input: string) {
+  if (!input || typeof window === 'undefined') return input || '';
+
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(input, 'text/html');
+
+  const allowedTags = new Set([
+    'p',
+    'h1',
+    'h2',
+    'h3',
+    'ul',
+    'ol',
+    'li',
+    'blockquote',
+    'strong',
+    'b',
+    'em',
+    'i',
+    'a',
+    'br'
+  ]);
+
+  const unwrapTags = new Set([
+    'div',
+    'section',
+    'article',
+    'main',
+    'header',
+    'footer',
+    'span',
+    'font'
+  ]);
+
+  function cleanNode(node: Node): string {
+    if (node.nodeType === Node.TEXT_NODE) {
+      return escapeHtml(node.textContent ?? '');
+    }
+
+    if (node.nodeType !== Node.ELEMENT_NODE) {
+      return '';
+    }
+
+    const el = node as HTMLElement;
+    const tag = el.tagName.toLowerCase();
+
+    if (tag === 'script' || tag === 'style' || tag === 'meta') {
+      return '';
+    }
+
+    const children = Array.from(el.childNodes).map(cleanNode).join('');
+
+    if (unwrapTags.has(tag)) {
+      return children;
+    }
+
+    if (!allowedTags.has(tag)) {
+      return children;
+    }
+
+    if (tag === 'a') {
+      const rawHref = el.getAttribute('href')?.trim() || '';
+      const safeHref =
+        rawHref.startsWith('http://') ||
+        rawHref.startsWith('https://') ||
+        rawHref.startsWith('/') ||
+        rawHref.startsWith('#')
+          ? rawHref
+          : '';
+
+      if (!safeHref) return children;
+
+      return `<a href="${escapeHtml(safeHref)}" rel="noopener noreferrer">${children}</a>`;
+    }
+
+    if (tag === 'strong' || tag === 'b') {
+      return `<strong>${children}</strong>`;
+    }
+
+    if (tag === 'em' || tag === 'i') {
+      return `<em>${children}</em>`;
+    }
+
+    if (tag === 'br') {
+      return '<br>';
+    }
+
+    if (tag === 'p') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly && !children.includes('<br>')) return '';
+      return `<p>${children}</p>`;
+    }
+
+    if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly) return '';
+      return `<${tag}>${children}</${tag}>`;
+    }
+
+    if (tag === 'blockquote') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly) return '';
+      return `<blockquote>${children}</blockquote>`;
+    }
+
+    if (tag === 'ul' || tag === 'ol') {
+      const items = Array.from(el.children)
+        .filter((child) => child.tagName.toLowerCase() === 'li')
+        .map((child) => cleanNode(child))
+        .join('');
+
+      return items ? `<${tag}>${items}</${tag}>` : '';
+    }
+
+    if (tag === 'li') {
+      const textOnly = normalizeText(el.textContent ?? '');
+      if (!textOnly) return '';
+      return `<li>${children}</li>`;
+    }
+
+    return children;
+  }
+
+  let html = Array.from(doc.body.childNodes).map(cleanNode).join('');
+
+  html = html
+    .replace(/<p>\s*<\/p>/g, '')
+    .replace(/<h1>\s*<\/h1>/g, '')
+    .replace(/<h2>\s*<\/h2>/g, '')
+    .replace(/<h3>\s*<\/h3>/g, '')
+    .replace(/\n+/g, '')
+    .trim();
+
+  return stripNofollowFromHtml(html);
+}
 
 function stripHtml(html: string) {
   return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
@@ -41,9 +202,10 @@ export function EditorStudio({
 }) {
   const [selectedId, setSelectedId] = useState<string>('new');
   const [form, setForm] = useState<EditorPayload>(blankPost);
-  const [mode, setMode] = useState<'html' | 'visual'>('html');
-  const [message, setMessage] = useState('');
+  const [message, setMessage] = useState<string>('');
   const [saving, setSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [mode, setMode] = useState<EditorMode>('html');
 
   const selectedPost = useMemo(
     () => posts.find((post) => post.id === selectedId),
@@ -58,28 +220,77 @@ export function EditorStudio({
   }
 
   const editor = useEditor({
-    extensions: [StarterKit, Link],
+    extensions: [
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3]
+        }
+      }),
+      Link.configure({
+        openOnClick: false,
+        autolink: true,
+        linkOnPaste: true,
+        HTMLAttributes: {
+          rel: 'noopener noreferrer'
+        }
+      })
+    ],
     content: form.content,
+    immediatelyRender: false,
+    editorProps: {
+      attributes: {
+        class: `${ARTICLE_PROSE} focus:outline-none`
+      },
+      handlePaste(_view, event) {
+        const html = event.clipboardData?.getData('text/html');
+        if (!html || !editor) return false;
+
+        event.preventDefault();
+
+        const cleaned = cleanTiptapHtml(html) || '<p></p>';
+
+        editor.commands.insertContent(cleaned, {
+          parseOptions: {
+            preserveWhitespace: false
+          }
+        });
+
+        setForm((prev) => ({ ...prev, content: editor.getHTML() }));
+        setMessage('Pasted content was cleaned automatically.');
+        return true;
+      }
+    },
     onUpdate: ({ editor }) => {
       if (mode === 'visual') {
-        setForm((prev) => ({ ...prev, content: editor.getHTML() }));
+        const html = stripNofollowFromHtml(editor.getHTML());
+        setForm((prev) => ({ ...prev, content: html }));
       }
     }
   });
 
-  /* =========================
-     LOAD POST
-  ========================= */
+  useEffect(() => {
+    if (!editor || mode !== 'visual') return;
+    const currentHtml = editor.getHTML();
+    if (form.content !== currentHtml) {
+      editor.commands.setContent(form.content || '', {
+        parseOptions: {
+          preserveWhitespace: false
+        }
+      });
+    }
+  }, [editor, form.content, mode]);
 
   function loadPost(id: string) {
     setSelectedId(id);
 
     if (id === 'new') {
       setForm(blankPost);
+      setMessage('');
+      setMode('html');
       return;
     }
 
-    const post = posts.find((p) => p.id === id);
+    const post = posts.find((item) => item.id === id);
     if (!post) return;
 
     setForm({
@@ -87,7 +298,7 @@ export function EditorStudio({
       title: post.title,
       slug: post.slug,
       excerpt: post.excerpt,
-      content: post.content,
+      content: stripNofollowFromHtml(post.content),
       featured_image_url: post.featured_image_url || '',
       author_name: post.author_name,
       author_bio: post.author_bio || '',
@@ -98,44 +309,64 @@ export function EditorStudio({
       is_featured: post.is_featured,
       status: post.status
     });
+
+    setMessage('');
   }
 
-  /* =========================
-     EDITOR COMMANDS (FIXED)
-  ========================= */
+  function switchToVisualMode() {
+    if (!editor) {
+      setMode('visual');
+      return;
+    }
 
-  function applyHeading(level: 2 | 3) {
-    editor?.chain().focus().setParagraph().toggleHeading({ level }).run();
+    const cleaned = cleanTiptapHtml(form.content || '<p></p>');
+    editor.commands.setContent(cleaned, {
+      parseOptions: {
+        preserveWhitespace: false
+      }
+    });
+    setForm((prev) => ({ ...prev, content: cleaned }));
+    setMode('visual');
+    setMessage('Switched to visual editor.');
   }
 
-  function applyList() {
-    editor?.chain().focus().toggleBulletList().run();
+  function switchToHtmlMode() {
+    if (editor) {
+      const html = stripNofollowFromHtml(editor.getHTML());
+      setForm((prev) => ({ ...prev, content: html }));
+    }
+    setMode('html');
+    setMessage('Switched to HTML editor.');
   }
 
-  function applyQuote() {
-    editor?.chain().focus().toggleBlockquote().run();
+  function autoGenerateSeo() {
+    setForm((prev) => ({
+      ...prev,
+      slug: prev.slug || makeSlug(prev.title),
+      excerpt: prev.excerpt || excerptFromContent(stripHtml(prev.content), 180),
+      meta_title: prev.meta_title || prev.title,
+      meta_description:
+        prev.meta_description || excerptFromContent(stripHtml(prev.content), 155)
+    }));
   }
-
-  function insertLink() {
-    if (!editor) return;
-    const url = window.prompt('Enter URL');
-    if (!url) return;
-    editor.chain().focus().setLink({ href: url }).run();
-  }
-
-  /* =========================
-     SAVE
-  ========================= */
 
   async function savePost() {
     setSaving(true);
+    setMessage('');
+
+    const finalContent =
+      mode === 'visual' && editor
+        ? stripNofollowFromHtml(editor.getHTML())
+        : stripNofollowFromHtml(form.content);
 
     const payload = {
       ...form,
+      content: finalContent,
       slug: form.slug || makeSlug(form.title),
-      excerpt:
-        form.excerpt ||
-        excerptFromContent(stripHtml(form.content), 180)
+      excerpt: form.excerpt || excerptFromContent(stripHtml(finalContent), 180),
+      meta_title: form.meta_title || form.title,
+      meta_description:
+        form.meta_description || excerptFromContent(stripHtml(finalContent), 155)
     };
 
     const res = await fetch('/api/admin/posts', {
@@ -144,27 +375,36 @@ export function EditorStudio({
       body: JSON.stringify(payload)
     });
 
+    const data = await res.json();
     setSaving(false);
 
     if (!res.ok) {
-      setMessage('Save failed');
+      setMessage(data.error || 'Unable to save.');
       return;
     }
 
-    setMessage('Saved');
-  }
+    setForm((prev) => ({ ...prev, content: payload.content }));
+    setMessage('Saved successfully.');
 
-  /* =========================
-     DELETE
-  ========================= */
+    if (data.post?.id) {
+      setSelectedId(data.post.id);
+      setForm({
+        ...payload,
+        id: data.post.id
+      });
+    }
+  }
 
   async function deletePost() {
     if (!form.id) return;
 
     const confirmed = window.confirm(
-      'Delete this article permanently?'
+      'Are you sure you want to delete this article? This cannot be undone.'
     );
+
     if (!confirmed) return;
+
+    setMessage('Deleting...');
 
     const res = await fetch('/api/admin/posts', {
       method: 'DELETE',
@@ -172,168 +412,583 @@ export function EditorStudio({
       body: JSON.stringify({ id: form.id })
     });
 
+    const data = await res.json().catch(() => null);
+
     if (!res.ok) {
-      setMessage('Delete failed');
+      setMessage(data?.error || 'Delete failed.');
       return;
     }
 
-    setMessage('Deleted');
-
     setSelectedId('new');
     setForm(blankPost);
-
+    setMessage('Deleted successfully.');
     window.location.reload();
   }
 
+  async function uploadImage(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    setUploading(true);
+    setMessage('');
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const res = await fetch('/api/admin/upload-image', {
+      method: 'POST',
+      body: formData
+    });
+
+    const data = await res.json();
+    setUploading(false);
+
+    if (!res.ok) {
+      setMessage(data.error || 'Upload failed.');
+      return;
+    }
+
+    setForm((prev) => ({ ...prev, featured_image_url: data.url }));
+    setMessage('Featured image uploaded.');
+  }
+
+  function insertLink() {
+    if (!editor) return;
+
+    const previousUrl = editor.getAttributes('link').href as string | undefined;
+    const url = window.prompt('Enter URL', previousUrl || '');
+
+    if (url === null) return;
+
+    if (url.trim() === '') {
+      editor.chain().focus().unsetLink().run();
+      return;
+    }
+
+    editor
+      .chain()
+      .focus()
+      .extendMarkRange('link')
+      .setLink({
+        href: url.trim(),
+        rel: 'noopener noreferrer'
+      })
+      .run();
+  }
+
+  function applyHeading(level: 2 | 3) {
+    if (!editor) return;
+    editor.chain().focus().setParagraph().toggleHeading({ level }).run();
+  }
+
+  function applyBulletList() {
+    if (!editor) return;
+    editor.chain().focus().toggleBulletList().run();
+  }
+
+  function applyBlockquote() {
+    if (!editor) return;
+    editor.chain().focus().toggleBlockquote().run();
+  }
+
+  const previewCategory =
+    categories.find((category) => category.id === form.category_id)?.name || 'Journal';
+
   return (
     <div className="space-y-10">
+      <div className="grid gap-8 xl:grid-cols-[300px_minmax(0,1fr)]">
+        <aside className="paper sticky top-24 h-fit p-5">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                Posts
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-slate-900">
+                Editorial desk
+              </h2>
+            </div>
 
-      {/* ================= SIDEBAR ================= */}
-
-      <div className="grid gap-8 xl:grid-cols-[300px_1fr]">
-
-        <aside className="paper p-4 space-y-2">
-          <button onClick={() => loadPost('new')}>
-            New post
-          </button>
-
-          {posts.map((p) => (
-            <button key={p.id} onClick={() => loadPost(p.id)}>
-              {p.title}
+            <button
+              type="button"
+              onClick={() => loadPost('new')}
+              className="rounded-full border border-slate-300 px-3 py-1.5 text-xs font-semibold text-slate-800 transition hover:bg-white"
+            >
+              New post
             </button>
-          ))}
+          </div>
+
+          <div className="grid gap-2">
+            <button
+              type="button"
+              onClick={() => loadPost('new')}
+              className={`rounded-2xl border px-4 py-3 text-left transition ${
+                selectedId === 'new'
+                  ? 'border-slate-900 bg-slate-900 text-white'
+                  : 'border-slate-200 bg-stone-50 text-slate-700 hover:bg-white'
+              }`}
+            >
+              <p className="font-semibold">Draft a new article</p>
+              <p className="mt-1 text-xs uppercase tracking-[0.18em] opacity-70">
+                fresh post
+              </p>
+            </button>
+
+            {posts.map((post) => (
+              <button
+                key={post.id}
+                type="button"
+                onClick={() => loadPost(post.id)}
+                className={`rounded-2xl border px-4 py-3 text-left transition ${
+                  selectedId === post.id
+                    ? 'border-slate-900 bg-slate-900 text-white'
+                    : 'border-slate-200 bg-stone-50 text-slate-700 hover:bg-white'
+                }`}
+              >
+                <p className="line-clamp-2 font-semibold">{post.title}</p>
+                <div className="mt-2 flex items-center gap-2 text-[11px] uppercase tracking-[0.18em] opacity-70">
+                  <span>{post.status}</span>
+                </div>
+              </button>
+            ))}
+          </div>
         </aside>
 
-        {/* ================= EDITOR ================= */}
+        <section className="space-y-8">
+          <div className="paper p-6 sm:p-8">
+            <div className="mb-8 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                  Content studio
+                </p>
+                <h2 className="display-font mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
+                  {selectedPost ? 'Edit article' : 'Create article'}
+                </h2>
+                <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
+                  Use HTML mode for reliable article pasting. Use the live preview below
+                  to judge spacing, hierarchy, and how the story will actually feel on the site.
+                </p>
+              </div>
 
-        <div className="space-y-6">
-
-          <div className="paper p-6 space-y-6">
-
-            <input
-              placeholder="Title"
-              value={form.title}
-              onChange={(e) =>
-                updateField('title', e.target.value)
-              }
-            />
-
-            <textarea
-              placeholder="Excerpt"
-              value={form.excerpt}
-              onChange={(e) =>
-                updateField('excerpt', e.target.value)
-              }
-            />
-
-            <div className="flex gap-2">
-              <button onClick={() => setMode('html')}>HTML</button>
-              <button onClick={() => setMode('visual')}>
-                Visual
+              <button
+                type="button"
+                onClick={autoGenerateSeo}
+                className="rounded-full border border-slate-300 px-4 py-2 text-sm font-semibold text-slate-800 transition hover:bg-white"
+              >
+                Auto-fill SEO
               </button>
             </div>
 
-            {mode === 'html' ? (
-              <textarea
-                rows={16}
-                value={form.content}
-                onChange={(e) =>
-                  updateField('content', e.target.value)
-                }
-              />
-            ) : (
-              <div className="border rounded-2xl">
+            <div className="grid gap-6">
+              <Field label="Title">
+                <input
+                  value={form.title}
+                  onChange={(e) => updateField('title', e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                  placeholder="Enter article title"
+                />
+              </Field>
 
-                <div className="flex gap-2 p-3 border-b">
-                  <button onClick={() => editor?.chain().focus().toggleBold().run()}>Bold</button>
-                  <button onClick={() => editor?.chain().focus().toggleItalic().run()}>Italic</button>
-                  <button onClick={() => applyHeading(2)}>H2</button>
-                  <button onClick={() => applyHeading(3)}>H3</button>
-                  <button onClick={applyList}>List</button>
-                  <button onClick={applyQuote}>Quote</button>
-                  <button onClick={insertLink}>Link</button>
-                </div>
+              <div className="grid gap-6 md:grid-cols-2">
+                <Field label="Slug">
+                  <input
+                    value={form.slug}
+                    onChange={(e) => updateField('slug', e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    placeholder="article-slug"
+                  />
+                </Field>
 
-                <div className="p-5 min-h-[300px]">
-                  <EditorContent editor={editor} />
-                </div>
+                <Field label="Category">
+                  <select
+                    value={form.category_id}
+                    onChange={(e) => updateField('category_id', e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                  >
+                    <option value="">No category</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </Field>
               </div>
-            )}
 
-            {/* SAVE + DELETE */}
-            <div className="flex gap-3">
-              <button
-                onClick={savePost}
-                className="button-primary"
-              >
-                {saving ? 'Saving...' : 'Save'}
-              </button>
+              <div className="grid gap-6 md:grid-cols-2">
+                <Field label="Author name">
+                  <input
+                    value={form.author_name}
+                    onChange={(e) => updateField('author_name', e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    placeholder="Editorial Team"
+                  />
+                </Field>
 
-              {form.id && (
+                <Field label="Author bio">
+                  <input
+                    value={form.author_bio}
+                    onChange={(e) => updateField('author_bio', e.target.value)}
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                    placeholder="Short contributor bio"
+                  />
+                </Field>
+              </div>
+
+              <Field label="Excerpt">
+                <textarea
+                  rows={4}
+                  value={form.excerpt}
+                  onChange={(e) => updateField('excerpt', e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                  placeholder="A short dek or summary for the article"
+                />
+              </Field>
+
+              <Field label="Featured image">
+                <div className="grid gap-3">
+                  <input
+                    value={form.featured_image_url}
+                    onChange={(e) => updateField('featured_image_url', e.target.value)}
+                    placeholder="Paste image URL or upload below"
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                  />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={uploadImage}
+                    className="w-full rounded-2xl border border-dashed border-slate-300 bg-white px-4 py-3 text-sm"
+                  />
+                  {uploading ? (
+                    <p className="text-sm text-slate-500">Uploading image...</p>
+                  ) : null}
+                  {form.featured_image_url ? (
+                    <div className="relative aspect-[16/8] overflow-hidden rounded-[24px] border border-slate-200 bg-stone-50">
+                      <Image
+                        src={form.featured_image_url}
+                        alt={form.title || 'Featured image preview'}
+                        fill
+                        className="object-cover"
+                      />
+                    </div>
+                  ) : null}
+                </div>
+              </Field>
+
+              <div className="flex flex-wrap gap-2">
                 <button
-                  onClick={deletePost}
-                  className="button-secondary text-red-600"
+                  type="button"
+                  onClick={switchToHtmlMode}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    mode === 'html'
+                      ? 'bg-slate-900 text-white'
+                      : 'border border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                  }`}
                 >
-                  Delete
+                  HTML editor
                 </button>
+                <button
+                  type="button"
+                  onClick={switchToVisualMode}
+                  className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
+                    mode === 'visual'
+                      ? 'bg-slate-900 text-white'
+                      : 'border border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+                  }`}
+                >
+                  Visual editor
+                </button>
+              </div>
+
+              {mode === 'html' ? (
+                <Field label="Body HTML">
+                  <textarea
+                    rows={20}
+                    value={form.content}
+                    onChange={(e) =>
+                      updateField('content', stripNofollowFromHtml(e.target.value))
+                    }
+                    placeholder="<h2>Section</h2><p>Paragraph...</p>"
+                    className="w-full rounded-[24px] border border-slate-300 bg-white px-4 py-4 font-mono text-sm leading-7 text-slate-800"
+                  />
+                </Field>
+              ) : (
+                <Field label="Body">
+                  <div className="overflow-hidden rounded-[24px] border border-slate-300 bg-white">
+                    <div className="flex flex-wrap gap-2 border-b border-slate-200 bg-stone-50 px-4 py-3">
+                      <ToolbarButton
+                        active={!!editor?.isActive('bold')}
+                        onClick={() => editor?.chain().focus().toggleBold().run()}
+                      >
+                        Bold
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('italic')}
+                        onClick={() => editor?.chain().focus().toggleItalic().run()}
+                      >
+                        Italic
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('heading', { level: 2 })}
+                        onClick={() => applyHeading(2)}
+                      >
+                        H2
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('heading', { level: 3 })}
+                        onClick={() => applyHeading(3)}
+                      >
+                        H3
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('bulletList')}
+                        onClick={applyBulletList}
+                      >
+                        List
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('blockquote')}
+                        onClick={applyBlockquote}
+                      >
+                        Quote
+                      </ToolbarButton>
+
+                      <ToolbarButton
+                        active={!!editor?.isActive('link')}
+                        onClick={insertLink}
+                      >
+                        Link
+                      </ToolbarButton>
+                    </div>
+
+                    <div className="min-h-[420px] px-6 py-5">
+                      <EditorContent editor={editor} />
+                    </div>
+                  </div>
+                </Field>
               )}
             </div>
-
-            {message && <p>{message}</p>}
           </div>
 
-        </div>
+          <div className="paper p-6 sm:p-8">
+            <div className="mb-5">
+              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+                SEO and publishing
+              </p>
+            </div>
+
+            <div className="grid gap-5">
+              <Field label="Meta title">
+                <input
+                  value={form.meta_title}
+                  onChange={(e) => updateField('meta_title', e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                />
+              </Field>
+
+              <Field label="Meta description">
+                <textarea
+                  rows={4}
+                  value={form.meta_description}
+                  onChange={(e) => updateField('meta_description', e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                />
+              </Field>
+
+              <Field label="Keywords (comma-separated)">
+                <input
+                  value={form.keywords}
+                  onChange={(e) => updateField('keywords', e.target.value)}
+                  className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                />
+              </Field>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <label className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-stone-50 px-4 py-4 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={form.is_featured}
+                    onChange={(e) => updateField('is_featured', e.target.checked)}
+                    className="h-4 w-4"
+                  />
+                  Featured post
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">
+                    Status
+                  </span>
+                  <select
+                    value={form.status}
+                    onChange={(e) =>
+                      updateField('status', e.target.value as 'draft' | 'published')
+                    }
+                    className="w-full rounded-2xl border border-slate-300 bg-white px-4 py-3"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="published">Published</option>
+                  </select>
+                </label>
+              </div>
+
+              <div className="flex flex-wrap gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={savePost}
+                  disabled={saving}
+                  className="rounded-2xl bg-slate-900 px-5 py-3 font-semibold text-white transition hover:bg-slate-700 disabled:opacity-70"
+                >
+                  {saving ? 'Saving...' : form.id ? 'Save changes' : 'Create post'}
+                </button>
+
+                {form.id ? (
+                  <button
+                    type="button"
+                    onClick={deletePost}
+                    className="rounded-2xl border border-red-300 bg-white px-5 py-3 font-semibold text-red-600 transition hover:bg-red-50"
+                  >
+                    Delete article
+                  </button>
+                ) : null}
+              </div>
+
+              {message ? <p className="text-sm text-slate-600">{message}</p> : null}
+            </div>
+          </div>
+        </section>
       </div>
 
-      {/* ================= FULL PREVIEW ================= */}
-
-      <article className="container-shell article-page py-12">
-
-        <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1fr_320px]">
-
-          <div>
-            <div className="paper overflow-hidden">
-
-              <div className="relative aspect-[16/8] bg-stone-200">
-                {form.featured_image_url && (
-                  <Image
-                    src={form.featured_image_url}
-                    alt=""
-                    fill
-                    className="object-cover"
-                  />
-                )}
-              </div>
-
-              <div className="p-10">
-
-                <h1 className="display-font text-5xl">
-                  {form.title || 'Untitled'}
-                </h1>
-
-                <p className="mt-4 text-xl text-slate-600">
-                  {form.excerpt}
-                </p>
-
-                <div
-                  className={`${ARTICLE_PROSE} mt-10`}
-                  dangerouslySetInnerHTML={{
-                    __html: form.content
-                  }}
-                />
-
-              </div>
-            </div>
-          </div>
-
-          <aside>
-            <div className="paper p-6">
-              Sidebar preview
-            </div>
-          </aside>
-
+      <section className="paper overflow-hidden">
+        <div className="border-b border-slate-200 px-6 py-5 sm:px-8">
+          <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Full article preview
+          </p>
+          <h2 className="display-font mt-2 text-3xl font-semibold text-slate-900 sm:text-4xl">
+            Preview it like a reader would
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600">
+            This is no longer a cramped sidebar card. It uses the wider editorial shell so you can judge title scale, body rhythm, and overall readability before publishing.
+          </p>
         </div>
-      </article>
+
+        <div className="px-4 py-6 sm:px-6 lg:px-8">
+          <article className="container-shell article-page py-8 sm:py-10">
+            <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[minmax(0,1fr)_320px]">
+              <div className="article-main">
+                <div className="paper article-shell overflow-hidden">
+                  <div className="article-hero">
+                    <div className="relative aspect-[16/8] overflow-hidden bg-[linear-gradient(135deg,#f3ead9,#dbc298)]">
+                      {form.featured_image_url ? (
+                        <Image
+                          src={form.featured_image_url}
+                          alt={form.title || 'Featured image preview'}
+                          fill
+                          className="object-cover"
+                        />
+                      ) : (
+                        <div className="absolute inset-0 flex items-end p-10">
+                          <p className="display-font text-5xl font-semibold text-slate-900/80">
+                            {form.title || 'Untitled article'}
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="p-6 sm:p-10 lg:p-12">
+                    <div className="article-meta-row mb-6 flex flex-wrap items-center gap-3 text-sm font-medium uppercase tracking-[0.18em] text-slate-500">
+                      <span className="text-brand-700">{previewCategory}</span>
+                      <span>{form.status}</span>
+                      <span>{form.author_name || 'Editorial Team'}</span>
+                    </div>
+
+                    <h1 className="display-font article-title text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+                      {form.title || 'Untitled article'}
+                    </h1>
+
+                    <p className="article-dek mt-5 max-w-3xl text-xl leading-9 text-slate-600">
+                      {form.excerpt || 'Your excerpt will appear here.'}
+                    </p>
+
+                    <div
+                      className={`${ARTICLE_PROSE} mt-12`}
+                      dangerouslySetInnerHTML={{
+                        __html: stripNofollowFromHtml(form.content)
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <aside className="space-y-6">
+                <div className="paper p-6">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
+                    About this preview
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    This preview mirrors the public article feel much more closely than the old compact card layout.
+                  </p>
+                </div>
+
+                <div className="paper p-6">
+                  <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
+                    Contributor
+                  </p>
+                  <p className="mt-3 text-sm leading-7 text-slate-600">
+                    Written by {form.author_name || 'Editorial Team'}
+                    {form.author_bio ? ` — ${form.author_bio}` : '.'}
+                  </p>
+                </div>
+              </aside>
+            </div>
+          </article>
+        </div>
+      </section>
     </div>
+  );
+}
+
+function Field({
+  label,
+  children
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="mb-2 block text-sm font-semibold text-slate-700">
+        {label}
+      </span>
+      {children}
+    </label>
+  );
+}
+
+function ToolbarButton({
+  children,
+  active = false,
+  onClick
+}: {
+  children: React.ReactNode;
+  active?: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1.5 text-sm font-semibold transition ${
+        active
+          ? 'bg-slate-900 text-white'
+          : 'border border-slate-300 bg-white text-slate-700 hover:border-slate-400'
+      }`}
+    >
+      {children}
+    </button>
   );
 }
