@@ -26,7 +26,7 @@ const blankPost: EditorPayload = {
 };
 
 const ARTICLE_PROSE =
-  'journal-prose prose prose-lg max-w-none prose-p:leading-8 prose-p:my-4 prose-headings:tracking-tight prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mt-6 prose-h3:mb-2 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-blockquote:my-5 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900';
+  'journal-prose prose prose-lg max-w-none prose-headings:tracking-tight prose-headings:text-slate-900 prose-h1:mt-0 prose-h1:mb-4 prose-h1:text-4xl prose-h1:font-semibold prose-h1:leading-tight prose-h2:mt-8 prose-h2:mb-3 prose-h2:text-3xl prose-h2:font-semibold prose-h2:leading-tight prose-h3:mt-6 prose-h3:mb-2 prose-h3:text-2xl prose-h3:font-semibold prose-p:my-4 prose-p:leading-8 prose-ul:my-4 prose-ol:my-4 prose-li:my-1 prose-blockquote:my-5 prose-blockquote:border-l-4 prose-blockquote:pl-4 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900';
 
 function stripNofollowFromHtml(html: string) {
   return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
@@ -243,7 +243,7 @@ export function EditorStudio({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: 'journal-prose prose prose-lg max-w-none focus:outline-none'
+        class: `${ARTICLE_PROSE} focus:outline-none`
       },
       handlePaste(_view, event) {
         const html = event.clipboardData?.getData('text/html');
