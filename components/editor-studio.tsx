@@ -189,6 +189,13 @@ function cleanTiptapHtml(input: string) {
   return stripNofollowFromHtml(html);
 }
 
+function normalizeEditorHtmlForInsert(html: string) {
+  if (typeof window === 'undefined') return html;
+  const wrapper = document.createElement('div');
+  wrapper.innerHTML = html;
+  return wrapper.innerHTML;
+}
+
 export function EditorStudio({
   posts,
   categories
@@ -240,15 +247,20 @@ export function EditorStudio({
       },
       handlePaste(_view, event) {
         const html = event.clipboardData?.getData('text/html');
-
-        if (!html) return false;
+        if (!html || !editor) return false;
 
         event.preventDefault();
 
         const cleaned = cleanTiptapHtml(html);
-        editor?.commands.insertContent(cleaned || '<p></p>');
-        setMessage('Pasted content was cleaned automatically.');
+        const normalized = normalizeEditorHtmlForInsert(cleaned || '<p></p>');
 
+        editor.commands.insertContent(normalized, {
+          parseOptions: {
+            preserveWhitespace: false
+          }
+        });
+
+        setMessage('Pasted content was cleaned automatically.');
         return true;
       }
     },
@@ -262,7 +274,11 @@ export function EditorStudio({
     if (!editor) return;
     const currentHtml = editor.getHTML();
     if (form.content !== currentHtml) {
-      editor.commands.setContent(form.content || '');
+      editor.commands.setContent(form.content || '', {
+        parseOptions: {
+          preserveWhitespace: false
+        }
+      });
     }
   }, [editor, form.content]);
 
@@ -330,8 +346,15 @@ export function EditorStudio({
       return;
     }
 
-    editor.commands.setContent(cleaned);
-    setForm((prev) => ({ ...prev, content: cleaned }));
+    const normalized = normalizeEditorHtmlForInsert(cleaned);
+
+    editor.commands.setContent(normalized, {
+      parseOptions: {
+        preserveWhitespace: false
+      }
+    });
+
+    setForm((prev) => ({ ...prev, content: normalized }));
     setMessage('HTML cleaned and inserted.');
     closePasteModal();
   }
@@ -801,8 +824,8 @@ export function EditorStudio({
 
             <div className="mt-5 flex flex-wrap items-center justify-between gap-3">
               <p className="text-xs leading-6 text-slate-500">
-                Tip: paste full HTML here instead of using browser prompts. It preserves
-                multiline structure correctly.
+                Tip: paste full HTML here. The editor will clean it and preserve real
+                headings and paragraphs.
               </p>
 
               <div className="flex flex-wrap gap-2">
