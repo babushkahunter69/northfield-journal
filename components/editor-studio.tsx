@@ -214,18 +214,13 @@ export function EditorStudio({
     setForm((prev) => ({ ...prev, [key]: value }));
   }
 
-  function setEditorHtml(rawHtml: string) {
-    if (!editor) return;
-
-    const cleaned = cleanTiptapHtml(rawHtml);
-    editor.commands.setContent(cleaned || '<p></p>');
-    setForm((prev) => ({ ...prev, content: cleaned || '<p></p>' }));
-    setMessage('HTML cleaned and inserted.');
-  }
-
   const editor = useEditor({
     extensions: [
-      StarterKit,
+      StarterKit.configure({
+        heading: {
+          levels: [1, 2, 3]
+        }
+      }),
       Link.configure({
         openOnClick: false,
         autolink: true,
@@ -247,10 +242,12 @@ export function EditorStudio({
         if (!html) return false;
 
         event.preventDefault();
+
         const cleaned = cleanTiptapHtml(html);
         view.dispatch(view.state.tr.replaceSelectionWith(view.state.schema.text('')));
         editor?.commands.insertContent(cleaned || '<p></p>');
         setMessage('Pasted content was cleaned automatically.');
+
         return true;
       }
     },
@@ -309,6 +306,18 @@ export function EditorStudio({
       meta_description:
         prev.meta_description || excerptFromContent(stripHtml(prev.content), 155)
     }));
+  }
+
+  function pasteHtmlFromPrompt() {
+    if (!editor) return;
+
+    const rawHtml = window.prompt('Paste article HTML here');
+    if (!rawHtml) return;
+
+    const cleaned = cleanTiptapHtml(rawHtml);
+    editor.commands.setContent(cleaned || '<p></p>');
+    setForm((prev) => ({ ...prev, content: cleaned || '<p></p>' }));
+    setMessage('HTML cleaned and inserted.');
   }
 
   async function savePost() {
@@ -401,12 +410,6 @@ export function EditorStudio({
       .run();
   }
 
-  function pasteHtmlFromPrompt() {
-    const rawHtml = window.prompt('Paste article HTML here');
-    if (!rawHtml) return;
-    setEditorHtml(rawHtml);
-  }
-
   return (
     <div className="grid gap-8 xl:grid-cols-[320px_minmax(0,1fr)]">
       <aside className="paper p-5">
@@ -468,6 +471,7 @@ export function EditorStudio({
                   {selectedPost ? 'Edit article' : 'Create article'}
                 </h2>
               </div>
+
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
@@ -476,6 +480,7 @@ export function EditorStudio({
                 >
                   Auto-fill SEO
                 </button>
+
                 <button
                   type="button"
                   onClick={pasteHtmlFromPrompt}
@@ -586,40 +591,42 @@ export function EditorStudio({
                     >
                       Bold
                     </ToolbarButton>
+
                     <ToolbarButton
                       active={!!editor?.isActive('italic')}
                       onClick={() => editor?.chain().focus().toggleItalic().run()}
                     >
                       Italic
                     </ToolbarButton>
+
                     <ToolbarButton
                       active={!!editor?.isActive('heading', { level: 2 })}
-                      onClick={() =>
-                        editor?.chain().focus().toggleHeading({ level: 2 }).run()
-                      }
+                      onClick={() => editor?.chain().focus().toggleHeading({ level: 2 }).run()}
                     >
                       H2
                     </ToolbarButton>
+
                     <ToolbarButton
                       active={!!editor?.isActive('heading', { level: 3 })}
-                      onClick={() =>
-                        editor?.chain().focus().toggleHeading({ level: 3 }).run()
-                      }
+                      onClick={() => editor?.chain().focus().toggleHeading({ level: 3 }).run()}
                     >
                       H3
                     </ToolbarButton>
+
                     <ToolbarButton
                       active={!!editor?.isActive('bulletList')}
                       onClick={() => editor?.chain().focus().toggleBulletList().run()}
                     >
                       List
                     </ToolbarButton>
+
                     <ToolbarButton
                       active={!!editor?.isActive('blockquote')}
                       onClick={() => editor?.chain().focus().toggleBlockquote().run()}
                     >
                       Quote
                     </ToolbarButton>
+
                     <ToolbarButton
                       active={!!editor?.isActive('link')}
                       onClick={insertLink}
@@ -641,6 +648,7 @@ export function EditorStudio({
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                 SEO and publishing
               </p>
+
               <div className="mt-5 grid gap-5">
                 <Field label="Meta title">
                   <input
@@ -712,6 +720,7 @@ export function EditorStudio({
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-slate-500">
                 Live preview
               </p>
+
               <div className="mt-5">
                 <h3 className="display-font text-4xl font-semibold text-slate-900">
                   {form.title || 'Untitled article'}
