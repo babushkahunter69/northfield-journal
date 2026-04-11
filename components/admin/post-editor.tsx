@@ -29,9 +29,7 @@ const blankPost: EditorPayload = {
 };
 
 const ARTICLE_PROSE =
-  'journal-prose prose prose-lg max-w-none prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900';
-
-type EditorMode = 'visual' | 'html';
+  'journal-prose prose prose-lg max-w-none prose-invert prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-headings:text-white prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-blockquote:text-white/80 prose-a:text-[#e0bb42] prose-a:underline prose-strong:text-white';
 
 function stripNofollowFromHtml(html: string) {
   return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
@@ -42,143 +40,6 @@ function stripNofollowFromHtml(html: string) {
 
     return cleaned.length ? ` rel=${quote}${cleaned.join(' ')}${quote}` : '';
   });
-}
-
-function escapeHtml(text: string) {
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
-function normalizeText(text: string) {
-  return text.replace(/\s+/g, ' ').trim();
-}
-
-function cleanTiptapHtml(input: string) {
-  if (!input || typeof window === 'undefined') return input || '';
-
-  const parser = new DOMParser();
-  const doc = parser.parseFromString(input, 'text/html');
-
-  const allowedTags = new Set([
-    'p',
-    'h1',
-    'h2',
-    'h3',
-    'ul',
-    'ol',
-    'li',
-    'blockquote',
-    'strong',
-    'b',
-    'em',
-    'i',
-    'a',
-    'br'
-  ]);
-
-  const unwrapTags = new Set([
-    'div',
-    'section',
-    'article',
-    'main',
-    'header',
-    'footer',
-    'span',
-    'font'
-  ]);
-
-  function cleanNode(node: Node): string {
-    if (node.nodeType === Node.TEXT_NODE) {
-      return escapeHtml(node.textContent ?? '');
-    }
-
-    if (node.nodeType !== Node.ELEMENT_NODE) {
-      return '';
-    }
-
-    const el = node as HTMLElement;
-    const tag = el.tagName.toLowerCase();
-
-    if (tag === 'script' || tag === 'style' || tag === 'meta') {
-      return '';
-    }
-
-    const children = Array.from(el.childNodes).map(cleanNode).join('');
-
-    if (unwrapTags.has(tag)) return children;
-    if (!allowedTags.has(tag)) return children;
-
-    if (tag === 'a') {
-      const rawHref = el.getAttribute('href')?.trim() || '';
-      const safeHref =
-        rawHref.startsWith('http://') ||
-        rawHref.startsWith('https://') ||
-        rawHref.startsWith('/') ||
-        rawHref.startsWith('#')
-          ? rawHref
-          : '';
-
-      if (!safeHref) return children;
-
-      return `<a href="${escapeHtml(
-        safeHref
-      )}" rel="noopener noreferrer">${children}</a>`;
-    }
-
-    if (tag === 'strong' || tag === 'b') return `<strong>${children}</strong>`;
-    if (tag === 'em' || tag === 'i') return `<em>${children}</em>`;
-    if (tag === 'br') return '<br>';
-
-    if (tag === 'p') {
-      const textOnly = normalizeText(el.textContent ?? '');
-      if (!textOnly && !children.includes('<br>')) return '';
-      return `<p>${children}</p>`;
-    }
-
-    if (tag === 'h1' || tag === 'h2' || tag === 'h3') {
-      const textOnly = normalizeText(el.textContent ?? '');
-      if (!textOnly) return '';
-      return `<${tag}>${children}</${tag}>`;
-    }
-
-    if (tag === 'blockquote') {
-      const textOnly = normalizeText(el.textContent ?? '');
-      if (!textOnly) return '';
-      return `<blockquote>${children}</blockquote>`;
-    }
-
-    if (tag === 'ul' || tag === 'ol') {
-      const items = Array.from(el.children)
-        .filter((child) => child.tagName.toLowerCase() === 'li')
-        .map((child) => cleanNode(child))
-        .join('');
-
-      return items ? `<${tag}>${items}</${tag}>` : '';
-    }
-
-    if (tag === 'li') {
-      const textOnly = normalizeText(el.textContent ?? '');
-      if (!textOnly) return '';
-      return `<li>${children}</li>`;
-    }
-
-    return children;
-  }
-
-  let html = Array.from(doc.body.childNodes).map(cleanNode).join('');
-
-  html = html
-    .replace(/<p>\s*<\/p>/g, '')
-    .replace(/<h1>\s*<\/h1>/g, '')
-    .replace(/<h2>\s*<\/h2>/g, '')
-    .replace(/<h3>\s*<\/h3>/g, '')
-    .replace(/\n+/g, '')
-    .trim();
-
-  return stripNofollowFromHtml(html);
 }
 
 function stripHtml(html: string) {
@@ -207,7 +68,7 @@ export function PostEditor({
   const [message, setMessage] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
-  const [mode, setMode] = useState<EditorMode>('html');
+
   const [form, setForm] = useState<EditorPayload>(() => {
     if (!initialPost) return blankPost;
 
@@ -239,7 +100,7 @@ export function PostEditor({
   const editor = useEditor({
     extensions: [
       StarterKit.configure({
-        heading: { levels: [1, 2, 3] }
+        heading: { levels: [2, 3] }
       }),
       LinkExtension.configure({
         openOnClick: false,
@@ -254,37 +115,17 @@ export function PostEditor({
     immediatelyRender: false,
     editorProps: {
       attributes: {
-        class: `${ARTICLE_PROSE} focus:outline-none`
-      },
-      handlePaste(_view, event) {
-        const html = event.clipboardData?.getData('text/html');
-        if (!html || !editor) return false;
-
-        event.preventDefault();
-
-        const cleaned = cleanTiptapHtml(html) || '<p></p>';
-
-        editor.commands.insertContent(cleaned, {
-          parseOptions: {
-            preserveWhitespace: false
-          }
-        });
-
-        setForm((prev) => ({ ...prev, content: editor.getHTML() }));
-        setMessage('Pasted content was cleaned automatically.');
-        return true;
+        class: `${ARTICLE_PROSE} min-h-[420px] focus:outline-none`
       }
     },
     onUpdate: ({ editor }) => {
-      if (mode === 'visual') {
-        const html = stripNofollowFromHtml(editor.getHTML());
-        setForm((prev) => ({ ...prev, content: html }));
-      }
+      const html = stripNofollowFromHtml(editor.getHTML());
+      setForm((prev) => ({ ...prev, content: html }));
     }
   });
 
   useEffect(() => {
-    if (!editor || mode !== 'visual') return;
+    if (!editor) return;
 
     const currentHtml = editor.getHTML();
     if (form.content !== currentHtml) {
@@ -294,35 +135,7 @@ export function PostEditor({
         }
       });
     }
-  }, [editor, form.content, mode]);
-
-  function switchToVisualMode() {
-    if (!editor) {
-      setMode('visual');
-      return;
-    }
-
-    const cleaned = cleanTiptapHtml(form.content || '<p></p>');
-    editor.commands.setContent(cleaned, {
-      parseOptions: {
-        preserveWhitespace: false
-      }
-    });
-
-    setForm((prev) => ({ ...prev, content: cleaned }));
-    setMode('visual');
-    setMessage('Switched to visual editor.');
-  }
-
-  function switchToHtmlMode() {
-    if (editor) {
-      const html = stripNofollowFromHtml(editor.getHTML());
-      setForm((prev) => ({ ...prev, content: html }));
-    }
-
-    setMode('html');
-    setMessage('Switched to HTML editor.');
-  }
+  }, [editor, form.content]);
 
   function autoGenerateSeo() {
     setForm((prev) => ({
@@ -339,10 +152,9 @@ export function PostEditor({
     setSaving(true);
     setMessage('');
 
-    const finalContent =
-      mode === 'visual' && editor
-        ? stripNofollowFromHtml(editor.getHTML())
-        : stripNofollowFromHtml(form.content);
+    const finalContent = editor
+      ? stripNofollowFromHtml(editor.getHTML())
+      : stripNofollowFromHtml(form.content);
 
     const status = nextStatus || form.status;
 
@@ -446,7 +258,7 @@ export function PostEditor({
 
   function applyHeading(level: 2 | 3) {
     if (!editor) return;
-    editor.chain().focus().setParagraph().toggleHeading({ level }).run();
+    editor.chain().focus().toggleHeading({ level }).run();
   }
 
   function applyBulletList() {
@@ -536,7 +348,7 @@ export function PostEditor({
 
           <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr_0.9fr]">
             <Field label="Cover Image" dark>
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {form.featured_image_url ? (
                   <div className="relative aspect-[16/10] overflow-hidden rounded-2xl border border-white/10 bg-black">
                     <Image
@@ -547,7 +359,7 @@ export function PostEditor({
                     />
                   </div>
                 ) : (
-                  <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[#090909] text-sm text-white/35">
+                  <div className="flex aspect-[16/10] items-center justify-center rounded-2xl border border-dashed border-white/10 bg-[#090909] text-sm text-white/30">
                     No image selected
                   </div>
                 )}
@@ -561,16 +373,15 @@ export function PostEditor({
                   className={inputClass}
                 />
 
-                <input
-                  type="file"
-                  accept="image/*"
-                  onChange={uploadImage}
-                  className="block w-full text-sm text-white/55 file:mr-4 file:rounded-xl file:border-0 file:bg-white/10 file:px-4 file:py-2 file:font-medium file:text-white"
-                />
-
-                {uploading ? (
-                  <p className="text-sm text-white/45">Uploading image...</p>
-                ) : null}
+                <label className="flex cursor-pointer items-center justify-center rounded-2xl border border-white/10 bg-[#111111] px-4 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white/80 transition hover:bg-white/5 hover:text-white">
+                  <span>{uploading ? 'Uploading...' : 'Upload Cover'}</span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={uploadImage}
+                    className="hidden"
+                  />
+                </label>
               </div>
             </Field>
 
@@ -620,120 +431,82 @@ export function PostEditor({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <Field label="Body *" dark>
-              <div />
-            </Field>
-
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={autoGenerateSeo}
-                className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/5 hover:text-white"
-              >
-                Auto-fill SEO
-              </button>
-
-              <button
-                type="button"
-                onClick={switchToHtmlMode}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  mode === 'html'
-                    ? 'bg-white text-black'
-                    : 'border border-white/10 text-white/75 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                HTML
-              </button>
-
-              <button
-                type="button"
-                onClick={switchToVisualMode}
-                className={`rounded-full px-4 py-2 text-sm font-semibold transition ${
-                  mode === 'visual'
-                    ? 'bg-white text-black'
-                    : 'border border-white/10 text-white/75 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                Visual
-              </button>
+            <div>
+              <p className="mb-2 block text-sm font-semibold text-white/85">Body *</p>
             </div>
+
+            <button
+              type="button"
+              onClick={autoGenerateSeo}
+              className="rounded-full border border-white/10 px-4 py-2 text-sm font-semibold text-white/75 transition hover:bg-white/5 hover:text-white"
+            >
+              Auto-fill SEO
+            </button>
           </div>
 
-          {mode === 'html' ? (
-            <textarea
-              rows={18}
-              value={form.content}
-              onChange={(e) =>
-                updateField('content', stripNofollowFromHtml(e.target.value))
-              }
-              placeholder="<h2>Section</h2><p>Paragraph...</p>"
-              className={`${inputClass} font-mono text-sm leading-7`}
-            />
-          ) : (
-            <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#111111]">
-              <div className="flex flex-wrap gap-2 border-b border-white/10 bg-white/[0.02] px-4 py-3">
-                <ToolbarButton
-                  active={!!editor?.isActive('bold')}
-                  onClick={() => editor?.chain().focus().toggleBold().run()}
-                >
-                  B
-                </ToolbarButton>
+          <div className="overflow-hidden rounded-[24px] border border-white/10 bg-[#111111]">
+            <div className="flex flex-wrap gap-2 border-b border-white/10 bg-white/[0.02] px-4 py-3">
+              <ToolbarButton
+                active={!!editor?.isActive('bold')}
+                onClick={() => editor?.chain().focus().toggleBold().run()}
+              >
+                B
+              </ToolbarButton>
 
-                <ToolbarButton
-                  active={!!editor?.isActive('italic')}
-                  onClick={() => editor?.chain().focus().toggleItalic().run()}
-                >
-                  I
-                </ToolbarButton>
+              <ToolbarButton
+                active={!!editor?.isActive('italic')}
+                onClick={() => editor?.chain().focus().toggleItalic().run()}
+              >
+                I
+              </ToolbarButton>
 
-                <ToolbarButton
-                  active={!!editor?.isActive('heading', { level: 2 })}
-                  onClick={() => applyHeading(2)}
-                >
-                  H2
-                </ToolbarButton>
+              <ToolbarButton
+                active={!!editor?.isActive('heading', { level: 2 })}
+                onClick={() => applyHeading(2)}
+              >
+                H2
+              </ToolbarButton>
 
-                <ToolbarButton
-                  active={!!editor?.isActive('heading', { level: 3 })}
-                  onClick={() => applyHeading(3)}
-                >
-                  H3
-                </ToolbarButton>
+              <ToolbarButton
+                active={!!editor?.isActive('heading', { level: 3 })}
+                onClick={() => applyHeading(3)}
+              >
+                H3
+              </ToolbarButton>
 
-                <ToolbarButton
-                  active={!!editor?.isActive('bulletList')}
-                  onClick={applyBulletList}
-                >
-                  • List
-                </ToolbarButton>
+              <ToolbarButton
+                active={!!editor?.isActive('bulletList')}
+                onClick={applyBulletList}
+              >
+                • List
+              </ToolbarButton>
 
-                <ToolbarButton
-                  active={!!editor?.isActive('orderedList')}
-                  onClick={applyOrderedList}
-                >
-                  1. List
-                </ToolbarButton>
+              <ToolbarButton
+                active={!!editor?.isActive('orderedList')}
+                onClick={applyOrderedList}
+              >
+                1. List
+              </ToolbarButton>
 
-                <ToolbarButton
-                  active={!!editor?.isActive('blockquote')}
-                  onClick={applyBlockquote}
-                >
-                  Quote
-                </ToolbarButton>
+              <ToolbarButton
+                active={!!editor?.isActive('blockquote')}
+                onClick={applyBlockquote}
+              >
+                Quote
+              </ToolbarButton>
 
-                <ToolbarButton
-                  active={!!editor?.isActive('link')}
-                  onClick={insertLink}
-                >
-                  Link
-                </ToolbarButton>
-              </div>
-
-              <div className="min-h-[420px] px-6 py-6 text-white">
-                <EditorContent editor={editor} />
-              </div>
+              <ToolbarButton
+                active={!!editor?.isActive('link')}
+                onClick={insertLink}
+              >
+                Link
+              </ToolbarButton>
             </div>
-          )}
+
+            <div className="px-6 py-6 text-white">
+              <EditorContent editor={editor} />
+            </div>
+          </div>
         </div>
       </div>
 
@@ -810,8 +583,7 @@ export function PostEditor({
             Preview it like a reader would
           </h2>
           <p className="mt-3 max-w-3xl text-sm leading-7 text-white/55">
-            This mirrors the public article page much more closely while keeping
-            HTML mode as the reliable editing workflow.
+            This mirrors the public article page while keeping the editor simple.
           </p>
         </div>
 
@@ -879,7 +651,7 @@ export function PostEditor({
                     </div>
 
                     <div
-                      className={`${ARTICLE_PROSE} mt-12`}
+                      className="journal-prose prose prose-lg mt-12 max-w-none prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-a:text-brand-700 prose-a:underline prose-strong:text-slate-900"
                       dangerouslySetInnerHTML={{
                         __html: stripNofollowFromHtml(form.content)
                       }}
