@@ -2,7 +2,7 @@
 
 import Image from 'next/image';
 import Link from 'next/link';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { Category, EditorPayload, Post } from '@/lib/types';
 import { excerptFromContent, makeSlug } from '@/lib/utils';
@@ -31,6 +31,14 @@ const blankPost: EditorPayload = {
 const EDITOR_PROSE =
   'journal-prose prose prose-lg max-w-none prose-p:my-4 prose-p:leading-8 prose-headings:tracking-tight prose-headings:text-[#0f172a] prose-h2:mb-4 prose-h2:mt-10 prose-h2:text-3xl prose-h2:font-semibold prose-h3:mb-3 prose-h3:mt-7 prose-h3:text-2xl prose-h3:font-semibold prose-ul:my-5 prose-ol:my-5 prose-li:my-1 prose-blockquote:my-6 prose-blockquote:border-l-4 prose-blockquote:pl-5 prose-blockquote:text-slate-700 prose-a:text-[#9a6730] prose-a:underline prose-strong:text-[#0f172a]';
 
+type SaveMode = 'manual-draft' | 'manual-publish' | 'autosave';
+
+type ToastItem = {
+  id: number;
+  title: string;
+  tone?: 'default' | 'success' | 'error';
+};
+
 function stripNofollowFromHtml(html: string) {
   return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
     const cleaned = String(value)
@@ -57,6 +65,37 @@ function getAuthorInitials(name: string) {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
+function buildFormFromPost(post: Post): EditorPayload {
+  return {
+    id: post.id,
+    title: post.title,
+    slug: post.slug,
+    excerpt: post.excerpt,
+    content: stripNofollowFromHtml(post.content),
+    featured_image_url: post.featured_image_url || '',
+    author_name: post.author_name,
+    author_bio: post.author_bio || '',
+    category_id: post.category_id || '',
+    meta_title: post.meta_title || '',
+    meta_description: post.meta_description || '',
+    keywords: (post.keywords || []).join(', '),
+    is_featured: post.is_featured,
+    status: post.status
+  };
+}
+
+function normalizePayload(form: EditorPayload, html: string) {
+  return {
+    ...form,
+    content: html,
+    slug: form.slug || makeSlug(form.title),
+    excerpt: form.excerpt || excerptFromContent(stripHtml(html), 180),
+    meta_title: form.meta_title || form.title,
+    meta_description:
+      form.meta_description || excerptFromContent(stripHtml(html), 155)
+  };
+}
+
 export function PostEditor({
   categories,
   initialPost
@@ -65,30 +104,33 @@ export function PostEditor({
   initialPost?: Post | null;
 }) {
   const router = useRouter();
-  const [message, setMessage] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [uploading, setUploading] = useState(false);
 
   const [form, setForm] = useState<EditorPayload>(() => {
     if (!initialPost) return blankPost;
-
-    return {
-      id: initialPost.id,
-      title: initialPost.title,
-      slug: initialPost.slug,
-      excerpt: initialPost.excerpt,
-      content: stripNofollowFromHtml(initialPost.content),
-      featured_image_url: initialPost.featured_image_url || '',
-      author_name: initialPost.author_name,
-      author_bio: initialPost.author_bio || '',
-      category_id: initialPost.category_id || '',
-      meta_title: initialPost.meta_title || '',
-      meta_description: initialPost.meta_description || '',
-      keywords: (initialPost.keywords || []).join(', '),
-      is_featured: initialPost.is_featured,
-      status: initialPost.status
-    };
+    return buildFormFromPost(initialPost);
   });
+
+  const [saving, setSaving] = useState(false);
+  const [autoSaving, setAutoSaving] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [toasts, setToasts] = useState<ToastItem[]>([]);
+  const [lastSavedAt, setLastSavedAt] = useState<Date | null>(null);
+
+  const toastIdRef = useRef(1);
+  const initialSignatureRef = useRef('');
+  const redirectHandledRef = useRef(false);
+
+  function showToast(
+    title: string,
+    tone: 'default' | 'success' | 'error' = 'default'
+  ) {
+    const id = toastIdRef.current++;
+    setToasts((prev) => [...prev, { id, title, tone }]);
+
+    window.setTimeout(() => {
+      setToasts((prev) => prev.filter((item) => item.id !== id));
+    }, 2600);
+  }
 
   function updateField<K extends keyof EditorPayload>(
     key: K,
@@ -137,72 +179,163 @@ export function PostEditor({
     }
   }, [editor, form.content]);
 
-  function autoGenerateSeo() {
-    setForm((prev) => ({
-      ...prev,
-      slug: prev.slug || makeSlug(prev.title),
-      excerpt: prev.excerpt || excerptFromContent(stripHtml(prev.content), 180),
-      meta_title: prev.meta_title || prev.title,
-      meta_description:
-        prev.meta_description || excerptFromContent(stripHtml(prev.content), 155)
-    }));
-  }
+  const signature = useMemo(() => {
+    return JSON.stringify({
+      title: form.title,
+      slug: form.slug,
+      excerpt: form.excerpt,
+      content: form.content,
+      featured_image_url: form.featured_image_url,
+      author_name: form.author_name,
+      author_bio: form.author_bio,
+      category_id: form.category_id,
+      meta_title: form.meta_title,
+      meta_description: form.meta_description,
+      keywords: form.keywords,
+      is_featured: form.is_featured,
+      status: form.status
+    });
+  }, [form]);
 
-  async function savePost(nextStatus?: 'draft' | 'published') {
-    setSaving(true);
-    setMessage('');
+  useEffect(() => {
+    initialSignatureRef.current = signature;
+  }, []);
+
+  const isDirty = signature !== initialSignatureRef.current;
+
+  useEffect(() => {
+    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+      if (!isDirty) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [isDirty]);
+
+  async function saveCore(mode: SaveMode) {
+    if (saving || autoSaving) return null;
 
     const finalContent = editor
       ? stripNofollowFromHtml(editor.getHTML())
       : stripNofollowFromHtml(form.content);
 
-    const status = nextStatus || form.status;
+    const targetStatus =
+      mode === 'manual-publish' ? 'published' : 'draft';
 
-    const payload = {
-      ...form,
-      status,
-      content: finalContent,
-      slug: form.slug || makeSlug(form.title),
-      excerpt: form.excerpt || excerptFromContent(stripHtml(finalContent), 180),
-      meta_title: form.meta_title || form.title,
-      meta_description:
-        form.meta_description || excerptFromContent(stripHtml(finalContent), 155)
-    };
+    const payload = normalizePayload(
+      {
+        ...form,
+        status: targetStatus
+      },
+      finalContent
+    );
 
-    const res = await fetch('/api/admin/posts', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
-    });
-
-    const data = await res.json().catch(() => null);
-    setSaving(false);
-
-    if (!res.ok) {
-      setMessage(data?.error || 'Unable to save.');
-      return;
+    if (!payload.title.trim() || !payload.content.trim()) {
+      if (mode !== 'autosave') {
+        showToast('Title and body are required.', 'error');
+      }
+      return null;
     }
 
-    if (data?.post?.id) {
-      const nextId = data.post.id;
-      setForm((prev) => ({
-        ...prev,
-        ...payload,
-        id: nextId
-      }));
+    if (mode === 'autosave') {
+      setAutoSaving(true);
+    } else {
+      setSaving(true);
+    }
 
-      if (!form.id) {
-        router.push(`/admin/posts/${nextId}/edit`);
+    try {
+      const res = await fetch('/api/admin/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        showToast(data?.error || 'Unable to save.', 'error');
+        return null;
+      }
+
+      const nextId = data?.post?.id as string | undefined;
+      const merged = nextId
+        ? {
+            ...payload,
+            id: nextId
+          }
+        : payload;
+
+      setForm(merged);
+      initialSignatureRef.current = JSON.stringify({
+        title: merged.title,
+        slug: merged.slug,
+        excerpt: merged.excerpt,
+        content: merged.content,
+        featured_image_url: merged.featured_image_url,
+        author_name: merged.author_name,
+        author_bio: merged.author_bio,
+        category_id: merged.category_id,
+        meta_title: merged.meta_title,
+        meta_description: merged.meta_description,
+        keywords: merged.keywords,
+        is_featured: merged.is_featured,
+        status: merged.status
+      });
+
+      setLastSavedAt(new Date());
+
+      if (mode === 'manual-publish') {
+        showToast('Post published.', 'success');
+      } else if (mode === 'manual-draft') {
+        showToast('Draft saved.', 'success');
+      } else {
+        showToast('Autosaved.', 'default');
+      }
+
+      if (nextId && !form.id && !redirectHandledRef.current) {
+        redirectHandledRef.current = true;
+        router.replace(`/admin/posts/${nextId}/edit`);
       } else {
         router.refresh();
       }
-    }
 
-    setMessage(
-      status === 'published'
-        ? 'Post published successfully.'
-        : 'Draft saved successfully.'
-    );
+      return merged;
+    } finally {
+      setSaving(false);
+      setAutoSaving(false);
+    }
+  }
+
+  useEffect(() => {
+    const hasMinimumContent =
+      form.title.trim().length > 0 && stripHtml(form.content).trim().length > 0;
+
+    if (!isDirty || !hasMinimumContent) return;
+
+    const timer = window.setTimeout(() => {
+      void saveCore('autosave');
+    }, 12000);
+
+    return () => window.clearTimeout(timer);
+  }, [isDirty, form.title, form.content]);
+
+  function autoGenerateSeo() {
+    const finalContent = editor
+      ? stripNofollowFromHtml(editor.getHTML())
+      : stripNofollowFromHtml(form.content);
+
+    setForm((prev) => ({
+      ...prev,
+      slug: prev.slug || makeSlug(prev.title),
+      excerpt: prev.excerpt || excerptFromContent(stripHtml(finalContent), 180),
+      meta_title: prev.meta_title || prev.title,
+      meta_description:
+        prev.meta_description || excerptFromContent(stripHtml(finalContent), 155)
+    }));
+
+    showToast('SEO fields refreshed.', 'default');
   }
 
   async function uploadImage(event: React.ChangeEvent<HTMLInputElement>) {
@@ -210,26 +343,29 @@ export function PostEditor({
     if (!file) return;
 
     setUploading(true);
-    setMessage('');
 
-    const formData = new FormData();
-    formData.append('file', file);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
 
-    const res = await fetch('/api/admin/upload-image', {
-      method: 'POST',
-      body: formData
-    });
+      const res = await fetch('/api/admin/upload-image', {
+        method: 'POST',
+        body: formData
+      });
 
-    const data = await res.json().catch(() => null);
-    setUploading(false);
+      const data = await res.json().catch(() => null);
 
-    if (!res.ok) {
-      setMessage(data?.error || 'Upload failed.');
-      return;
+      if (!res.ok) {
+        showToast(data?.error || 'Upload failed.', 'error');
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, featured_image_url: data.url }));
+      showToast('Cover image uploaded.', 'success');
+    } finally {
+      setUploading(false);
+      event.target.value = '';
     }
-
-    setForm((prev) => ({ ...prev, featured_image_url: data.url }));
-    setMessage('Featured image uploaded.');
   }
 
   function insertLink() {
@@ -276,6 +412,23 @@ export function PostEditor({
     editor.chain().focus().toggleBlockquote().run();
   }
 
+  async function copyLiveLink() {
+    const slug = form.slug || makeSlug(form.title);
+    if (!slug) {
+      showToast('Save the post first to get a link.', 'error');
+      return;
+    }
+
+    const base =
+      typeof window !== 'undefined'
+        ? window.location.origin
+        : 'https://northfieldjournal.com';
+
+    const url = `${base}/blog/${slug}`;
+    await navigator.clipboard.writeText(url);
+    showToast('Link copied.', 'success');
+  }
+
   const previewCategory =
     categories.find((category) => category.id === form.category_id)?.name ||
     'Journal';
@@ -288,40 +441,77 @@ export function PostEditor({
     [previewAuthorName]
   );
 
+  const liveHref = form.slug ? `/blog/${form.slug}` : null;
+
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9a6730]">
-            Publishing
-          </p>
-          <h1 className="mt-3 font-serif text-5xl font-semibold tracking-tight text-[#0f172a]">
-            {form.id ? 'Edit Post' : 'New Post'}
-          </h1>
-          <p className="mt-3 max-w-2xl text-base leading-8 text-slate-600">
-            Write, refine, and publish an article that matches the Northfield Journal
-            tone and editorial style.
-          </p>
-        </div>
+      <ToastStack toasts={toasts} />
 
-        <div className="flex flex-wrap gap-3">
-          {form.id ? <DeletePostButton postId={form.id} /> : null}
-          <button
-            type="button"
-            onClick={() => savePost('draft')}
-            disabled={saving}
-            className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-[#fffdfa] disabled:opacity-60"
-          >
-            {saving ? 'Saving...' : 'Save Draft'}
-          </button>
-          <button
-            type="button"
-            onClick={() => savePost('published')}
-            disabled={saving}
-            className="rounded-2xl bg-[#0f1b3d] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#16254f] disabled:opacity-60"
-          >
-            {form.id ? 'Update Live Post' : 'Publish'}
-          </button>
+      <div className="sticky top-4 z-20 rounded-[24px] border border-[#e2d9cb] bg-[rgba(255,253,248,0.92)] px-5 py-4 shadow-[0_12px_30px_rgba(15,23,42,0.08)] backdrop-blur">
+        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9a6730]">
+              Publishing
+            </p>
+            <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tight text-[#0f172a]">
+              {form.id ? 'Edit Post' : 'New Post'}
+            </h1>
+            <div className="mt-2 flex flex-wrap items-center gap-3 text-sm text-slate-500">
+              <span>
+                {autoSaving
+                  ? 'Autosaving...'
+                  : saving
+                  ? 'Saving...'
+                  : isDirty
+                  ? 'Unsaved changes'
+                  : 'All changes saved'}
+              </span>
+              {lastSavedAt ? (
+                <span>Last saved at {lastSavedAt.toLocaleTimeString()}</span>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="flex flex-wrap gap-3">
+            {liveHref ? (
+              <>
+                <Link
+                  href={liveHref}
+                  target="_blank"
+                  className="rounded-2xl border border-[#d9cfbf] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#fffdfa]"
+                >
+                  View Live
+                </Link>
+                <button
+                  type="button"
+                  onClick={copyLiveLink}
+                  className="rounded-2xl border border-[#d9cfbf] bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-[#fffdfa]"
+                >
+                  Copy Link
+                </button>
+              </>
+            ) : null}
+
+            {form.id ? <DeletePostButton postId={form.id} /> : null}
+
+            <button
+              type="button"
+              onClick={() => void saveCore('manual-draft')}
+              disabled={saving || autoSaving}
+              className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 transition hover:bg-[#fffdfa] disabled:opacity-60"
+            >
+              Save Draft
+            </button>
+
+            <button
+              type="button"
+              onClick={() => void saveCore('manual-publish')}
+              disabled={saving || autoSaving}
+              className="rounded-2xl bg-[#0f1b3d] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-[#16254f] disabled:opacity-60"
+            >
+              {form.id ? 'Update Live Post' : 'Publish'}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -431,9 +621,7 @@ export function PostEditor({
           </div>
 
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="mb-2 block text-sm font-semibold text-slate-700">Body *</p>
-            </div>
+            <p className="text-sm font-semibold text-slate-700">Body *</p>
 
             <button
               type="button"
@@ -569,8 +757,6 @@ export function PostEditor({
               </select>
             </label>
           </div>
-
-          {message ? <p className="text-sm text-slate-600">{message}</p> : null}
         </div>
       </div>
 
@@ -762,5 +948,28 @@ function ToolbarButton({
     >
       {children}
     </button>
+  );
+}
+
+function ToastStack({ toasts }: { toasts: ToastItem[] }) {
+  if (!toasts.length) return null;
+
+  return (
+    <div className="fixed right-5 top-5 z-[60] flex w-[320px] max-w-[calc(100vw-2rem)] flex-col gap-3">
+      {toasts.map((toast) => (
+        <div
+          key={toast.id}
+          className={`rounded-2xl border px-4 py-3 shadow-[0_14px_40px_rgba(15,23,42,0.12)] ${
+            toast.tone === 'success'
+              ? 'border-emerald-200 bg-white text-emerald-700'
+              : toast.tone === 'error'
+              ? 'border-red-200 bg-white text-red-700'
+              : 'border-[#e2d9cb] bg-white text-slate-700'
+          }`}
+        >
+          <p className="text-sm font-semibold">{toast.title}</p>
+        </div>
+      ))}
+    </div>
   );
 }
