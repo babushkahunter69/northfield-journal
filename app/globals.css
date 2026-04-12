@@ -786,3 +786,140 @@ html.dark .site-footer__bottom {
   padding-right: 0 !important;
   font-weight: inherit !important;
 }
+/* Fix mobile article readability */
+.journal-prose {
+  color: #1e293b; /* slate-800 */
+}
+
+.journal-prose p {
+  color: #334155; /* slate-700 */
+}
+
+.journal-prose h1,
+.journal-prose h2,
+.journal-prose h3,
+.journal-prose h4 {
+  color: #0f172a; /* slate-900 */
+}
+
+.journal-prose strong {
+  color: #0f172a;
+}
+
+.journal-prose li {
+  color: #334155;
+}
+
+.journal-prose a {
+  color: #9a6730; /* your brand gold */
+}
+@media (prefers-color-scheme: dark) {
+  .journal-prose {
+    color: #1e293b !important;
+  }
+
+  .journal-prose p,
+  .journal-prose li {
+    color: #334155 !important;
+  }
+
+  .journal-prose h1,
+  .journal-prose h2,
+  .journal-prose h3 {
+    color: #0f172a !important;
+  }
+}
+/* =========================
+   DARK MODE ARTICLE TEXT FIX
+   (keep dark UI, fix readability)
+========================= */
+
+html.dark .article-page .journal-prose {
+  color: #e5e7eb; /* light gray */
+}
+
+html.dark .article-page .journal-prose p,
+html.dark .article-page .journal-prose li {
+  color: #cbd5f5; /* softer readable text */
+}
+
+html.dark .article-page .journal-prose h1,
+html.dark .article-page .journal-prose h2,
+html.dark .article-page .journal-prose h3,
+html.dark .article-page .journal-prose h4 {
+  color: #ffffff; /* strong white headings */
+}
+
+html.dark .article-page .journal-prose strong {
+  color: #ffffff;
+}
+
+html.dark .article-page .journal-prose a {
+  color: #d6a55b; /* your gold still works in dark */
+}
+
+html.dark .article-page .journal-prose blockquote {
+  color: #d1d5db;
+  border-left-color: rgba(214, 165, 91, 0.5);
+}
+/* =========================
+   DARK MODE ARTICLE PROSE FIX
+========================= */
+
+html.dark .article-page .journal-prose {
+  --tw-prose-body: #cbd5e1;
+  --tw-prose-headings: #ffffff;
+  --tw-prose-lead: #dbe4f0;
+  --tw-prose-links: #d6a55b;
+  --tw-prose-bold: #ffffff;
+  --tw-prose-counters: #94a3b8;
+  --tw-prose-bullets: #94a3b8;
+  --tw-prose-hr: rgba(214, 226, 240, 0.28);
+  --tw-prose-quotes: #e5e7eb;
+  --tw-prose-quote-borders: rgba(214, 165, 91, 0.45);
+  --tw-prose-captions: #94a3b8;
+  --tw-prose-code: #ffffff;
+  --tw-prose-pre-code: #e5e7eb;
+  --tw-prose-pre-bg: rgba(15, 23, 42, 0.45);
+  --tw-prose-th-borders: rgba(148, 163, 184, 0.3);
+  --tw-prose-td-borders: rgba(148, 163, 184, 0.22);
+
+  color: #cbd5e1 !important;
+}
+
+html.dark .article-page .journal-prose p,
+html.dark .article-page .journal-prose li,
+html.dark .article-page .journal-prose ul,
+html.dark .article-page .journal-prose ol,
+html.dark .article-page .journal-prose blockquote {
+  color: #cbd5e1 !important;
+}
+
+html.dark .article-page .journal-prose h1,
+html.dark .article-page .journal-prose h2,
+html.dark .article-page .journal-prose h3,
+html.dark .article-page .journal-prose h4,
+html.dark .article-page .journal-prose strong,
+html.dark .article-page .journal-prose b {
+  color: #ffffff !important;
+}
+
+html.dark .article-page .journal-prose a {
+  color: #d6a55b !important;
+}
+
+html.dark .article-page .journal-prose > p:first-of-type::first-letter {
+  color: #ffffff !important;
+}
+
+html.dark .article-page .journal-prose hr {
+  border-color: rgba(214, 226, 240, 0.28) !important;
+}
+/* Login input readability */
+input::placeholder {
+  color: rgba(148, 163, 184, 0.7);
+}
+
+input {
+  color: #ffffff;
+}
