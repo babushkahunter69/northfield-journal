@@ -11,6 +11,33 @@ function slugify(value: string) {
     .replace(/--+/g, '-');
 }
 
+async function getUniqueSlug(baseTitle: string, currentId?: string) {
+  const baseSlug = slugify(baseTitle) || `post-${Date.now()}`;
+
+  const { data, error } = await supabaseAdmin
+    .from('posts')
+    .select('id, slug')
+    .ilike('slug', `${baseSlug}%`);
+
+  if (error) {
+    throw new Error(error.message || 'Failed to check slug uniqueness.');
+  }
+
+  const existing = (data || []).filter((row) => row.id !== currentId);
+  const used = new Set(existing.map((row) => String(row.slug)));
+
+  if (!used.has(baseSlug)) {
+    return baseSlug;
+  }
+
+  let i = 2;
+  while (used.has(`${baseSlug}-${i}`)) {
+    i += 1;
+  }
+
+  return `${baseSlug}-${i}`;
+}
+
 export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
 
@@ -21,6 +48,7 @@ export async function POST(request: Request) {
   try {
     const body = await request.json().catch(() => null);
 
+    const id = typeof body?.id === 'string' ? body.id.trim() : '';
     const title = typeof body?.title === 'string' ? body.title.trim() : '';
     const excerpt = typeof body?.excerpt === 'string' ? body.excerpt.trim() : '';
     const content = typeof body?.content === 'string' ? body.content.trim() : '';
@@ -40,22 +68,24 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Title is required.' }, { status: 400 });
     }
 
-    const payload = {
-      title,
-      excerpt,
-      content,
-      status,
-      meta_title,
-      meta_description,
-      featured_image_url
-    };
+    if (id) {
+      const slug = await getUniqueSlug(title, id);
 
-    if (body?.id) {
       const { data, error } = await supabaseAdmin
         .from('posts')
-        .update(payload)
-        .eq('id', body.id)
-        .select('id, slug, status')
+        .update({
+          title,
+          slug,
+          excerpt,
+          content,
+          status,
+          meta_title,
+          meta_description,
+          featured_image_url,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', id)
+        .select('id, slug, status, featured_image_url')
         .single();
 
       if (error || !data) {
@@ -65,32 +95,30 @@ export async function POST(request: Request) {
         );
       }
 
-      return NextResponse.json({ success: true, post: data });
+      return NextResponse.json({
+        success: true,
+        post: data
+      });
     }
 
-    const baseSlug = slugify(title) || `post-${Date.now()}`;
-
-    const { data: existing } = await supabaseAdmin
-      .from('posts')
-      .select('slug')
-      .ilike('slug', `${baseSlug}%`);
-
-    const used = new Set((existing || []).map((row) => String(row.slug)));
-    let slug = baseSlug;
-    let i = 2;
-    while (used.has(slug)) {
-      slug = `${baseSlug}-${i}`;
-      i += 1;
-    }
+    const slug = await getUniqueSlug(title);
 
     const { data, error } = await supabaseAdmin
       .from('posts')
       .insert({
-        ...payload,
+        title,
         slug,
-        author_name: 'Northfield Journal Editorial Desk'
+        excerpt,
+        content,
+        status,
+        meta_title,
+        meta_description,
+        featured_image_url,
+        author_name: 'Northfield Journal Editorial Desk',
+        source_type: 'manual',
+        generation_status: 'manual_draft'
       })
-      .select('id, slug, status')
+      .select('id, slug, status, featured_image_url')
       .single();
 
     if (error || !data) {
@@ -100,7 +128,10 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({ success: true, post: data });
+    return NextResponse.json({
+      success: true,
+      post: data
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown save error';
     return NextResponse.json({ error: message }, { status: 500 });
