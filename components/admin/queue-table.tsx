@@ -38,6 +38,7 @@ async function safeJson(response: Response) {
 
 export function QueueTable({ rows }: { rows: QueueRow[] }) {
   const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [runningCron, setRunningCron] = useState(false);
 
   async function generate(keywordId: string) {
     setLoadingId(keywordId);
@@ -74,6 +75,35 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
     }
   }
 
+  async function runDailyCronNow() {
+    setRunningCron(true);
+
+    try {
+      const response = await fetch('/api/admin/run-daily-cron', {
+        method: 'POST'
+      });
+
+      const data = await safeJson(response);
+
+      if (!response.ok) {
+        window.alert(data?.error || 'Daily cron failed.');
+        return;
+      }
+
+      if (data?.data?.post?.id) {
+        window.location.href = `/admin/posts/${data.data.post.id}/edit`;
+        return;
+      }
+
+      window.alert(data?.data?.message || 'Cron ran successfully.');
+      window.location.reload();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Daily cron failed.');
+    } finally {
+      setRunningCron(false);
+    }
+  }
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -85,17 +115,28 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
             Draft Queue
           </h1>
           <p className="mt-3 max-w-3xl text-base leading-8 text-slate-600">
-            Run one-click generation for any queued topic, or let Vercel Cron call the protected
-            daily draft endpoint automatically.
+            Run one-click generation for any queued topic, or trigger the same daily cron flow
+            used by your deployment.
           </p>
         </div>
 
-        <Link
-          href="/admin/keywords"
-          className="rounded-2xl border border-[#d9cfbf] bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-[#fffdfa]"
-        >
-          Manage keywords
-        </Link>
+        <div className="flex gap-3">
+          <button
+            type="button"
+            onClick={runDailyCronNow}
+            disabled={runningCron}
+            className="rounded-2xl bg-[#0f1b3d] px-4 py-3 font-semibold text-white disabled:opacity-60"
+          >
+            {runningCron ? 'Running cron...' : 'Run daily cron now'}
+          </button>
+
+          <Link
+            href="/admin/keywords"
+            className="rounded-2xl border border-[#d9cfbf] bg-white px-4 py-3 font-semibold text-slate-700 transition hover:bg-[#fffdfa]"
+          >
+            Manage keywords
+          </Link>
+        </div>
       </div>
 
       <div className="overflow-hidden rounded-[28px] border border-[#e2d9cb] bg-[#fffdf8] shadow-[0_20px_50px_rgba(15,23,42,0.08)]">

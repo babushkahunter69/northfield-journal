@@ -29,6 +29,10 @@ function cleanArticleHtml(html: string) {
     .replace(/<h2>(?:\s|&nbsp;|<br\s*\/?>)*<\/h2>/gi, '')
     .replace(/<h3>(?:\s|&nbsp;|<br\s*\/?>)*<\/h3>/gi, '')
     .replace(/^(?:\s|&nbsp;|<br\s*\/?>)+/gi, '')
+    .replace(
+      /<p>\s*<strong>\s*([A-Za-z])([A-Za-z])<\/strong>/i,
+      '<p>$1<strong>$2</strong>'
+    )
     .trim();
 }
 

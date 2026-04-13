@@ -17,36 +17,43 @@ function sanitizeHtml(html: string) {
 
 export async function generateArticle(brief: GeneratedBrief): Promise<GeneratedArticle> {
   const prompt = `
-You are writing for Northfield Journal, a Western-market education publication.
+You are writing for Northfield Journal, a premium Western-market education publication.
 
-Write a practical, original, editor-ready SEO article.
+Write an editor-ready article using this brief.
 
-Requirements:
-- Primary keyword: ${brief.working_title}
-- Working title: ${brief.working_title}
-- SEO title: ${brief.seo_title}
-- SEO description: ${brief.seo_description}
-- Category: ${brief.category_slug}
-- Target length: about ${brief.target_word_count} words
-- Angle: ${brief.angle}
-
-Rules:
-- Use clear, calm, credible English
-- Avoid fake statistics
-- Avoid unverifiable claims
-- Avoid hype
-- Make the article helpful and skimmable
-- Use HTML only for body content
-- Use semantic headings like <h2>, <h3>, <p>, <ul>, <li>
-- Include a short FAQ section at the end
-- Do not wrap output in markdown fences
+Brief:
+- working title: ${brief.working_title}
+- seo title: ${brief.seo_title}
+- seo description: ${brief.seo_description}
+- category: ${brief.category_slug}
+- angle: ${brief.angle}
+- target word count: ${brief.target_word_count}
+- secondary keywords: ${(brief.secondary_keywords || []).join(', ')}
+- internal link topics: ${(brief.internal_link_suggestions || []).join(', ')}
 
 Outline:
-${
-  brief.outline?.length
-    ? brief.outline.map((item) => `- ${item}`).join('\n')
-    : '- Introduction\n- Main strategies\n- Common mistakes\n- FAQ\n- Conclusion'
-}
+${brief.outline?.length
+  ? brief.outline.map((item) => `- ${item}`).join('\n')
+  : '- Introduction\n- Key strategies\n- Common mistakes\n- FAQ\n- Conclusion'}
+
+Editorial requirements:
+- Use clear, polished, practical English
+- Sound like a high-quality education magazine, not AI sludge
+- Avoid filler and generic statements
+- Avoid fake statistics and vague claims
+- Use specific examples when helpful
+- Write for readers in the US, UK, Canada, or Australia
+- Match educational search intent
+- Keep paragraphs readable and skimmable
+- Use semantic HTML only
+- Use <h2>, <h3>, <p>, <ul>, <ol>, <li>, <blockquote> where appropriate
+- No markdown fences
+- No introductory label like "Introduction"
+- Start with a strong first paragraph that deserves a premium drop cap
+- Do not wrap the first word or first sentence of the opening paragraph in <strong> tags
+- Include one section with practical mistakes to avoid
+- End with a short FAQ section
+- End with a conclusion that feels editorial, not salesy
 
 Return JSON with exactly this shape:
 {

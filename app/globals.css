@@ -386,6 +386,27 @@ textarea {
 .journal-prose h3,
 .journal-prose h4 {
   color: #0f172a;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.article-page .journal-prose h2 {
+  font-size: 1.8rem;
+  margin-top: 2.2rem;
+  margin-bottom: 0.8rem;
+}
+
+.article-page .journal-prose h3 {
+  font-size: 1.4rem;
+  margin-top: 1.8rem;
+  margin-bottom: 0.6rem;
+}
+
+.article-page .journal-prose h4 {
+  font-size: 1.1rem;
+  margin-top: 1.5rem;
+  margin-bottom: 0.5rem;
 }
 
 .journal-prose strong {
@@ -952,4 +973,34 @@ select:focus {
 
 .article-page {
   min-height: auto;
+}
+/* =========================
+   CLEAN SINGLE DROP CAP
+========================= */
+
+.article-page .journal-prose > p:first-of-type::first-letter {
+  float: left;
+  font-size: 3.5rem;
+  line-height: 1;
+  font-weight: 700;
+  margin-right: 0.4rem;
+  margin-top: 0.1rem;
+  font-family: Georgia, "Times New Roman", serif;
+  color: #0f172a;
+}
+
+.article-page .journal-prose > p:first-of-type strong::first-letter {
+  all: unset;
+}
+
+.article-page .journal-prose > p:first-of-type strong {
+  font-weight: inherit;
+}
+
+.article-page .journal-prose > p:first-of-type {
+  text-indent: 0;
+}
+
+html.dark .article-page .journal-prose > p:first-of-type::first-letter {
+  color: #ffffff;
 }

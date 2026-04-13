@@ -62,12 +62,26 @@ function normalizeLabel(title: string) {
 }
 
 export default async function HomePage() {
-  const [featuredPosts, latestPosts, allPosts] = await Promise.all([
-    getFeaturedPosts(),
+  // 🔥 NEW: pull featured post directly from DB
+  const { supabaseAdmin } = await import('@/lib/supabase-admin');
+
+  const featuredResponse = await supabaseAdmin
+    .from('posts')
+    .select('*')
+    .eq('status', 'published')
+    .eq('is_featured_homepage', true)
+    .order('published_at', { ascending: false })
+    .limit(3);
+
+  const featuredPosts = featuredResponse.data || [];
+
+  // keep your existing queries
+  const [latestPosts, allPosts] = await Promise.all([
     getLatestPosts(4),
     getPublishedPosts()
   ]);
 
+  // fallback logic (KEEP THIS — it's good)
   const featuredCollection =
     featuredPosts.length > 0 ? featuredPosts : latestPosts.slice(0, 3);
 
