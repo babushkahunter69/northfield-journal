@@ -9,7 +9,7 @@ type BriefResponse = {
   seo_description: string;
   target_word_count: number;
   secondary_keywords: string[];
-  outline: string[];
+  outline: Array<string | { heading?: string; notes?: string }>;
   faq: Array<{ question: string; answer: string }>;
   internal_link_suggestions: string[];
   category_slug: string;
@@ -22,6 +22,28 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/--+/g, '-');
+}
+
+function normalizeOutline(
+  outline: Array<string | { heading?: string; notes?: string }> | undefined
+): Array<{ heading: string; notes: string }> {
+  if (!Array.isArray(outline)) return [];
+
+  return outline
+    .map((item) => {
+      if (typeof item === 'string') {
+        return {
+          heading: item.trim(),
+          notes: ''
+        };
+      }
+
+      return {
+        heading: String(item?.heading || '').trim(),
+        notes: String(item?.notes || '').trim()
+      };
+    })
+    .filter((item) => item.heading);
 }
 
 export async function generateBrief(keyword: ContentKeyword): Promise<GeneratedBrief> {
@@ -49,7 +71,7 @@ Input:
 Instructions:
 1. Create a strong working title for SEO and CTR.
 2. Create a short, clean slug.
-3. Choose a practical article angle.
+3. Create a practical article angle.
 4. Produce an outline with 5 to 8 sections.
 5. Include FAQ questions people actually search for.
 6. Suggest internal links as topic ideas, not URLs.
@@ -71,7 +93,9 @@ Return JSON with exactly this shape:
   "seo_description": "string",
   "target_word_count": 1400,
   "secondary_keywords": ["string"],
-  "outline": ["string"],
+  "outline": [
+    { "heading": "string", "notes": "string" }
+  ],
   "faq": [{"question":"string","answer":"string"}],
   "internal_link_suggestions": ["string"],
   "category_slug": "string"
@@ -88,7 +112,7 @@ Return JSON with exactly this shape:
     seo_description: result.seo_description || '',
     target_word_count: result.target_word_count || 1400,
     secondary_keywords: result.secondary_keywords || [],
-    outline: result.outline || [],
+    outline: normalizeOutline(result.outline),
     faq: result.faq || [],
     internal_link_suggestions: result.internal_link_suggestions || [],
     category_slug: result.category_slug || keyword.cluster || 'student-success'
