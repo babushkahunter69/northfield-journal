@@ -1,7 +1,7 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import type {
   ContentBriefRow,
-  ContentKeywordRow,
+  ContentKeyword,
   GeneratedArticle,
   GeneratedBrief,
   PostRow
@@ -68,7 +68,7 @@ async function logGenerationRun(payload: {
   });
 }
 
-async function fetchKeywordById(keywordId: string): Promise<ContentKeywordRow> {
+async function fetchKeywordById(keywordId: string): Promise<ContentKeyword> {
   const response = await supabaseAdmin
     .from('content_keywords')
     .select('*')
@@ -79,11 +79,11 @@ async function fetchKeywordById(keywordId: string): Promise<ContentKeywordRow> {
     throw new Error(response.error?.message || 'Keyword not found.');
   }
 
-  return response.data as ContentKeywordRow;
+  return response.data as ContentKeyword;
 }
 
 async function upsertBrief(
-  keyword: ContentKeywordRow,
+  keyword: ContentKeyword,
   brief: GeneratedBrief
 ): Promise<ContentBriefRow> {
   const response = await supabaseAdmin
@@ -112,7 +112,7 @@ async function upsertBrief(
 }
 
 async function persistPost(
-  keyword: ContentKeywordRow,
+  keyword: ContentKeyword,
   brief: GeneratedBrief,
   article: GeneratedArticle,
   coverUrl: string | null
@@ -156,7 +156,7 @@ async function persistPost(
   return response.data as PostRow;
 }
 
-export async function generateDraftFromKeyword(keyword: ContentKeywordRow) {
+export async function generateDraftFromKeyword(keyword: ContentKeyword) {
   let savedBrief: ContentBriefRow | null = null;
 
   try {
