@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { PostEditor } from '@/components/admin/post-editor';
-import { getPostById } from '@/lib/data';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 export default async function EditPostPage({
   params
@@ -9,9 +9,13 @@ export default async function EditPostPage({
 }) {
   const { id } = await params;
 
-  const post = await getPostById(id);
+  const { data: post, error } = await supabaseAdmin
+    .from('posts')
+    .select('*')
+    .eq('id', id)
+    .single();
 
-  if (!post) {
+  if (error || !post) {
     notFound();
   }
 
