@@ -1,26 +1,5 @@
-import Link from 'next/link';
 import { supabaseAdmin } from '@/lib/supabase-admin';
-
-async function publishPost(postId: string) {
-  'use server';
-
-  await supabaseAdmin
-    .from('posts')
-    .update({
-      status: 'published',
-      published_at: new Date().toISOString()
-    })
-    .eq('id', postId);
-}
-
-async function deletePost(postId: string) {
-  'use server';
-
-  await supabaseAdmin
-    .from('posts')
-    .delete()
-    .eq('id', postId);
-}
+import { PostTableActions } from '@/components/admin/post-table-actions';
 
 export default async function AdminPostsPage() {
   const { data: posts } = await supabaseAdmin
@@ -29,8 +8,10 @@ export default async function AdminPostsPage() {
     .order('created_at', { ascending: false });
 
   const totalPosts = posts?.length || 0;
-  const publishedPosts = posts?.filter((post) => post.status === 'published').length || 0;
-  const draftPosts = posts?.filter((post) => post.status === 'draft').length || 0;
+  const publishedPosts =
+    posts?.filter((post) => post.status === 'published').length || 0;
+  const draftPosts =
+    posts?.filter((post) => post.status === 'draft').length || 0;
 
   return (
     <div className="space-y-8">
@@ -76,7 +57,9 @@ export default async function AdminPostsPage() {
                 <tr key={post.id} className="border-b border-[#efe7da] last:border-b-0">
                   <td className="px-6 py-6">
                     <div className="max-w-[420px]">
-                      <p className="truncate text-xl font-medium text-slate-900">{post.title}</p>
+                      <p className="truncate text-xl font-medium text-slate-900">
+                        {post.title}
+                      </p>
                       <p className="mt-1 text-sm text-slate-500">/blog/{post.slug}</p>
                     </div>
                   </td>
@@ -85,7 +68,9 @@ export default async function AdminPostsPage() {
                     {post.categories?.name || '—'}
                   </td>
 
-                  <td className="px-6 py-6 text-sm text-slate-600">{post.author_name}</td>
+                  <td className="px-6 py-6 text-sm text-slate-600">
+                    {post.author_name}
+                  </td>
 
                   <td className="px-6 py-6">
                     <span
@@ -103,46 +88,16 @@ export default async function AdminPostsPage() {
                     {post.published_at
                       ? new Date(post.published_at).toLocaleDateString()
                       : post.created_at
-                      ? new Date(post.created_at).toLocaleDateString()
-                      : '—'}
+                        ? new Date(post.created_at).toLocaleDateString()
+                        : '—'}
                   </td>
 
                   <td className="px-6 py-6">
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/admin/posts/${post.id}/edit`}
-                        className="rounded-full border border-[#d9cfbf] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-                      >
-                        Edit
-                      </Link>
-
-                      <Link
-                        href={`/blog/${post.slug}`}
-                        className="rounded-full border border-[#d9cfbf] bg-white px-4 py-2 text-sm font-semibold text-slate-700"
-                      >
-                        View
-                      </Link>
-
-                      {post.status !== 'published' ? (
-                        <form action={publishPost.bind(null, post.id)}>
-                          <button
-                            type="submit"
-                            className="rounded-full bg-[#0f172a] px-4 py-2 text-sm font-semibold text-white"
-                          >
-                            Publish
-                          </button>
-                        </form>
-                      ) : null}
-
-                      <form action={deletePost.bind(null, post.id)}>
-                        <button
-                          type="submit"
-                          className="rounded-full border border-red-300 bg-white px-4 py-2 text-sm font-semibold text-red-600"
-                        >
-                          Delete
-                        </button>
-                      </form>
-                    </div>
+                    <PostTableActions
+                      postId={post.id}
+                      slug={post.slug}
+                      status={post.status}
+                    />
                   </td>
                 </tr>
               ))}

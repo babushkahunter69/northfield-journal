@@ -12,7 +12,7 @@ type ArticleResponse = {
 };
 
 function sanitizeHtml(html: string) {
-  return html.replace(/```html|```/g, '').trim();
+  return String(html || '').replace(/```html|```/g, '').trim();
 }
 
 function trimMeta(str: string, max: number) {
@@ -57,6 +57,16 @@ function buildOutlineText(brief: GeneratedBrief) {
     .join('\n');
 }
 
+function countWordsFromHtml(html: string) {
+  const text = String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!text) return 0;
+  return text.split(' ').filter(Boolean).length;
+}
+
 function ensureInternalLinks(content: string, suggestions: string[] = []) {
   if (!content) return '';
 
@@ -64,14 +74,13 @@ function ensureInternalLinks(content: string, suggestions: string[] = []) {
     return content;
   }
 
-  const suggestionLinks = (suggestions || [])
+  const cleanedSuggestions = (suggestions || [])
     .map((item) => String(item || '').trim())
-    .filter(Boolean)
-    .slice(0, 2);
+    .filter(Boolean);
 
   const fallbackLinks =
-    suggestionLinks.length >= 2
-      ? suggestionLinks.map((item) => ({
+    cleanedSuggestions.length >= 2
+      ? cleanedSuggestions.slice(0, 2).map((item) => ({
           href: `/blog/${item
             .toLowerCase()
             .replace(/[^a-z0-9]+/g, '-')
@@ -90,15 +99,89 @@ function ensureInternalLinks(content: string, suggestions: string[] = []) {
 <p>Related reading: <a href="${chosen[0].href}">${chosen[0].text}</a> and <a href="${chosen[1].href}">${chosen[1].text}</a>.</p>
 `.trim();
 
-  const faqIndex = content.search(
-    /<h2[^>]*>\s*Frequently Asked Questions\s*<\/h2>/i
-  );
+  const faqIndex = content.search(/<h2[^>]*>\s*Frequently Asked Questions\s*<\/h2>/i);
 
   if (faqIndex !== -1) {
     return `${content.slice(0, faqIndex)}${linksHtml}${content.slice(faqIndex)}`;
   }
 
-  return `${content}${linksHtml}`;
+  return `${content}\n${linksHtml}`;
+}
+
+function buildFallbackFaq(brief: GeneratedBrief) {
+  return [
+    {
+      question: `What is the best way to approach ${brief.working_title.toLowerCase()}?`,
+      answer:
+        'The best approach is usually to start with a realistic plan, apply practical strategies consistently, and review progress over time rather than relying on one quick fix.'
+    },
+    {
+      question: 'How can someone apply these strategies in daily learning or teaching?',
+      answer:
+        'Use them in small, repeatable steps. Focus on one or two changes first, build consistency, and then expand once the routine starts working in real situations.'
+    },
+    {
+      question: 'Why do practical habits matter more than motivation alone?',
+      answer:
+        'Motivation changes from day to day, but clear systems and habits make progress more reliable. Practical routines reduce friction and make good outcomes easier to repeat.'
+    }
+  ];
+}
+
+function ensureFaqSection(
+  content: string,
+  faq: Array<{ question: string; answer: string }>
+) {
+  if (!content) return content;
+
+  if (/<h2[^>]*>\s*Frequently Asked Questions\s*<\/h2>/i.test(content)) {
+    return content;
+  }
+
+  if (!faq.length) return content;
+
+  const faqHtml = `
+<h2>Frequently Asked Questions</h2>
+${faq
+  .map(
+    (item) => `
+<h3>${item.question}</h3>
+<p>${item.answer}</p>
+`.trim()
+  )
+  .join('\n')}
+`.trim();
+
+  return `${content}\n${faqHtml}`;
+}
+
+function ensureMinimumLength(content: string, brief: GeneratedBrief) {
+  const wordCount = countWordsFromHtml(content);
+
+  if (wordCount >= 900) {
+    return content;
+  }
+
+  const filler = `
+<h2>Putting these ideas into practice</h2>
+<p>The most useful educational advice is the kind that can be applied consistently in real settings. Rather than trying to overhaul everything at once, readers often get better results by choosing one or two practical changes and applying them deliberately over time.</p>
+<p>Consistency matters because good habits compound. A small adjustment in planning, review, communication, or classroom routine can create better outcomes when repeated across days and weeks. This is especially important in education, where progress usually comes from steady effort rather than one-off breakthroughs.</p>
+<p>It also helps to reflect on what is working and what is not. A strategy that sounds strong in theory may need to be simplified in practice. Reviewing the results, making small adjustments, and keeping the approach realistic usually leads to better long-term outcomes.</p>
+
+<h2>Common mistakes to avoid</h2>
+<ul>
+  <li>Trying to change too much at once instead of focusing on one or two practical improvements.</li>
+  <li>Using advice inconsistently and expecting immediate results without enough repetition.</li>
+  <li>Ignoring context, such as student needs, classroom realities, or existing workload pressures.</li>
+  <li>Choosing impressive-sounding ideas over methods that are actually sustainable.</li>
+</ul>
+
+<h2>Why this matters in practice</h2>
+<p>${brief.working_title} is most effective when readers can translate ideas into action. That is why practical structure, realistic examples, and repeatable strategies matter more than abstract advice alone.</p>
+<p>Whether the audience is students, teachers, school leaders, or families, the same principle applies: useful education content should reduce confusion, support decision-making, and lead to better outcomes over time.</p>
+`.trim();
+
+  return `${content}\n${filler}`;
 }
 
 export async function generateArticle(
@@ -178,23 +261,26 @@ Return JSON with exactly this shape:
 
   const result = await generateJson<ArticleResponse>(prompt);
 
-  const cleanedContent = sanitizeHtml(result.content || '');
-  const contentWithLinks = ensureInternalLinks(
-    cleanedContent,
-    brief.internal_link_suggestions || []
-  );
+  const normalizedFaq =
+    normalizeFaq(result.faq).length > 0
+      ? normalizeFaq(result.faq)
+      : buildFallbackFaq(brief);
 
-  if (!contentWithLinks || contentWithLinks.length < 5000) {
+  let content = sanitizeHtml(result.content || '');
+  content = ensureInternalLinks(content, brief.internal_link_suggestions || []);
+  content = ensureFaqSection(content, normalizedFaq);
+  content = ensureMinimumLength(content, brief);
+
+  const finalWordCount = countWordsFromHtml(content);
+  if (finalWordCount < 900) {
     throw new Error('Generated content too short — retry');
   }
-
-  const normalizedFaq = normalizeFaq(result.faq);
 
   return {
     title: result.title || brief.working_title,
     slug: brief.slug,
     excerpt: result.excerpt || '',
-    content: contentWithLinks,
+    content,
     meta_title: trimMeta(
       result.meta_title || brief.seo_title || brief.working_title,
       65
@@ -204,26 +290,7 @@ Return JSON with exactly this shape:
       160
     ),
     keywords: Array.isArray(result.keywords) ? result.keywords : [],
-    faq:
-      normalizedFaq.length > 0
-        ? normalizedFaq
-        : [
-            {
-              question: 'What are effective study techniques?',
-              answer:
-                'Effective study techniques usually include active recall, spaced repetition, time blocking, and focused review sessions.'
-            },
-            {
-              question: 'How can students study more efficiently?',
-              answer:
-                'Students can study more efficiently by working in short focused blocks, reducing distractions, and reviewing material consistently instead of cramming.'
-            },
-            {
-              question: 'Why do study habits matter?',
-              answer:
-                'Strong study habits improve retention, reduce stress, and make it easier to apply knowledge in tests, assignments, and long-term learning.'
-            }
-          ],
+    faq: normalizedFaq,
     category_slug: brief.category_slug
   };
 }

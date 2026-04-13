@@ -17,30 +17,33 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'post_id is required.' }, { status: 400 });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from('posts')
-      .update({
-        status: 'published',
-        published_at: new Date().toISOString(),
-        updated_at: new Date().toISOString()
-      })
-      .eq('id', postId)
-      .select('id, slug, status, published_at')
-      .single();
+    const runsResponse = await supabaseAdmin
+      .from('content_generation_runs')
+      .delete()
+      .eq('post_id', postId);
 
-    if (error || !data) {
+    if (runsResponse.error) {
       return NextResponse.json(
-        { error: error?.message || 'Unable to publish post.' },
+        { error: runsResponse.error.message || 'Failed to delete generation runs.' },
         { status: 500 }
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      post: data
-    });
+    const postResponse = await supabaseAdmin
+      .from('posts')
+      .delete()
+      .eq('id', postId);
+
+    if (postResponse.error) {
+      return NextResponse.json(
+        { error: postResponse.error.message || 'Failed to delete post.' },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown publish error';
+    const message = error instanceof Error ? error.message : 'Unknown delete error';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
