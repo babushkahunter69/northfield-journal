@@ -70,6 +70,7 @@ Return JSON with exactly this shape:
     meta_title: result.meta_title || brief.seo_title || brief.working_title,
     meta_description: result.meta_description || brief.seo_description || '',
     keywords: result.keywords || [],
-    faq: result.faq || []
+    faq: result.faq || [],
+    category_slug: brief.category_slug
   };
 }
