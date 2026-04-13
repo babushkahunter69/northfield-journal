@@ -1,9 +1,6 @@
 import { notFound } from 'next/navigation';
-import { getCategories } from '@/lib/data';
-import { supabaseAdmin } from '@/lib/supabase-admin';
 import { PostEditor } from '@/components/admin/post-editor';
-
-export const dynamic = 'force-dynamic';
+import { getPostById } from '@/lib/data';
 
 export default async function EditPostPage({
   params
@@ -12,14 +9,11 @@ export default async function EditPostPage({
 }) {
   const { id } = await params;
 
-  const [categories, postResponse] = await Promise.all([
-    getCategories(),
-    supabaseAdmin.from('posts').select('*').eq('id', id).single()
-  ]);
+  const post = await getPostById(id);
 
-  const post = postResponse.data;
+  if (!post) {
+    notFound();
+  }
 
-  if (!post) notFound();
-
-  return <PostEditor categories={categories} initialPost={post} />;
+  return <PostEditor post={post} />;
 }
