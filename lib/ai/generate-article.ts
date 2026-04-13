@@ -1,5 +1,6 @@
 import { generateJson } from './client';
 import type { GeneratedArticle, GeneratedBrief } from '@/lib/types';
+import { supabaseAdmin } from '@/lib/supabase-admin';
 
 type ArticleResponse = {
   title: string;
@@ -9,6 +10,11 @@ type ArticleResponse = {
   meta_description: string;
   keywords?: string[];
   faq?: Array<{ question: string; answer: string }>;
+};
+
+type PublishedLinkCandidate = {
+  slug: string;
+  title: string;
 };
 
 function sanitizeHtml(html: string) {
@@ -65,47 +71,6 @@ function countWordsFromHtml(html: string) {
 
   if (!text) return 0;
   return text.split(' ').filter(Boolean).length;
-}
-
-function ensureInternalLinks(content: string, suggestions: string[] = []) {
-  if (!content) return '';
-
-  if (/href="\/blog\/[^"]+"/i.test(content)) {
-    return content;
-  }
-
-  const cleanedSuggestions = (suggestions || [])
-    .map((item) => String(item || '').trim())
-    .filter(Boolean);
-
-  const fallbackLinks =
-    cleanedSuggestions.length >= 2
-      ? cleanedSuggestions.slice(0, 2).map((item) => ({
-          href: `/blog/${item
-            .toLowerCase()
-            .replace(/[^a-z0-9]+/g, '-')
-            .replace(/^-+|-+$/g, '')}`,
-          text: item
-        }))
-      : [
-          { href: '/blog/study-tips', text: 'study tips for students' },
-          { href: '/blog/note-taking', text: 'note-taking strategies' },
-          { href: '/blog/time-management', text: 'time management habits' }
-        ];
-
-  const chosen = fallbackLinks.slice(0, 2);
-
-  const linksHtml = `
-<p>Related reading: <a href="${chosen[0].href}">${chosen[0].text}</a> and <a href="${chosen[1].href}">${chosen[1].text}</a>.</p>
-`.trim();
-
-  const faqIndex = content.search(/<h2[^>]*>\s*Frequently Asked Questions\s*<\/h2>/i);
-
-  if (faqIndex !== -1) {
-    return `${content.slice(0, faqIndex)}${linksHtml}${content.slice(faqIndex)}`;
-  }
-
-  return `${content}\n${linksHtml}`;
 }
 
 function buildFallbackFaq(brief: GeneratedBrief) {
@@ -184,9 +149,130 @@ function ensureMinimumLength(content: string, brief: GeneratedBrief) {
   return `${content}\n${filler}`;
 }
 
+async function getPublishedLinkCandidates(
+  currentSlug: string,
+  limit = 12
+): Promise<PublishedLinkCandidate[]> {
+  const { data, error } = await supabaseAdmin
+    .from('posts')
+    .select('slug, title')
+    .eq('status', 'published')
+    .not('slug', 'is', null)
+    .order('published_at', { ascending: false })
+    .limit(limit + 5);
+
+  if (error || !data) {
+    return [];
+  }
+
+  return data
+    .map((row) => ({
+      slug: String(row.slug || '').trim(),
+      title: String(row.title || '').trim()
+    }))
+    .filter((row) => row.slug && row.title && row.slug !== currentSlug)
+    .slice(0, limit);
+}
+
+function scoreCandidate(candidate: PublishedLinkCandidate, brief: GeneratedBrief) {
+  const haystack = `${candidate.title} ${candidate.slug}`.toLowerCase();
+  const signals = [
+    brief.working_title,
+    brief.angle,
+    brief.category_slug,
+    ...(brief.secondary_keywords || []),
+    ...(brief.internal_link_suggestions || [])
+  ]
+    .map((item) => String(item || '').toLowerCase())
+    .filter(Boolean);
+
+  let score = 0;
+
+  for (const signal of signals) {
+    const words = signal.split(/[^a-z0-9]+/).filter(Boolean);
+    for (const word of words) {
+      if (word.length < 4) continue;
+      if (haystack.includes(word)) score += 1;
+    }
+  }
+
+  return score;
+}
+
+function chooseRealInternalLinks(
+  candidates: PublishedLinkCandidate[],
+  brief: GeneratedBrief,
+  maxLinks = 2
+) {
+  return candidates
+    .map((candidate) => ({
+      ...candidate,
+      score: scoreCandidate(candidate, brief)
+    }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, maxLinks)
+    .map(({ slug, title }) => ({ href: `/blog/${slug}`, text: title }));
+}
+
+function ensureInternalLinks(
+  content: string,
+  brief: GeneratedBrief,
+  availableLinks: Array<{ href: string; text: string }>
+) {
+  if (!content) return '';
+
+  if (/href="\/blog\/[^"]+"/i.test(content)) {
+    return content;
+  }
+
+  if (!availableLinks.length) {
+    return content;
+  }
+
+  const chosen = availableLinks.slice(0, 2);
+
+  const linksHtml = `
+<p>Related reading: ${chosen
+  .map((item) => `<a href="${item.href}">${item.text}</a>`)
+  .join(' and ')}.</p>
+`.trim();
+
+  const faqIndex = content.search(/<h2[^>]*>\s*Frequently Asked Questions\s*<\/h2>/i);
+
+  if (faqIndex !== -1) {
+    return `${content.slice(0, faqIndex)}${linksHtml}${content.slice(faqIndex)}`;
+  }
+
+  return `${content}\n${linksHtml}`;
+}
+
+function buildInternalLinkPrompt(
+  availableLinks: Array<{ href: string; text: string }>
+) {
+  if (!availableLinks.length) {
+    return `
+- Only add internal links if they are explicitly provided below.
+- If no suitable internal links are available, do not invent any URLs.
+- Do not create placeholder slugs or guessed links.
+- In this case, it is acceptable to include zero internal links.
+`.trim();
+  }
+
+  return `
+- Use 1 to 2 internal links from this approved list only.
+- Do not invent or guess any other /blog/ URLs.
+- Approved internal links:
+${availableLinks.map((item) => `  - <a href="${item.href}">${item.text}</a>`).join('\n')}
+`.trim();
+}
+
 export async function generateArticle(
   brief: GeneratedBrief
 ): Promise<GeneratedArticle> {
+  const publishedCandidates = await getPublishedLinkCandidates(brief.slug);
+  const approvedInternalLinks = chooseRealInternalLinks(publishedCandidates, brief, 2);
+
   const prompt = `
 You are writing for Northfield Journal, a premium Western-market education publication.
 
@@ -226,9 +312,8 @@ STRICT REQUIREMENTS:
 3. SEO
 - Include the main topic naturally in the title, opening paragraph, and multiple subheadings
 - Use 3 to 5 secondary keywords naturally without stuffing
-- Include 2 to 3 internal links using this exact format:
-  <a href="/blog/example-slug">anchor text</a>
 - Make the article useful for real search intent, not generic or fluffy
+${buildInternalLinkPrompt(approvedInternalLinks)}
 
 4. META
 - meta_title should be between 40 and 65 characters
@@ -267,7 +352,7 @@ Return JSON with exactly this shape:
       : buildFallbackFaq(brief);
 
   let content = sanitizeHtml(result.content || '');
-  content = ensureInternalLinks(content, brief.internal_link_suggestions || []);
+  content = ensureInternalLinks(content, brief, approvedInternalLinks);
   content = ensureFaqSection(content, normalizedFaq);
   content = ensureMinimumLength(content, brief);
 
