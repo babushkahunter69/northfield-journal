@@ -201,7 +201,7 @@ export async function generateDraftFromKeyword(keyword: ContentKeyword) {
     try {
       coverUrl = await createCoverForPost({
         title: article.title,
-        category: briefWithUniqueSlug.category_slug,
+        categorySlug: briefWithUniqueSlug.category_slug,
         slug: briefWithUniqueSlug.slug
       });
 
