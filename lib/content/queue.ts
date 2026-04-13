@@ -3,8 +3,7 @@ import type {
   ContentBriefRow,
   ContentKeyword,
   GeneratedArticle,
-  GeneratedBrief,
-  PostRow
+  GeneratedBrief
 } from '@/lib/types';
 import { generateBrief } from '@/lib/ai/generate-brief';
 import { generateArticle } from '@/lib/ai/generate-article';
@@ -116,7 +115,7 @@ async function persistPost(
   brief: GeneratedBrief,
   article: GeneratedArticle,
   coverUrl: string | null
-): Promise<PostRow> {
+) {
   const uniqueSlug = await getUniqueSlug(article.slug || brief.slug || brief.working_title);
 
   const categoryResponse = await supabaseAdmin
@@ -153,7 +152,7 @@ async function persistPost(
     throw new Error(response.error?.message || 'Failed to persist post.');
   }
 
-  return response.data as PostRow;
+    return response.data;
 }
 
 export async function generateDraftFromKeyword(keyword: ContentKeyword) {
