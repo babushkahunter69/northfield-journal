@@ -93,7 +93,7 @@ export default async function PostPage({
   const articleUrl = `${getSiteUrl()}/blog/${normalizedSlug}`;
 
   return (
-    <article className="container-shell article-page dark pt-12 pb-6 sm:pt-14 sm:pb-8">
+    <article className="container-shell article-page pt-12 pb-6 sm:pt-14 sm:pb-8">
       <ArticleEnhancements title={post.title} url={articleUrl} />
 
       {structuredData ? (
@@ -136,11 +136,11 @@ export default async function PostPage({
                 <span>{post.reading_time_minutes} min read</span>
               </div>
 
-              <h1 className="display-font article-title text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
+              <h1 className="display-font article-title text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white">
                 {post.title}
               </h1>
 
-              <p className="article-dek mt-5 max-w-3xl text-xl leading-9 text-slate-600">
+              <p className="article-dek mt-5 max-w-3xl text-xl leading-9 text-slate-600 dark:text-slate-300">
                 {post.excerpt}
               </p>
 
@@ -149,7 +149,7 @@ export default async function PostPage({
                 className="article-author-card mt-8 mb-8 block rounded-[28px] border border-slate-200 bg-stone-50 p-5 transition duration-200 hover:-translate-y-[1px] hover:border-slate-300"
               >
                 <div className="flex items-start gap-4">
-                  <div className="article-author-avatar flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase tracking-[0.18em] text-slate-900">
+                  <div className="article-author-avatar flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase tracking-[0.18em] text-slate-900 dark:text-white">
                     {post.author?.avatarInitials ?? 'NJ'}
                   </div>
 
@@ -157,15 +157,15 @@ export default async function PostPage({
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-700">
                       Contributor
                     </p>
-                    <h2 className="mt-2 text-xl font-semibold text-slate-900">
+                    <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
                       {post.author_name}
                     </h2>
                     {post.author_bio ? (
-                      <p className="mt-2 text-sm leading-7 text-slate-600">
+                      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
                         {post.author_bio}
                       </p>
                     ) : (
-                      <p className="mt-2 text-sm leading-7 text-slate-600">
+                      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
                         Read more from this contributor in the Northfield Journal.
                       </p>
                     )}
@@ -209,23 +209,22 @@ dark:prose-a:text-amber-400
 [&>p:first-of-type:first-letter]:leading-[0.8]
 [&>p:first-of-type:first-letter]:text-slate-900
 
-dark:[&>p:first-of-type:first-letter]:text-white
-"
+dark:[&>p:first-of-type:first-letter]:text-white"
                 dangerouslySetInnerHTML={{
                   __html: cleanedContent
                 }}
               />
 
               {relatedPosts.length ? (
-                <section className="article-related mt-8 border-t border-slate-200 pt-8">
+                <section className="article-related mt-8 border-t border-slate-200 pt-8 dark:border-slate-700">
                   <div className="section-header-row">
                     <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
                       Related reading
                     </p>
-                    <h2 className="display-font mt-3 text-3xl font-semibold text-slate-900">
+                    <h2 className="display-font mt-3 text-3xl font-semibold text-slate-900 dark:text-white">
                       More from Northfield Journal
                     </h2>
-                    <p className="mt-3 max-w-2xl text-base leading-8 text-slate-600">
+                    <p className="mt-3 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">
                       Articles selected for readers who want to keep following this theme,
                       contributor, or editorial thread.
                     </p>
@@ -270,16 +269,16 @@ dark:[&>p:first-of-type:first-letter]:text-white
                             ) : null}
                           </div>
 
-                          <h3 className="mt-3 text-xl font-semibold leading-snug text-slate-900 transition group-hover:text-brand-700">
+                          <h3 className="mt-3 text-xl font-semibold leading-snug text-slate-900 transition group-hover:text-brand-700 dark:text-white">
                             {relatedPost.title}
                           </h3>
 
-                          <p className="mt-3 line-clamp-3 text-sm leading-7 text-slate-600">
+                          <p className="mt-3 line-clamp-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
                             {relatedPost.excerpt}
                           </p>
 
-                          <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                            <span className="text-sm text-slate-600">
+                          <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
+                            <span className="text-sm text-slate-600 dark:text-slate-300">
                               By {relatedPost.author_name}
                             </span>
                             <span className="text-sm font-semibold text-brand-700">
@@ -293,14 +292,14 @@ dark:[&>p:first-of-type:first-letter]:text-white
                 </section>
               ) : null}
 
-              <div className="article-end-cta mt-10 border-t border-slate-200 pt-6">
+              <div className="article-end-cta mt-10 border-t border-slate-200 pt-6 dark:border-slate-700">
                 <p className="text-sm uppercase tracking-[0.18em] text-brand-700">
                   Continue the conversation
                 </p>
-                <h2 className="display-font mt-4 text-3xl font-semibold text-slate-900">
+                <h2 className="display-font mt-4 text-3xl font-semibold text-slate-900 dark:text-white">
                   Enjoyed this article?
                 </h2>
-                <p className="mt-3 max-w-2xl text-base leading-8 text-slate-600">
+                <p className="mt-3 max-w-2xl text-base leading-8 text-slate-600 dark:text-slate-300">
                   Share your perspective with Northfield Journal. We welcome clear,
                   practical, and thoughtful writing from educators, tutors, researchers,
                   and contributors.
@@ -325,7 +324,7 @@ dark:[&>p:first-of-type:first-letter]:text-white
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
               About this article
             </p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
+            <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
               This piece is designed to be clear, practical, and worth revisiting.
             </p>
           </div>
@@ -334,7 +333,7 @@ dark:[&>p:first-of-type:first-letter]:text-white
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
               Contributor
             </p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
+            <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
               Written by {post.author_name}
               {post.author_bio ? ` — ${post.author_bio}` : '.'}
             </p>
@@ -350,7 +349,7 @@ dark:[&>p:first-of-type:first-letter]:text-white
             <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
               For readers
             </p>
-            <p className="mt-3 text-sm leading-7 text-slate-600">
+            <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
               Save ideas that matter, share them with your team, and return when you
               need a sharper perspective.
             </p>

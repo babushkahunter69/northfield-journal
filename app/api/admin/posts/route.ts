@@ -42,6 +42,8 @@ export async function POST(request: Request) {
       content,
       featured_image_url:
         String(body.featured_image_url || '').trim() || null,
+      og_image_url: String(body.og_image_url || body.featured_image_url || '').trim() || null,
+      canonical_url: String(body.canonical_url || '').trim() || null,
       author_name: String(body.author_name || 'Editorial Team').trim(),
       author_bio: String(body.author_bio || '').trim() || null,
       category_id: String(body.category_id || '').trim() || null,
@@ -50,6 +52,9 @@ export async function POST(request: Request) {
         String(body.meta_description || '').trim() ||
         excerptFromContent(content, 155),
       keywords: splitKeywords(String(body.keywords || '')),
+      faq_json: Array.isArray(body.faq_json) ? body.faq_json : null,
+      source_type: String(body.source_type || 'editorial').trim(),
+      generation_status: String(body.generation_status || 'manual').trim(),
       is_featured: Boolean(body.is_featured),
       status: body.status === 'published' ? 'published' : 'draft',
       reading_time_minutes: estimateReadingTime(content)

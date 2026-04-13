@@ -19,6 +19,11 @@ export type Author = {
 };
 
 export type Post = {
+  og_image_url?: string | null;
+  canonical_url?: string | null;
+  generation_status?: string | null;
+  source_type?: string | null;
+  faq_json?: Array<{ question: string; answer: string }> | null;
   id: string;
   title: string;
   slug: string;
@@ -84,4 +89,61 @@ export type EditorPayload = {
   keywords: string;
   is_featured: boolean;
   status: PostStatus;
+};
+
+export type ContentKeywordStatus = 'queued' | 'in_progress' | 'done' | 'skipped';
+
+export type ContentKeyword = {
+  id: string;
+  keyword: string;
+  cluster: string | null;
+  search_intent: string | null;
+  audience: string | null;
+  priority: number;
+  country_code: string | null;
+  status: ContentKeywordStatus;
+  last_generated_at: string | null;
+  created_at: string;
+};
+
+export type ContentBriefRow = {
+  id: string;
+  keyword_id: string;
+  working_title: string;
+  slug: string;
+  angle: string | null;
+  outline_json: Array<{ heading: string; notes: string }> | null;
+  seo_title: string | null;
+  seo_description: string | null;
+  target_word_count: number | null;
+  internal_links_json: string[] | null;
+  external_sources_json: string[] | null;
+  status: string;
+  created_at: string;
+};
+
+export type GeneratedBrief = {
+  working_title: string;
+  slug: string;
+  angle: string;
+  seo_title: string;
+  seo_description: string;
+  target_word_count: number;
+  secondary_keywords: string[];
+  outline: Array<{ heading: string; notes: string }>;
+  faq: Array<{ question: string; answer: string }>;
+  internal_link_suggestions: string[];
+  category_slug: string;
+};
+
+export type GeneratedArticle = {
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  meta_title: string;
+  meta_description: string;
+  keywords: string[];
+  category_slug: string;
+  faq: Array<{ question: string; answer: string }>;
 };

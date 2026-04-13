@@ -6,6 +6,8 @@ import { usePathname } from 'next/navigation';
 const navItems = [
   { href: '/admin/posts', label: 'All Posts', icon: '🗂️' },
   { href: '/admin/posts/new', label: 'New Post', icon: '✍️' },
+  { href: '/admin/queue', label: 'Draft Queue', icon: '⚙️' },
+  { href: '/admin/keywords', label: 'Keywords', icon: '🔎' },
   { href: '/admin/legacy-editor', label: 'Legacy Editor', icon: '🛠️' }
 ];
 

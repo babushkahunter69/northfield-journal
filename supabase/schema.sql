@@ -184,3 +184,110 @@ select
   4,
   now() - interval '2 days'
 where not exists (select 1 from posts where slug = 'formative-assessment-busy-classroom');
+
+
+alter table posts add column if not exists og_image_url text;
+alter table posts add column if not exists canonical_url text;
+alter table posts add column if not exists cover_template_id uuid;
+alter table posts add column if not exists source_type text default 'editorial';
+alter table posts add column if not exists generation_status text default 'manual';
+alter table posts add column if not exists faq_json jsonb;
+
+create table if not exists content_keywords (
+  id uuid primary key default gen_random_uuid(),
+  keyword text not null unique,
+  cluster text,
+  search_intent text,
+  audience text,
+  priority integer not null default 50,
+  country_code text default 'US',
+  status text not null check (status in ('queued', 'in_progress', 'done', 'skipped')) default 'queued',
+  last_generated_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists content_briefs (
+  id uuid primary key default gen_random_uuid(),
+  keyword_id uuid references content_keywords(id) on delete cascade,
+  working_title text not null,
+  slug text not null,
+  angle text,
+  outline_json jsonb,
+  seo_title text,
+  seo_description text,
+  target_word_count integer default 1400,
+  internal_links_json jsonb,
+  external_sources_json jsonb,
+  status text not null default 'draft',
+  created_at timestamptz not null default now()
+);
+
+create table if not exists content_generation_runs (
+  id uuid primary key default gen_random_uuid(),
+  keyword_id uuid references content_keywords(id) on delete set null,
+  brief_id uuid references content_briefs(id) on delete set null,
+  post_id uuid references posts(id) on delete set null,
+  run_type text not null,
+  status text not null,
+  model_name text,
+  input_snapshot jsonb,
+  output_snapshot jsonb,
+  error_message text,
+  created_at timestamptz not null default now()
+);
+
+create table if not exists cover_templates (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  category_slug text not null,
+  base_image_url text,
+  overlay_style text,
+  text_position text,
+  is_active boolean not null default true,
+  created_at timestamptz not null default now()
+);
+
+alter table content_keywords enable row level security;
+alter table content_briefs enable row level security;
+alter table content_generation_runs enable row level security;
+alter table cover_templates enable row level security;
+
+create policy "Service role can manage content keywords"
+on content_keywords for all
+using (auth.role() = 'service_role')
+with check (auth.role() = 'service_role');
+
+create policy "Service role can manage content briefs"
+on content_briefs for all
+using (auth.role() = 'service_role')
+with check (auth.role() = 'service_role');
+
+create policy "Service role can manage generation runs"
+on content_generation_runs for all
+using (auth.role() = 'service_role')
+with check (auth.role() = 'service_role');
+
+create policy "Public can read cover templates"
+on cover_templates for select
+using (true);
+
+create policy "Service role can manage cover templates"
+on cover_templates for all
+using (auth.role() = 'service_role')
+with check (auth.role() = 'service_role');
+
+insert into cover_templates (name, category_slug, overlay_style, text_position)
+values
+  ('Study Skills Default', 'student-success', 'clean-gradient', 'left'),
+  ('Teaching Default', 'teaching-craft', 'clean-gradient', 'left'),
+  ('EdTech Default', 'edtech', 'clean-gradient', 'left')
+on conflict do nothing;
+
+insert into content_keywords (keyword, cluster, search_intent, audience, priority, country_code)
+values
+  ('how to study effectively', 'student-success', 'informational', 'students', 100, 'US'),
+  ('best note taking methods for college students', 'student-success', 'informational', 'students', 95, 'US'),
+  ('formative assessment strategies for teachers', 'teaching-craft', 'informational', 'teachers', 90, 'US'),
+  ('best ai tools for teachers', 'edtech', 'commercial investigation', 'teachers', 85, 'US'),
+  ('how to write a scholarship essay', 'scholarships-access', 'informational', 'students', 92, 'US')
+on conflict (keyword) do nothing;

@@ -355,6 +355,51 @@ textarea {
   background: rgba(161, 98, 7, 0.35);
 }
 
+/* Article list styling fix */
+.journal-prose ul {
+  list-style-type: disc;
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.journal-prose ol {
+  list-style-type: decimal;
+  padding-left: 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.journal-prose li {
+  margin-bottom: 0.5rem;
+}
+
+/* Fix article readability */
+.journal-prose {
+  color: #1e293b;
+}
+
+.journal-prose p {
+  color: #334155;
+}
+
+.journal-prose h1,
+.journal-prose h2,
+.journal-prose h3,
+.journal-prose h4 {
+  color: #0f172a;
+}
+
+.journal-prose strong {
+  color: #0f172a;
+}
+
+.journal-prose li {
+  color: #334155;
+}
+
+.journal-prose a {
+  color: #9a6730;
+}
+
 /* =========================
    DARK MODE
 ========================= */
@@ -462,6 +507,42 @@ html.dark .article-page .article-author-avatar {
   background: radial-gradient(circle at top, #1f3358 0%, #10203b 100%);
   border-color: rgba(214, 165, 91, 0.24);
   color: #f8fafc;
+}
+
+html.dark .article-page .journal-prose {
+  color: #cbd5e1 !important;
+}
+
+html.dark .article-page .journal-prose p,
+html.dark .article-page .journal-prose li,
+html.dark .article-page .journal-prose ul,
+html.dark .article-page .journal-prose ol,
+html.dark .article-page .journal-prose blockquote {
+  color: #cbd5e1 !important;
+}
+
+html.dark .article-page .journal-prose h1,
+html.dark .article-page .journal-prose h2,
+html.dark .article-page .journal-prose h3,
+html.dark .article-page .journal-prose h4,
+html.dark .article-page .journal-prose strong,
+html.dark .article-page .journal-prose b {
+  color: #ffffff !important;
+}
+
+html.dark .article-page .journal-prose a {
+  color: #d6a55b !important;
+}
+
+html.dark .article-page .journal-prose > p:first-of-type::first-letter,
+html.dark .article-page .journal-prose > h2 + p::first-letter {
+  color: #ffffff !important;
+  background: transparent !important;
+  -webkit-text-fill-color: #ffffff !important;
+}
+
+html.dark .article-page .journal-prose hr {
+  border-color: rgba(214, 226, 240, 0.28) !important;
 }
 
 /* Tailwind utility overrides used across components */
@@ -719,6 +800,124 @@ html.dark .site-footer__bottom {
   color: #8fa3bf;
 }
 
+/* Login input readability */
+input::placeholder {
+  color: rgba(148, 163, 184, 0.7);
+}
+
+input {
+  color: #ffffff;
+}
+
+/* =========================
+   ADMIN READABILITY FIXES
+========================= */
+
+input,
+textarea,
+select {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #94a3b8 !important;
+  opacity: 1;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a;
+}
+
+.ProseMirror {
+  min-height: 520px;
+  color: #0f172a !important;
+  caret-color: #0f172a;
+  font-size: 1.05rem;
+  line-height: 1.85;
+}
+
+.ProseMirror:focus {
+  outline: none;
+}
+
+.ProseMirror p {
+  margin: 0 0 1rem;
+  color: #0f172a !important;
+}
+
+.ProseMirror h1,
+.ProseMirror h2,
+.ProseMirror h3,
+.ProseMirror h4 {
+  color: #0f172a !important;
+  font-weight: 700;
+  line-height: 1.25;
+  margin-top: 1.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.ProseMirror h1 {
+  font-size: 2rem;
+}
+
+.ProseMirror h2 {
+  font-size: 1.5rem;
+}
+
+.ProseMirror h3 {
+  font-size: 1.25rem;
+}
+
+.ProseMirror ul,
+.ProseMirror ol {
+  margin: 0 0 1rem 1.4rem;
+  padding: 0;
+}
+
+.ProseMirror li {
+  margin: 0.35rem 0;
+  color: #0f172a !important;
+}
+
+.ProseMirror blockquote {
+  margin: 1.25rem 0;
+  padding-left: 1rem;
+  border-left: 3px solid #d6cebf;
+  color: #475569 !important;
+}
+
+.ProseMirror a {
+  color: #9a6730 !important;
+  text-decoration: underline;
+}
+
+.ProseMirror strong {
+  color: #0f172a !important;
+  font-weight: 700;
+}
+
+.ProseMirror em {
+  color: #334155 !important;
+}
+
+.ProseMirror img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 16px;
+  margin: 1rem 0;
+}
+
+.ProseMirror hr {
+  border: 0;
+  border-top: 1px solid #e5ded1;
+  margin: 2rem 0;
+}
+
 /* =========================
    RESPONSIVE
 ========================= */
@@ -750,176 +949,7 @@ html.dark .site-footer__bottom {
     width: min(100%, calc(100% - 20px));
   }
 }
+
 .article-page {
   min-height: auto;
-}
-/* Article list styling fix */
-.journal-prose ul {
-  list-style-type: disc;
-  padding-left: 1.5rem;
-  margin-bottom: 1.25rem;
-}
-
-.journal-prose ol {
-  list-style-type: decimal;
-  padding-left: 1.5rem;
-  margin-bottom: 1.25rem;
-}
-
-.journal-prose li {
-  margin-bottom: 0.5rem;
-}
-
-/* Prevent drop cap from affecting list items */
-.journal-prose > p:first-of-type::first-letter {
-  float: left;
-  font-size: 3.75rem;
-  line-height: 0.9;
-  padding-right: 0.5rem;
-  font-weight: 700;
-}
-
-.journal-prose li::first-letter {
-  float: none !important;
-  font-size: inherit !important;
-  line-height: inherit !important;
-  padding-right: 0 !important;
-  font-weight: inherit !important;
-}
-/* Fix mobile article readability */
-.journal-prose {
-  color: #1e293b; /* slate-800 */
-}
-
-.journal-prose p {
-  color: #334155; /* slate-700 */
-}
-
-.journal-prose h1,
-.journal-prose h2,
-.journal-prose h3,
-.journal-prose h4 {
-  color: #0f172a; /* slate-900 */
-}
-
-.journal-prose strong {
-  color: #0f172a;
-}
-
-.journal-prose li {
-  color: #334155;
-}
-
-.journal-prose a {
-  color: #9a6730; /* your brand gold */
-}
-@media (prefers-color-scheme: dark) {
-  .journal-prose {
-    color: #1e293b !important;
-  }
-
-  .journal-prose p,
-  .journal-prose li {
-    color: #334155 !important;
-  }
-
-  .journal-prose h1,
-  .journal-prose h2,
-  .journal-prose h3 {
-    color: #0f172a !important;
-  }
-}
-/* =========================
-   DARK MODE ARTICLE TEXT FIX
-   (keep dark UI, fix readability)
-========================= */
-
-html.dark .article-page .journal-prose {
-  color: #e5e7eb; /* light gray */
-}
-
-html.dark .article-page .journal-prose p,
-html.dark .article-page .journal-prose li {
-  color: #cbd5f5; /* softer readable text */
-}
-
-html.dark .article-page .journal-prose h1,
-html.dark .article-page .journal-prose h2,
-html.dark .article-page .journal-prose h3,
-html.dark .article-page .journal-prose h4 {
-  color: #ffffff; /* strong white headings */
-}
-
-html.dark .article-page .journal-prose strong {
-  color: #ffffff;
-}
-
-html.dark .article-page .journal-prose a {
-  color: #d6a55b; /* your gold still works in dark */
-}
-
-html.dark .article-page .journal-prose blockquote {
-  color: #d1d5db;
-  border-left-color: rgba(214, 165, 91, 0.5);
-}
-/* =========================
-   DARK MODE ARTICLE PROSE FIX
-========================= */
-
-html.dark .article-page .journal-prose {
-  --tw-prose-body: #cbd5e1;
-  --tw-prose-headings: #ffffff;
-  --tw-prose-lead: #dbe4f0;
-  --tw-prose-links: #d6a55b;
-  --tw-prose-bold: #ffffff;
-  --tw-prose-counters: #94a3b8;
-  --tw-prose-bullets: #94a3b8;
-  --tw-prose-hr: rgba(214, 226, 240, 0.28);
-  --tw-prose-quotes: #e5e7eb;
-  --tw-prose-quote-borders: rgba(214, 165, 91, 0.45);
-  --tw-prose-captions: #94a3b8;
-  --tw-prose-code: #ffffff;
-  --tw-prose-pre-code: #e5e7eb;
-  --tw-prose-pre-bg: rgba(15, 23, 42, 0.45);
-  --tw-prose-th-borders: rgba(148, 163, 184, 0.3);
-  --tw-prose-td-borders: rgba(148, 163, 184, 0.22);
-
-  color: #cbd5e1 !important;
-}
-
-html.dark .article-page .journal-prose p,
-html.dark .article-page .journal-prose li,
-html.dark .article-page .journal-prose ul,
-html.dark .article-page .journal-prose ol,
-html.dark .article-page .journal-prose blockquote {
-  color: #cbd5e1 !important;
-}
-
-html.dark .article-page .journal-prose h1,
-html.dark .article-page .journal-prose h2,
-html.dark .article-page .journal-prose h3,
-html.dark .article-page .journal-prose h4,
-html.dark .article-page .journal-prose strong,
-html.dark .article-page .journal-prose b {
-  color: #ffffff !important;
-}
-
-html.dark .article-page .journal-prose a {
-  color: #d6a55b !important;
-}
-
-html.dark .article-page .journal-prose > p:first-of-type::first-letter {
-  color: #ffffff !important;
-}
-
-html.dark .article-page .journal-prose hr {
-  border-color: rgba(214, 226, 240, 0.28) !important;
-}
-/* Login input readability */
-input::placeholder {
-  color: rgba(148, 163, 184, 0.7);
-}
-
-input {
-  color: #ffffff;
 }
