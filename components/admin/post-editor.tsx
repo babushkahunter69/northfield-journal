@@ -1,8 +1,8 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { PostPreview } from '@/components/admin/post-preview';
@@ -120,6 +120,41 @@ export function PostEditor({ post }: { post: Post }) {
       setForm((prev) => ({ ...prev, status: 'published' }));
       router.refresh();
       alert('Post published.');
+    } finally {
+      setPublishing(false);
+    }
+  }
+
+  async function unpublishPost() {
+    if (!form.id) {
+      alert('Save the post first.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      'Move this published article back to draft?'
+    );
+    if (!confirmed) return;
+
+    setPublishing(true);
+
+    try {
+      const response = await fetch('/api/admin/unpublish-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: form.id })
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        alert(data?.error || 'Failed to move article back to draft.');
+        return;
+      }
+
+      setForm((prev) => ({ ...prev, status: 'draft' }));
+      router.refresh();
+      alert('Post moved back to draft.');
     } finally {
       setPublishing(false);
     }
@@ -301,7 +336,7 @@ export function PostEditor({ post }: { post: Post }) {
                 : 'border border-[#d9cfbf] bg-white text-slate-700'
             }`}
           >
-            Preview
+            Full Preview
           </button>
         </div>
 
@@ -327,7 +362,7 @@ export function PostEditor({ post }: { post: Post }) {
             disabled={!form.id || settingFeatured}
             className={`rounded-2xl px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] ${
               form.is_featured_homepage
-                ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                ? 'border border-amber-300 bg-amber-100 text-amber-800'
                 : 'border border-[#d9cfbf] bg-white text-slate-700 hover:bg-[#fffdfa]'
             } disabled:opacity-60`}
           >
@@ -338,13 +373,23 @@ export function PostEditor({ post }: { post: Post }) {
               : 'Set as featured'}
           </button>
 
-          <button
-            onClick={publishPost}
-            disabled={publishing}
-            className="rounded-2xl bg-[#0f172a] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white hover:bg-black disabled:opacity-60"
-          >
-            {publishing ? 'Publishing...' : form.status === 'published' ? 'Published' : 'Publish'}
-          </button>
+          {form.status === 'published' ? (
+            <button
+              onClick={unpublishPost}
+              disabled={publishing}
+              className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-[#fffdfa] disabled:opacity-60"
+            >
+              {publishing ? 'Updating...' : 'Move to Draft'}
+            </button>
+          ) : (
+            <button
+              onClick={publishPost}
+              disabled={publishing}
+              className="rounded-2xl bg-[#0f172a] px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-white hover:bg-black disabled:opacity-60"
+            >
+              {publishing ? 'Publishing...' : 'Publish'}
+            </button>
+          )}
         </div>
       </div>
 
@@ -443,16 +488,24 @@ export function PostEditor({ post }: { post: Post }) {
           />
 
           {activeTab === 'edit' ? (
-            <div className="overflow-hidden rounded-[24px] border border-[#e2d9cb] bg-[#fffdf9] shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
-              <div className="border-b border-[#e2d9cb] bg-[#f8f3ea] px-4 py-3 text-sm text-slate-600">
-                Rich Text Editor
-              </div>
+            <div className="grid gap-6 xl:grid-cols-2">
+              <div className="overflow-hidden rounded-[24px] border border-[#e2d9cb] bg-[#fffdf9] shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
+                <div className="border-b border-[#e2d9cb] bg-[#f8f3ea] px-4 py-3 text-sm text-slate-600">
+                  Rich Text Editor
+                </div>
 
-              <div className="bg-white px-8 py-8 text-slate-900">
-                <div className="mx-auto max-w-3xl">
-                  <EditorContent editor={editor} />
+                <div className="bg-white px-8 py-8 text-slate-900">
+                  <div className="mx-auto max-w-3xl">
+                    <EditorContent editor={editor} />
+                  </div>
                 </div>
               </div>
+
+              <PostPreview
+                title={form.title}
+                excerpt={form.excerpt}
+                content={form.content}
+              />
             </div>
           ) : (
             <PostPreview

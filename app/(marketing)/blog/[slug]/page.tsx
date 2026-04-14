@@ -5,36 +5,13 @@ import { notFound } from 'next/navigation';
 import { format } from 'date-fns';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { ArticleEnhancements } from '@/components/article-enhancements';
+import { RichContent } from '@/components/rich-content';
 import {
   getPostBySlug,
   getRelatedPostsBySlug,
   getStructuredDataForPost
 } from '@/lib/data';
 import { getSiteUrl } from '@/lib/utils';
-
-function stripNofollowFromHtml(html: string) {
-  return html.replace(/\srel=(["'])(.*?)\1/gi, (_match, quote, value) => {
-    const cleaned = String(value)
-      .split(/\s+/)
-      .filter(Boolean)
-      .filter((token) => token.toLowerCase() !== 'nofollow');
-
-    return cleaned.length ? ` rel=${quote}${cleaned.join(' ')}${quote}` : '';
-  });
-}
-
-function cleanArticleHtml(html: string) {
-  return stripNofollowFromHtml(html)
-    .replace(/<p>(?:\s|&nbsp;|<br\s*\/?>)*<\/p>/gi, '')
-    .replace(/<h2>(?:\s|&nbsp;|<br\s*\/?>)*<\/h2>/gi, '')
-    .replace(/<h3>(?:\s|&nbsp;|<br\s*\/?>)*<\/h3>/gi, '')
-    .replace(/^(?:\s|&nbsp;|<br\s*\/?>)+/gi, '')
-    .replace(
-      /<p>\s*<strong>\s*([A-Za-z])([A-Za-z])<\/strong>/i,
-      '<p>$1<strong>$2</strong>'
-    )
-    .trim();
-}
 
 export async function generateMetadata({
   params
@@ -93,7 +70,6 @@ export default async function PostPage({
 
   if (!post) notFound();
 
-  const cleanedContent = cleanArticleHtml(post.content);
   const articleUrl = `${getSiteUrl()}/blog/${normalizedSlug}`;
 
   return (
@@ -181,43 +157,7 @@ export default async function PostPage({
                 </div>
               </Link>
 
-              <div
-                className="journal-prose prose prose-lg max-w-none
-prose-p:my-5 prose-p:leading-9
-prose-headings:tracking-tight
-prose-h2:mb-5 prose-h2:mt-12 prose-h2:text-3xl prose-h2:font-semibold
-prose-h3:mb-4 prose-h3:mt-8 prose-h3:text-2xl prose-h3:font-semibold
-prose-ul:my-6 prose-ol:my-6 prose-li:my-1
-prose-blockquote:my-7 prose-blockquote:border-l-4 prose-blockquote:pl-5
-prose-a:text-brand-700 prose-a:underline
-prose-strong:text-slate-900
-
-dark:prose-p:text-slate-200
-dark:prose-li:text-slate-200
-dark:prose-strong:text-white
-dark:prose-headings:text-white
-dark:prose-a:text-amber-400
-
-[&>*:first-child]:mt-0
-[&>*:last-child]:mb-0
-
-[&>p:first-of-type]:text-[1.18rem]
-[&>p:first-of-type]:leading-9
-
-[&>p:first-of-type:first-letter]:float-left
-[&>p:first-of-type:first-letter]:mr-3
-[&>p:first-of-type:first-letter]:mt-2
-[&>p:first-of-type:first-letter]:font-serif
-[&>p:first-of-type:first-letter]:text-6xl
-[&>p:first-of-type:first-letter]:font-semibold
-[&>p:first-of-type:first-letter]:leading-[0.8]
-[&>p:first-of-type:first-letter]:text-slate-900
-
-dark:[&>p:first-of-type:first-letter]:text-white"
-                dangerouslySetInnerHTML={{
-                  __html: cleanedContent
-                }}
-              />
+              <RichContent content={post.content} />
 
               {relatedPosts.length ? (
                 <section className="article-related mt-8 border-t border-slate-200 pt-8 dark:border-slate-700">
