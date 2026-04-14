@@ -1,44 +1,22 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { generateDraftFromKeywordId } from '@/lib/content/queue';
-
-function isAuthorized(request: Request) {
-  const auth = request.headers.get('authorization');
-  return auth === `Bearer ${process.env.CRON_SECRET}`;
-}
+import { isCronAuthorized, runDraftBatch } from '@/lib/cron/run-next-draft';
 
 export async function GET(request: Request) {
-  if (!isAuthorized(request)) {
+  if (!isCronAuthorized(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const { data: keyword, error } = await supabaseAdmin
-      .from('content_keywords')
-      .select('id, status')
-      .eq('status', 'queued')
-      .order('priority', { ascending: false })
-      .order('created_at', { ascending: true })
-      .limit(1)
-      .maybeSingle();
+    const url = new URL(request.url);
+    const batchParam = Number(url.searchParams.get('batch') || '3');
+    const batchSize = Number.isFinite(batchParam) ? batchParam : 3;
 
-    if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
-    }
-
-    if (!keyword?.id) {
-      return NextResponse.json({
-        success: true,
-        message: 'No queued keywords found.'
-      });
-    }
-
-    const post = await generateDraftFromKeywordId(keyword.id);
+    const result = await runDraftBatch(batchSize);
 
     return NextResponse.json({
-      success: true,
-      keyword_id: keyword.id,
-      post
+      ...result,
+      route: '/api/cron/daily-draft',
+      batch_size: Math.max(1, Math.min(batchSize, 10))
     });
   } catch (error) {
     const message =

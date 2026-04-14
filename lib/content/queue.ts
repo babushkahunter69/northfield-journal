@@ -8,6 +8,33 @@ import type {
 import { generateBrief } from '@/lib/ai/generate-brief';
 import { generateArticle } from '@/lib/ai/generate-article';
 import { createCoverForPost } from '@/lib/cover/create-cover';
+import { validateGeneratedArticle } from '@/lib/content/quality';
+
+type EducationKeyword = ContentKeyword & {
+  audience?: string | null;
+  grade_band?: string | null;
+  subject_area?: string | null;
+  content_type?: string | null;
+  target_country?: string | null;
+  curriculum?: string | null;
+  learning_objective?: string | null;
+  tone?: string | null;
+  attempt_count?: number | null;
+  last_attempted_at?: string | null;
+  last_error?: string | null;
+};
+
+type EducationBrief = GeneratedBrief & {
+  keyword?: string;
+  audience?: string | null;
+  grade_band?: string | null;
+  subject_area?: string | null;
+  content_type?: string | null;
+  target_country?: string | null;
+  curriculum?: string | null;
+  learning_objective?: string | null;
+  tone?: string | null;
+};
 
 function slugify(value: string) {
   return value
@@ -16,6 +43,14 @@ function slugify(value: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .replace(/--+/g, '-');
+}
+
+function titleCaseFromSlug(slug: string) {
+  return slug
+    .split('-')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
 }
 
 async function getUniqueSlug(baseSlug: string) {
@@ -67,7 +102,7 @@ async function logGenerationRun(payload: {
   });
 }
 
-async function fetchKeywordById(keywordId: string): Promise<ContentKeyword> {
+async function fetchKeywordById(keywordId: string): Promise<EducationKeyword> {
   const response = await supabaseAdmin
     .from('content_keywords')
     .select('*')
@@ -78,12 +113,12 @@ async function fetchKeywordById(keywordId: string): Promise<ContentKeyword> {
     throw new Error(response.error?.message || 'Keyword not found.');
   }
 
-  return response.data as ContentKeyword;
+  return response.data as EducationKeyword;
 }
 
 async function upsertBrief(
-  keyword: ContentKeyword,
-  brief: GeneratedBrief
+  keyword: EducationKeyword,
+  brief: EducationBrief
 ): Promise<ContentBriefRow> {
   const response = await supabaseAdmin
     .from('content_briefs')
@@ -110,21 +145,52 @@ async function upsertBrief(
   return response.data as ContentBriefRow;
 }
 
+async function ensureCategoryId(categorySlug: string | null | undefined) {
+  const normalizedSlug = slugify(String(categorySlug || ''));
+
+  const safeSlug = normalizedSlug || 'student-success';
+  const safeName = titleCaseFromSlug(safeSlug);
+
+  const existingResponse = await supabaseAdmin
+    .from('categories')
+    .select('id, slug, name')
+    .eq('slug', safeSlug)
+    .maybeSingle();
+
+  if (existingResponse.error) {
+    throw new Error(existingResponse.error.message || 'Failed to look up category.');
+  }
+
+  if (existingResponse.data?.id) {
+    return existingResponse.data.id;
+  }
+
+  const insertPayload: Record<string, unknown> = {
+    name: safeName,
+    slug: safeSlug
+  };
+
+  const createResponse = await supabaseAdmin
+    .from('categories')
+    .insert(insertPayload)
+    .select('id')
+    .single();
+
+  if (createResponse.error || !createResponse.data?.id) {
+    throw new Error(createResponse.error?.message || 'Failed to create category.');
+  }
+
+  return createResponse.data.id;
+}
+
 async function persistPost(
-  keyword: ContentKeyword,
-  brief: GeneratedBrief,
+  keyword: EducationKeyword,
+  brief: EducationBrief,
   article: GeneratedArticle,
   coverUrl: string | null
 ) {
   const uniqueSlug = await getUniqueSlug(article.slug || brief.slug || brief.working_title);
-
-  const categoryResponse = await supabaseAdmin
-    .from('categories')
-    .select('id')
-    .eq('slug', brief.category_slug)
-    .maybeSingle();
-
-  const categoryId = categoryResponse.data?.id ?? null;
+  const categoryId = await ensureCategoryId(brief.category_slug);
 
   const response = await supabaseAdmin
     .from('posts')
@@ -152,26 +218,44 @@ async function persistPost(
     throw new Error(response.error?.message || 'Failed to persist post.');
   }
 
-    return response.data;
+  return response.data;
 }
 
-export async function generateDraftFromKeyword(keyword: ContentKeyword) {
+async function markKeywordAttempt(keyword: EducationKeyword) {
+  await supabaseAdmin
+    .from('content_keywords')
+    .update({
+      status: 'in_progress',
+      attempt_count: (keyword.attempt_count ?? 0) + 1,
+      last_attempted_at: new Date().toISOString(),
+      last_error: null
+    })
+    .eq('id', keyword.id);
+}
+
+export async function generateDraftFromKeyword(keyword: EducationKeyword) {
   let savedBrief: ContentBriefRow | null = null;
 
   try {
-    await supabaseAdmin
-      .from('content_keywords')
-      .update({ status: 'in_progress' })
-      .eq('id', keyword.id);
+    await markKeywordAttempt(keyword);
 
     const generatedBrief = await generateBrief(keyword);
     const uniqueBriefSlug = await getUniqueSlug(
       generatedBrief.slug || generatedBrief.working_title || keyword.keyword
     );
 
-    const briefWithUniqueSlug: GeneratedBrief = {
+    const briefWithUniqueSlug: EducationBrief = {
       ...generatedBrief,
-      slug: uniqueBriefSlug
+      slug: uniqueBriefSlug,
+      keyword: keyword.keyword,
+      audience: keyword.audience ?? null,
+      grade_band: keyword.grade_band ?? null,
+      subject_area: keyword.subject_area ?? null,
+      content_type: keyword.content_type ?? null,
+      target_country: keyword.target_country ?? null,
+      curriculum: keyword.curriculum ?? null,
+      learning_objective: keyword.learning_objective ?? null,
+      tone: keyword.tone ?? null
     };
 
     savedBrief = await upsertBrief(keyword, briefWithUniqueSlug);
@@ -186,6 +270,34 @@ export async function generateDraftFromKeyword(keyword: ContentKeyword) {
     });
 
     const article = await generateArticle(briefWithUniqueSlug);
+
+    const validation = validateGeneratedArticle(article, briefWithUniqueSlug);
+
+    if (!validation.ok) {
+      await logGenerationRun({
+        keyword_id: keyword.id,
+        brief_id: savedBrief.id,
+        run_type: 'validation',
+        status: 'failed',
+        input_snapshot: briefWithUniqueSlug,
+        output_snapshot: {
+          article,
+          validation
+        },
+        error_message: `Validation failed: ${validation.errors.join(' | ')}`
+      });
+
+      throw new Error(`Draft validation failed: ${validation.errors.join(' | ')}`);
+    }
+
+    await logGenerationRun({
+      keyword_id: keyword.id,
+      brief_id: savedBrief.id,
+      run_type: 'validation',
+      status: 'success',
+      input_snapshot: briefWithUniqueSlug,
+      output_snapshot: validation
+    });
 
     await logGenerationRun({
       keyword_id: keyword.id,
@@ -238,15 +350,38 @@ export async function generateDraftFromKeyword(keyword: ContentKeyword) {
       .from('content_keywords')
       .update({
         status: 'done',
-        last_generated_at: new Date().toISOString()
+        last_generated_at: new Date().toISOString(),
+        last_error: null
       })
       .eq('id', keyword.id);
 
+    await logGenerationRun({
+      keyword_id: keyword.id,
+      brief_id: savedBrief.id,
+      post_id: post.id,
+      run_type: 'persist',
+      status: 'success',
+      input_snapshot: {
+        category_slug: briefWithUniqueSlug.category_slug,
+        post_slug: post.slug
+      },
+      output_snapshot: {
+        post_id: post.id,
+        category_id: post.category_id ?? null
+      }
+    });
+
     return post;
   } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Draft generation failed.';
+
     await supabaseAdmin
       .from('content_keywords')
-      .update({ status: 'queued' })
+      .update({
+        status: 'queued',
+        last_error: message
+      })
       .eq('id', keyword.id);
 
     await logGenerationRun({
@@ -255,7 +390,7 @@ export async function generateDraftFromKeyword(keyword: ContentKeyword) {
       run_type: 'draft',
       status: 'failed',
       input_snapshot: keyword,
-      error_message: error instanceof Error ? error.message : 'Draft generation failed.'
+      error_message: message
     });
 
     throw error;

@@ -1,6 +1,19 @@
 import { generateJson } from './client';
 import type { GeneratedArticle, GeneratedBrief } from '@/lib/types';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { educationContextBlock } from '@/lib/content/education-context';
+
+type EducationBrief = GeneratedBrief & {
+  keyword?: string;
+  audience?: string | null;
+  grade_band?: string | null;
+  subject_area?: string | null;
+  content_type?: string | null;
+  target_country?: string | null;
+  curriculum?: string | null;
+  learning_objective?: string | null;
+  tone?: string | null;
+};
 
 type ArticleResponse = {
   title: string;
@@ -267,8 +280,22 @@ ${availableLinks.map((item) => `  - <a href="${item.href}">${item.text}</a>`).jo
 `.trim();
 }
 
+function buildEducationPromptBlock(brief: EducationBrief) {
+  return educationContextBlock({
+    keyword: brief.keyword || brief.working_title,
+    audience: brief.audience,
+    grade_band: brief.grade_band,
+    subject_area: brief.subject_area,
+    content_type: brief.content_type,
+    target_country: brief.target_country,
+    curriculum: brief.curriculum,
+    learning_objective: brief.learning_objective,
+    tone: brief.tone
+  });
+}
+
 export async function generateArticle(
-  brief: GeneratedBrief
+  brief: EducationBrief
 ): Promise<GeneratedArticle> {
   const publishedCandidates = await getPublishedLinkCandidates(brief.slug);
   const approvedInternalLinks = chooseRealInternalLinks(publishedCandidates, brief, 2);
@@ -277,6 +304,9 @@ export async function generateArticle(
 You are writing for Northfield Journal, a premium Western-market education publication.
 
 Write an editor-ready, SEO-aware article using this brief.
+
+Education context:
+${buildEducationPromptBlock(brief)}
 
 Brief:
 - working title: ${brief.working_title}
@@ -309,28 +339,35 @@ STRICT REQUIREMENTS:
 - Include at least one section with practical mistakes to avoid
 - End with a conclusion that feels editorial, not salesy
 
-3. SEO
+3. EDUCATION QUALITY
+- Match the tone and depth to the intended audience and grade band
+- Keep the advice practical, clear, calm, and trustworthy
+- Use examples or scenarios that feel realistic for students, teachers, or parents
+- Avoid robotic phrasing, hype, generic filler, and vague claims
+- Do not invent laws, school policies, or curriculum specifics
+- If regional details are uncertain, keep advice general and natural
+
+4. SEO
 - Include the main topic naturally in the title, opening paragraph, and multiple subheadings
 - Use 3 to 5 secondary keywords naturally without stuffing
 - Make the article useful for real search intent, not generic or fluffy
 ${buildInternalLinkPrompt(approvedInternalLinks)}
 
-4. META
+5. META
 - meta_title should be between 40 and 65 characters
 - meta_description should be between 120 and 160 characters
 
-5. FAQ
+6. FAQ
 - Include a section titled exactly:
   <h2>Frequently Asked Questions</h2>
 - Include 3 to 5 FAQ items
 - FAQ answers should be concise but genuinely helpful
 
-6. TONE
+7. TONE
 - Clear, polished, practical English
 - Sound like a high-quality education magazine
-- Avoid filler, clichés, hype, fake statistics, and vague claims
-- Use specific examples when helpful
 - Write for readers in the US, UK, Canada, or Australia
+- Do not mention AI
 
 Return JSON with exactly this shape:
 {
