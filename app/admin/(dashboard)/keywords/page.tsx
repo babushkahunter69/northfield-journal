@@ -2,18 +2,27 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { KeywordManager } from '@/components/admin/keyword-manager';
 import KeywordBulkImport from '@/components/admin/KeywordBulkImport';
 import AutoKeywordGenerator from '@/components/admin/AutoKeywordGenerator';
+import { AutomationDashboard } from '@/components/admin/AutomationDashboard';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AdminKeywordsPage() {
-  const response = await supabaseAdmin
-    .from('content_keywords')
-    .select('*')
-    .order('priority', { ascending: false })
-    .order('created_at', { ascending: false });
+  const [keywordsResponse, logsResponse] = await Promise.all([
+    supabaseAdmin
+      .from('content_keywords')
+      .select('*')
+      .order('priority', { ascending: false })
+      .order('created_at', { ascending: false }),
+    supabaseAdmin
+      .from('automation_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(20)
+  ]);
 
   return (
     <div className="space-y-8">
+      <AutomationDashboard logs={logsResponse.data ?? []} />
       <AutoKeywordGenerator />
 
       <section className="rounded-[28px] border border-stone-200 bg-white/70 shadow-sm">
@@ -44,7 +53,7 @@ export default async function AdminKeywordsPage() {
         </details>
       </section>
 
-      <KeywordManager initialKeywords={response.data ?? []} />
+      <KeywordManager initialKeywords={keywordsResponse.data ?? []} />
     </div>
   );
 }
