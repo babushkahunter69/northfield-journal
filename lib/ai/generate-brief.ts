@@ -23,6 +23,8 @@ type BriefResponse = {
   seo_description: string;
   target_word_count: number;
   internal_link_suggestions: string[];
+  secondary_keywords?: string[];
+  faq?: Array<{ question: string; answer: string }>;
   category_slug: string;
 };
 
@@ -108,6 +110,28 @@ function inferCategoryFromMetadata(keyword: EducationKeywordInput) {
   return 'student-success';
 }
 
+function normalizeSecondaryKeywords(value: string[] | undefined): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .slice(0, 8);
+}
+
+function normalizeFaq(
+  value: Array<{ question?: string; answer?: string }> | undefined
+): Array<{ question: string; answer: string }> {
+  if (!Array.isArray(value)) return [];
+
+  return value
+    .map((item) => ({
+      question: String(item?.question || '').trim(),
+      answer: String(item?.answer || '').trim()
+    }))
+    .filter((item) => item.question && item.answer)
+    .slice(0, 5);
+}
+
 export async function generateBrief(
   keyword: EducationKeywordInput
 ): Promise<GeneratedBrief & EducationKeywordInput> {
@@ -139,6 +163,10 @@ Return JSON with exactly this shape:
   "seo_description": "string",
   "target_word_count": 1200,
   "internal_link_suggestions": ["string"],
+  "secondary_keywords": ["string"],
+  "faq": [
+    { "question": "string", "answer": "string" }
+  ],
   "category_slug": "string"
 }
 
@@ -160,6 +188,7 @@ Constraints:
   - math-learning
   - science-learning
   - writing-skills
+  - reading-skills
 `;
 
   const result = await generateJson<BriefResponse>(prompt);
@@ -187,6 +216,8 @@ Constraints:
           .filter(Boolean)
           .slice(0, 6)
       : [],
+    secondary_keywords: normalizeSecondaryKeywords(result.secondary_keywords),
+    faq: normalizeFaq(result.faq),
     category_slug: categorySlug,
 
     audience: keyword.audience ?? null,
