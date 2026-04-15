@@ -36,6 +36,61 @@ type EducationBrief = GeneratedBrief & {
   tone?: string | null;
 };
 
+
+const GENERIC_FILLER_REPLACEMENTS: Array<{ pattern: RegExp; replacement: string }> = [
+  { pattern: /\bin today[’']s fast-paced world\b/gi, replacement: 'today' },
+  { pattern: /\bever-evolving landscape\b/gi, replacement: 'current environment' },
+  { pattern: /\bgame-changer\b/gi, replacement: 'meaningful improvement' },
+  { pattern: /\bdelve into\b/gi, replacement: 'look at' },
+  { pattern: /\bunlock the power of\b/gi, replacement: 'use' },
+  { pattern: /\bnow more than ever\b/gi, replacement: 'right now' },
+  { pattern: /\bit is important to note that\b/gi, replacement: '' },
+  { pattern: /\bseamlessly\b/gi, replacement: 'effectively' },
+  { pattern: /\brobust solution\b/gi, replacement: 'practical approach' },
+  { pattern: /\bnavigate the complexities\b/gi, replacement: 'work through the details' },
+  { pattern: /\btake your learning to the next level\b/gi, replacement: 'build stronger learning habits' }
+];
+
+function cleanSpacing(value: string) {
+  return value
+    .replace(/\s+,/g, ',')
+    .replace(/\s+\./g, '.')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\(\s+/g, '(')
+    .replace(/\s+\)/g, ')')
+    .trim();
+}
+
+function rewriteGenericFillerText(value: string) {
+  let next = String(value || '');
+
+  for (const rule of GENERIC_FILLER_REPLACEMENTS) {
+    next = next.replace(rule.pattern, rule.replacement);
+  }
+
+  next = next
+    .replace(/,\s*,/g, ', ')
+    .replace(/\s{2,}/g, ' ')
+    .replace(/\s+([.,!?;:])/g, '$1');
+
+  return cleanSpacing(next);
+}
+
+function autoFixBannedPhrases(article: GeneratedArticle): GeneratedArticle {
+  return {
+    ...article,
+    title: rewriteGenericFillerText(article.title),
+    excerpt: rewriteGenericFillerText(article.excerpt),
+    meta_title: rewriteGenericFillerText(article.meta_title),
+    meta_description: rewriteGenericFillerText(article.meta_description),
+    content: rewriteGenericFillerText(article.content)
+  };
+}
+
+function hasGenericFillerValidationErrors(errors: string[]) {
+  return errors.some((error) => /generic filler phrase/i.test(error));
+}
+
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -269,9 +324,46 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
       output_snapshot: briefWithUniqueSlug
     });
 
-    const article = await generateArticle(briefWithUniqueSlug);
+    let article = await generateArticle(briefWithUniqueSlug);
 
-    const validation = validateGeneratedArticle(article, briefWithUniqueSlug);
+    let validation = validateGeneratedArticle(article, briefWithUniqueSlug);
+
+    if (!validation.ok && hasGenericFillerValidationErrors(validation.errors)) {
+      const cleanedArticle = autoFixBannedPhrases(article);
+      const cleanedValidation = validateGeneratedArticle(cleanedArticle, briefWithUniqueSlug);
+
+      await logGenerationRun({
+        keyword_id: keyword.id,
+        brief_id: savedBrief.id,
+        run_type: 'auto_fix_filler',
+        status: cleanedValidation.ok ? 'success' : 'failed',
+        input_snapshot: { article, validation },
+        output_snapshot: { article: cleanedArticle, validation: cleanedValidation },
+        error_message: cleanedValidation.ok ? null : `Auto-fix still failing: ${cleanedValidation.errors.join(' | ')}`
+      });
+
+      article = cleanedArticle;
+      validation = cleanedValidation;
+    }
+
+    if (!validation.ok) {
+      const retriedArticle = await generateArticle(briefWithUniqueSlug);
+      const cleanedRetriedArticle = autoFixBannedPhrases(retriedArticle);
+      const retriedValidation = validateGeneratedArticle(cleanedRetriedArticle, briefWithUniqueSlug);
+
+      await logGenerationRun({
+        keyword_id: keyword.id,
+        brief_id: savedBrief.id,
+        run_type: 'draft_retry',
+        status: retriedValidation.ok ? 'success' : 'failed',
+        input_snapshot: briefWithUniqueSlug,
+        output_snapshot: { article: cleanedRetriedArticle, validation: retriedValidation },
+        error_message: retriedValidation.ok ? null : `Retry validation failed: ${retriedValidation.errors.join(' | ')}`
+      });
+
+      article = cleanedRetriedArticle;
+      validation = retriedValidation;
+    }
 
     if (!validation.ok) {
       await logGenerationRun({

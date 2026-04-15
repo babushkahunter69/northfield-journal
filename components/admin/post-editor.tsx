@@ -386,14 +386,6 @@ export function PostEditor({ post }: { post: Post }) {
           </button>
 
           <button
-            onClick={improveFailedChecks}
-            disabled={!form.id || improving}
-            className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-[#fffdfa] disabled:opacity-60"
-          >
-            {improving ? 'Improving...' : 'Improve Failed Checks'}
-          </button>
-
-          <button
             onClick={saveDraft}
             disabled={saving}
             className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-[#fffdfa] disabled:opacity-60"
