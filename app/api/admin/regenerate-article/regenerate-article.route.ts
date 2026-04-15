@@ -3,7 +3,6 @@ import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateArticle } from '@/lib/ai/generate-article';
 import { improveArticleToThreshold } from '@/lib/ai/improve-article';
-import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import type { ContentBriefRow, GeneratedBrief } from '@/lib/types';
 
 function toGeneratedBrief(
@@ -63,7 +62,6 @@ export async function POST(request: Request) {
       status: 'draft' | 'published';
       faq_json?: Array<{ question: string; answer: string }> | null;
       categories?: { slug?: string | null } | null;
-      featured_image_url?: string | null;
     };
 
     if (post.status !== 'draft') {
@@ -93,17 +91,10 @@ export async function POST(request: Request) {
 
     const briefInput = toGeneratedBrief(brief, categorySlug);
     let article = await generateArticle(briefInput);
-
-    if ((article.content || '').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length < 850) {
-      article = await generateArticle(briefInput);
-    }
-
     const improved = await improveArticleToThreshold({
       article,
       primaryKeyword: brief.working_title,
-      internalLinkSuggestions: briefInput.internal_link_suggestions,
-      minimumScore: 80,
-      maxPasses: 2
+      internalLinkSuggestions: briefInput.internal_link_suggestions
     });
     article = improved.article;
 
@@ -133,10 +124,10 @@ export async function POST(request: Request) {
         meta_description:
           article.meta_description || post.meta_description || post.excerpt || '',
         faq_json: article.faq || post.faq_json || null,
-        generation_status: `ai_regenerated_${improved.after.score}`
+        generation_status: 'ai_regenerated'
       })
       .eq('id', post.id)
-      .select('id, slug, title, excerpt, content, meta_title, meta_description, featured_image_url, status')
+      .select('id')
       .single();
 
     if (updateResponse.error || !updateResponse.data) {
@@ -146,22 +137,20 @@ export async function POST(request: Request) {
       );
     }
 
-    const rescored = evaluateEditorialScore({
-      title: updateResponse.data.title,
-      excerpt: updateResponse.data.excerpt || '',
-      content: updateResponse.data.content || '',
-      metaTitle: updateResponse.data.meta_title || updateResponse.data.title,
-      metaDescription: updateResponse.data.meta_description || updateResponse.data.excerpt || '',
-      featuredImageUrl: updateResponse.data.featured_image_url,
-      primaryKeyword: brief.working_title
-    });
-
     return NextResponse.json({
       success: true,
+      post: {
+        ...updateResponse.data,
+        content: article.content,
+        title: article.title || post.title,
+        excerpt: article.excerpt || post.excerpt || '',
+        meta_title: article.meta_title || post.meta_title || post.title,
+        meta_description:
+          article.meta_description || post.meta_description || post.excerpt || ''
+      },
       before: improved.before.score,
-      after: rescored.score,
-      remainingFailed: rescored.checks.filter((check) => !check.passed).map((check) => check.key),
-      post: updateResponse.data
+      after: improved.after.score,
+      passes: improved.passes
     });
   } catch (error) {
     const message =

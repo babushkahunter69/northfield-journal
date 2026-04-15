@@ -77,7 +77,7 @@ function sleep(ms: number) {
 async function requestChatCompletion<T>(
   messages: ChatMessage[],
   expectJson: boolean,
-  attempt = 0
+  retries = 1
 ): Promise<T | string> {
   const { apiKey, model, apiUrl } = getAiConfig();
 
@@ -91,67 +91,57 @@ async function requestChatCompletion<T>(
     payload.response_format = { type: 'json_object' };
   }
 
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 30000);
+  let lastError: Error | null = null;
 
-  let response: Response;
-  try {
-    response = await fetch(apiUrl, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`
-      },
-      body: JSON.stringify(payload),
-      signal: controller.signal
-    });
-  } catch (error) {
-    clearTimeout(timeout);
-    if (attempt < 1) {
-      await sleep(1000 * (attempt + 1));
-      return requestChatCompletion<T>(messages, expectJson, attempt + 1);
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${apiKey}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const rawText = await response.text();
+
+      let data: ChatCompletionResponse<T> | null = null;
+      try {
+        data = rawText ? JSON.parse(rawText) : null;
+      } catch {
+        throw new Error(`AI returned non-JSON response: ${rawText || 'empty response'}`);
+      }
+
+      if (!response.ok) {
+        throw new Error(
+          data?.error?.message || `AI request failed with status ${response.status}.`
+        );
+      }
+
+      const content = data?.choices?.[0]?.message?.content?.trim();
+
+      if (!content) {
+        throw new Error('AI response was empty.');
+      }
+
+      if (!expectJson) {
+        return content;
+      }
+
+      try {
+        return JSON.parse(content) as T;
+      } catch {
+        throw new Error(`AI returned invalid JSON content: ${content}`);
+      }
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error('Unknown AI error');
+      if (attempt === retries) break;
+      await sleep(800 * (attempt + 1));
     }
-    throw error;
-  }
-  clearTimeout(timeout);
-
-  const rawText = await response.text();
-
-  let data: ChatCompletionResponse<T> | null = null;
-  try {
-    data = rawText ? JSON.parse(rawText) : null;
-  } catch {
-    throw new Error(`AI returned non-JSON response: ${rawText || 'empty response'}`);
   }
 
-  if (!response.ok) {
-    const message = data?.error?.message || `AI request failed with status ${response.status}.`;
-    if (attempt < 1 && (response.status >= 500 || response.status === 429)) {
-      await sleep(1000 * (attempt + 1));
-      return requestChatCompletion<T>(messages, expectJson, attempt + 1);
-    }
-    throw new Error(message);
-  }
-
-  const content = data?.choices?.[0]?.message?.content?.trim();
-
-  if (!content) {
-    if (attempt < 1) {
-      await sleep(1000 * (attempt + 1));
-      return requestChatCompletion<T>(messages, expectJson, attempt + 1);
-    }
-    throw new Error('AI response was empty.');
-  }
-
-  if (!expectJson) {
-    return content;
-  }
-
-  try {
-    return JSON.parse(content) as T;
-  } catch {
-    throw new Error(`AI returned invalid JSON content: ${content}`);
-  }
+  throw lastError || new Error('AI request failed.');
 }
 
 export async function generateJson<T>(prompt: unknown): Promise<T> {

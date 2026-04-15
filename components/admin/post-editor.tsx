@@ -256,7 +256,7 @@ export function PostEditor({ post }: { post: Post }) {
     }
   }
 
-  async function generateAiCover() {
+  async function generateStockCover() {
     if (!form.title.trim()) {
       alert('Add a title first before generating a cover.');
       return;
@@ -271,6 +271,7 @@ export function PostEditor({ post }: { post: Post }) {
         body: JSON.stringify({
           title: form.title,
           excerpt: form.excerpt,
+          content: form.content,
           slug: form.slug || form.title,
           category: 'education'
         })
@@ -279,7 +280,7 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'AI cover generation failed.');
+        alert(data?.error || 'Stock cover lookup failed.');
         return;
       }
 
@@ -477,11 +478,11 @@ export function PostEditor({ post }: { post: Post }) {
 
                 <button
                   type="button"
-                  onClick={generateAiCover}
+                  onClick={generateStockCover}
                   disabled={generatingCover}
                   className="rounded-2xl bg-[#0f172a] px-4 py-2 text-sm font-semibold text-white hover:bg-black disabled:opacity-60"
                 >
-                  {generatingCover ? 'Generating...' : 'Generate AI cover'}
+                  {generatingCover ? 'Finding cover...' : 'Find stock cover'}
                 </button>
               </div>
             </div>
