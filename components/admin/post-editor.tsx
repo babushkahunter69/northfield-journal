@@ -323,31 +323,6 @@ export function PostEditor({ post }: { post: Post }) {
     }
   }
 
-  async function improveFailedChecks() {
-    if (!form.id) return;
-
-    setImproving(true);
-
-    try {
-      const res = await fetch('/api/admin/improve-post', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ post_id: form.id })
-      });
-
-      const data = await res.json().catch(() => null);
-
-      if (!res.ok) {
-        alert(data?.error || 'Failed to improve article.');
-        return;
-      }
-
-      window.location.reload();
-    } finally {
-      setImproving(false);
-    }
-  }
-
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
