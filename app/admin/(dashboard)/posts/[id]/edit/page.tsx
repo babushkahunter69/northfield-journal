@@ -19,5 +19,13 @@ export default async function EditPostPage({
     notFound();
   }
 
-  return <PostEditor post={post} />;
+  const { data: brief } = await supabaseAdmin
+    .from('content_briefs')
+    .select('working_title')
+    .eq('slug', post.slug)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  return <PostEditor post={{ ...post, primary_keyword: brief?.working_title || post.slug?.replace(/-/g, ' ') || '' }} />;
 }

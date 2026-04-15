@@ -19,6 +19,7 @@ type Post = {
   featured_image_url?: string | null;
   slug?: string;
   is_featured_homepage?: boolean;
+  primary_keyword?: string | null;
 };
 
 export function PostEditor({ post }: { post: Post }) {
@@ -38,6 +39,7 @@ export function PostEditor({ post }: { post: Post }) {
   const [uploadingImage, setUploadingImage] = useState(false);
   const [generatingCover, setGeneratingCover] = useState(false);
   const [settingFeatured, setSettingFeatured] = useState(false);
+  const [improving, setImproving] = useState(false);
   const [activeTab, setActiveTab] = useState<'edit' | 'preview'>('edit');
 
   const inputClass =
@@ -295,6 +297,57 @@ export function PostEditor({ post }: { post: Post }) {
     }
   }
 
+
+  async function improveFailedChecks() {
+    if (!form.id) return;
+
+    setImproving(true);
+
+    try {
+      const res = await fetch('/api/admin/improve-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: form.id })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert(data?.error || 'Failed to improve article.');
+        return;
+      }
+
+      window.location.reload();
+    } finally {
+      setImproving(false);
+    }
+  }
+
+  async function improveFailedChecks() {
+    if (!form.id) return;
+
+    setImproving(true);
+
+    try {
+      const res = await fetch('/api/admin/improve-post', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: form.id })
+      });
+
+      const data = await res.json().catch(() => null);
+
+      if (!res.ok) {
+        alert(data?.error || 'Failed to improve article.');
+        return;
+      }
+
+      window.location.reload();
+    } finally {
+      setImproving(false);
+    }
+  }
+
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -347,6 +400,22 @@ export function PostEditor({ post }: { post: Post }) {
             className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-[#fffdfa] disabled:opacity-60"
           >
             {regenerating ? 'Regenerating...' : 'Regenerate Article'}
+          </button>
+
+          <button
+            onClick={improveFailedChecks}
+            disabled={!form.id || improving}
+            className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-[#fffdfa] disabled:opacity-60"
+          >
+            {improving ? 'Improving...' : 'Improve Failed Checks'}
+          </button>
+
+          <button
+            onClick={improveFailedChecks}
+            disabled={!form.id || improving}
+            className="rounded-2xl border border-[#d9cfbf] bg-white px-5 py-3 text-sm font-semibold uppercase tracking-[0.14em] text-slate-700 hover:bg-[#fffdfa] disabled:opacity-60"
+          >
+            {improving ? 'Improving...' : 'Improve Failed Checks'}
           </button>
 
           <button
@@ -524,6 +593,7 @@ export function PostEditor({ post }: { post: Post }) {
             metaTitle={derivedMetaTitle}
             metaDescription={derivedMetaDescription}
             featuredImageUrl={form.featured_image_url || null}
+            primaryKeyword={form.primary_keyword || form.slug || form.title}
           />
         </div>
       </div>

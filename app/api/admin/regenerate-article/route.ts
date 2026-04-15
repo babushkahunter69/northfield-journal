@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateArticle } from '@/lib/ai/generate-article';
+import { improveArticleToThreshold } from '@/lib/ai/improve-article';
+import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import type { ContentBriefRow, GeneratedBrief } from '@/lib/types';
 
 function toGeneratedBrief(
@@ -88,7 +90,14 @@ export async function POST(request: Request) {
     const brief = briefResponse.data as ContentBriefRow;
     const categorySlug = post.categories?.slug || 'student-success';
 
-    const article = await generateArticle(toGeneratedBrief(brief, categorySlug));
+    const briefInput = toGeneratedBrief(brief, categorySlug);
+    let article = await generateArticle(briefInput);
+    const improved = await improveArticleToThreshold({
+      article,
+      primaryKeyword: brief.working_title,
+      internalLinkSuggestions: briefInput.internal_link_suggestions
+    });
+    article = improved.article;
 
     await supabaseAdmin.from('content_generation_runs').insert({
       brief_id: brief.id,
