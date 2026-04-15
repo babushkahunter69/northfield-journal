@@ -3,7 +3,6 @@ import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateArticle } from '@/lib/ai/generate-article';
 import { improveArticleToThreshold } from '@/lib/ai/improve-article';
-import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import type { ContentBriefRow, GeneratedBrief } from '@/lib/types';
 
 function toGeneratedBrief(
