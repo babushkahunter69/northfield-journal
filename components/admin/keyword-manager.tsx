@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { showAdminToast } from '@/lib/admin/toast';
 
 type ContentKeyword = {
   id: string;
@@ -35,6 +37,7 @@ const selectClass =
   'w-full appearance-none rounded-2xl border border-[#d6cebf] bg-white px-4 py-3 text-base text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#0f1b3d]/10';
 
 export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKeyword[] }) {
+  const router = useRouter();
   const [keywords, setKeywords] = useState(initialKeywords);
   const [submitting, setSubmitting] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -47,6 +50,10 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
     priority: 50,
     country_code: 'US'
   });
+
+  useEffect(() => {
+    setKeywords(initialKeywords);
+  }, [initialKeywords]);
 
   async function addKeyword(event: React.FormEvent) {
     event.preventDefault();
@@ -64,8 +71,9 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
 
       setKeywords((prev) => [data.keyword, ...prev]);
       setForm((prev) => ({ ...prev, keyword: '' }));
+      showAdminToast({ type: 'success', title: 'Keyword added', description: 'The keyword was added to the automation queue.' });
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Unable to save keyword.');
+      showAdminToast({ type: 'error', title: 'Keyword save failed', description: error instanceof Error ? error.message : 'Unable to save keyword.' });
     } finally {
       setSubmitting(false);
     }
@@ -73,7 +81,7 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
 
   async function importKeywords() {
     if (!bulkRaw.trim()) {
-      window.alert('Paste keywords first.');
+      showAdminToast({ type: 'info', title: 'Keywords required', description: 'Paste keywords first.' });
       return;
     }
 
@@ -92,11 +100,15 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
         throw new Error(data?.error || 'Unable to import keywords.');
       }
 
-      setKeywords((prev) => [...(data.keywords || []).reverse(), ...prev]);
       setBulkRaw('');
-      window.alert(`Imported ${data.imported} keywords.`);
+      showAdminToast({
+        type: 'success',
+        title: 'Keywords imported',
+        description: `Imported ${data.inserted || data.imported || 0} keywords.`
+      });
+      router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Unable to import keywords.');
+      showAdminToast({ type: 'error', title: 'Keyword import failed', description: error instanceof Error ? error.message : 'Unable to import keywords.' });
     } finally {
       setImporting(false);
     }

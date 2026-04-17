@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+import { showAdminToast } from '@/lib/admin/toast';
 
 export function DeletePostButton({
   postId,
@@ -28,7 +29,7 @@ export function DeletePostButton({
     setLoading(false);
 
     if (!res.ok) {
-      alert('Delete failed.');
+      showAdminToast({ type: 'error', title: 'Delete failed', description: 'The article could not be deleted.' });
       return;
     }
 
@@ -39,6 +40,7 @@ export function DeletePostButton({
       return;
     }
 
+    showAdminToast({ type: 'success', title: 'Article deleted', description: 'The article was removed successfully.' });
     router.refresh();
   }
 

@@ -7,6 +7,7 @@ import { EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { PostPreview } from '@/components/admin/post-preview';
 import { SeoChecklist } from '@/components/admin/seo-checklist';
+import { showAdminToast } from '@/lib/admin/toast';
 
 type Post = {
   id?: string;
@@ -45,6 +46,28 @@ export function PostEditor({ post }: { post: Post }) {
   const inputClass =
     'w-full rounded-2xl border border-[#d6cebf] bg-white px-4 py-3 text-base leading-6 text-slate-900 placeholder:text-stone-400 focus:border-[#a16207] focus:outline-none focus:ring-2 focus:ring-[#a16207]/12';
 
+
+  function applyPostData(nextPost: Partial<Post> | null | undefined) {
+    if (!nextPost) return;
+
+    setForm((prev) => {
+      const merged = {
+        ...prev,
+        ...nextPost,
+        featured_image_url:
+          nextPost.featured_image_url !== undefined
+            ? nextPost.featured_image_url || ''
+            : prev.featured_image_url || ''
+      };
+
+      return merged;
+    });
+
+    if (nextPost.content !== undefined) {
+      editor?.commands.setContent(nextPost.content || '', false);
+    }
+  }
+
   const editor = useEditor({
     extensions: [StarterKit],
     content: form.content || '',
@@ -70,14 +93,15 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Failed to save draft.');
+        showAdminToast({ type: 'error', title: 'Save failed', description: data?.error || 'Failed to save draft.' });
         return;
       }
 
-      if (data?.post?.id && !form.id) {
-        setForm((prev) => ({ ...prev, id: data.post.id }));
+      if (data?.post) {
+        applyPostData(data.post);
       }
 
+      showAdminToast({ type: 'success', title: 'Draft saved', description: 'Your article changes have been saved.' });
       router.refresh();
     } finally {
       setSaving(false);
@@ -86,7 +110,7 @@ export function PostEditor({ post }: { post: Post }) {
 
   async function publishPost() {
     if (!form.id) {
-      alert('Save the draft first before publishing.');
+      showAdminToast({ type: 'info', title: 'Save required', description: 'Save the draft first before publishing.' });
       return;
     }
 
@@ -102,7 +126,7 @@ export function PostEditor({ post }: { post: Post }) {
       const saveData = await saveResponse.json().catch(() => null);
 
       if (!saveResponse.ok) {
-        alert(saveData?.error || 'Failed to save before publishing.');
+        showAdminToast({ type: 'error', title: 'Publish failed', description: saveData?.error || 'Failed to save before publishing.' });
         return;
       }
 
@@ -115,13 +139,13 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Failed to publish.');
+        showAdminToast({ type: 'error', title: 'Publish failed', description: data?.error || 'Failed to publish.' });
         return;
       }
 
       setForm((prev) => ({ ...prev, status: 'published' }));
+      showAdminToast({ type: 'success', title: 'Article published', description: 'The article is now live.' });
       router.refresh();
-      alert('Post published.');
     } finally {
       setPublishing(false);
     }
@@ -129,7 +153,7 @@ export function PostEditor({ post }: { post: Post }) {
 
   async function unpublishPost() {
     if (!form.id) {
-      alert('Save the post first.');
+      showAdminToast({ type: 'info', title: 'Save required', description: 'Save the post first.' });
       return;
     }
 
@@ -150,13 +174,13 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Failed to move article back to draft.');
+        showAdminToast({ type: 'error', title: 'Move to draft failed', description: data?.error || 'Failed to move article back to draft.' });
         return;
       }
 
       setForm((prev) => ({ ...prev, status: 'draft' }));
+      showAdminToast({ type: 'success', title: 'Article moved to draft', description: 'The article is no longer live.' });
       router.refresh();
-      alert('Post moved back to draft.');
     } finally {
       setPublishing(false);
     }
@@ -164,7 +188,7 @@ export function PostEditor({ post }: { post: Post }) {
 
   async function setFeaturedArticle() {
     if (!form.id) {
-      alert('Save the post first.');
+      showAdminToast({ type: 'info', title: 'Save required', description: 'Save the post first.' });
       return;
     }
 
@@ -180,13 +204,13 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Failed to set featured article.');
+        showAdminToast({ type: 'error', title: 'Featured article failed', description: data?.error || 'Failed to set featured article.' });
         return;
       }
 
       setForm((prev) => ({ ...prev, is_featured_homepage: true }));
+      showAdminToast({ type: 'success', title: 'Homepage feature updated', description: 'This article is now marked as the homepage feature.' });
       router.refresh();
-      alert('Homepage featured article updated.');
     } finally {
       setSettingFeatured(false);
     }
@@ -212,11 +236,23 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || 'Failed to regenerate.');
+        showAdminToast({ type: 'error', title: 'Regeneration failed', description: data?.error || 'Failed to regenerate.' });
         return;
       }
 
-      window.location.reload();
+      if (data?.post) {
+        applyPostData(data.post);
+      }
+
+      showAdminToast({
+        type: 'success',
+        title: 'Article regenerated',
+        description:
+          typeof data?.after === 'number'
+            ? `The draft was refreshed. Updated score: ${data.after}.`
+            : 'The draft content has been refreshed.'
+      });
+      router.refresh();
     } finally {
       setRegenerating(false);
     }
@@ -237,13 +273,13 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Image upload failed.');
+        showAdminToast({ type: 'error', title: 'Image upload failed', description: data?.error || 'Image upload failed.' });
         return;
       }
 
       const imageUrl = data?.url || data?.publicUrl || data?.imageUrl;
       if (!imageUrl) {
-        alert('Upload succeeded but no image URL was returned.');
+        showAdminToast({ type: 'error', title: 'Image upload incomplete', description: 'Upload succeeded but no image URL was returned.' });
         return;
       }
 
@@ -251,6 +287,7 @@ export function PostEditor({ post }: { post: Post }) {
         ...prev,
         featured_image_url: imageUrl
       }));
+      showAdminToast({ type: 'success', title: 'Cover image uploaded', description: 'The featured image has been updated.' });
     } finally {
       setUploadingImage(false);
     }
@@ -258,7 +295,7 @@ export function PostEditor({ post }: { post: Post }) {
 
   async function generateStockCover() {
     if (!form.title.trim()) {
-      alert('Add a title first before generating a cover.');
+      showAdminToast({ type: 'info', title: 'Title required', description: 'Add a title first before generating a cover.' });
       return;
     }
 
@@ -280,12 +317,12 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Stock cover lookup failed.');
+        showAdminToast({ type: 'error', title: 'Cover generation failed', description: data?.error || 'Stock cover lookup failed.' });
         return;
       }
 
       if (!data?.url) {
-        alert('Cover was generated but no URL was returned.');
+        showAdminToast({ type: 'error', title: 'Cover generation incomplete', description: 'Cover was generated but no URL was returned.' });
         return;
       }
 
@@ -293,6 +330,7 @@ export function PostEditor({ post }: { post: Post }) {
         ...prev,
         featured_image_url: data.url
       }));
+      showAdminToast({ type: 'success', title: 'Cover image updated', description: 'A new cover image was added to the article.' });
     } finally {
       setGeneratingCover(false);
     }
@@ -314,11 +352,23 @@ export function PostEditor({ post }: { post: Post }) {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        alert(data?.error || 'Failed to improve article.');
+        showAdminToast({ type: 'error', title: 'Improve failed', description: data?.error || 'Failed to improve article.' });
         return;
       }
 
-      window.location.reload();
+      if (data?.post) {
+        applyPostData(data.post);
+      }
+
+      showAdminToast({
+        type: 'success',
+        title: 'Article improved',
+        description:
+          typeof data?.after === 'number'
+            ? `The article was improved. Updated score: ${data.after}.`
+            : 'The article was improved successfully.'
+      });
+      router.refresh();
     } finally {
       setImproving(false);
     }

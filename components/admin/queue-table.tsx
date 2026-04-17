@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { showAdminToast } from '@/lib/admin/toast';
 
 type QueueRow = {
   id: string;
@@ -37,6 +39,7 @@ async function safeJson(response: Response) {
 }
 
 export function QueueTable({ rows }: { rows: QueueRow[] }) {
+  const router = useRouter();
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [runningCron, setRunningCron] = useState(false);
 
@@ -56,20 +59,19 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
         const message =
           data?.error ||
           `Draft generation failed with status ${response.status}.`;
-        window.alert(message);
+        showAdminToast({ type: 'error', title: 'Draft generation failed', description: message });
         return;
       }
 
       if (!data?.post?.id) {
-        window.alert('Draft was created but no post ID was returned.');
+        showAdminToast({ type: 'error', title: 'Draft generation incomplete', description: 'Draft was created but no post ID was returned.' });
         return;
       }
 
-      window.location.href = `/admin/posts/${data.post.id}/edit`;
+      showAdminToast({ type: 'success', title: 'Draft generated', description: 'Opening the new draft in the editor.' });
+      router.push(`/admin/posts/${data.post.id}/edit`);
     } catch (error) {
-      window.alert(
-        error instanceof Error ? error.message : 'Draft generation failed.'
-      );
+      showAdminToast({ type: 'error', title: 'Draft generation failed', description: error instanceof Error ? error.message : 'Draft generation failed.' });
     } finally {
       setLoadingId(null);
     }
@@ -86,19 +88,20 @@ export function QueueTable({ rows }: { rows: QueueRow[] }) {
       const data = await safeJson(response);
 
       if (!response.ok) {
-        window.alert(data?.error || 'Daily cron failed.');
+        showAdminToast({ type: 'error', title: 'Cron failed', description: data?.error || 'Daily cron failed.' });
         return;
       }
 
       if (data?.data?.post?.id) {
-        window.location.href = `/admin/posts/${data.data.post.id}/edit`;
+        showAdminToast({ type: 'success', title: 'Draft generated', description: 'Opening the draft created by the cron job.' });
+        router.push(`/admin/posts/${data.data.post.id}/edit`);
         return;
       }
 
-      window.alert(data?.data?.message || 'Cron ran successfully.');
-      window.location.reload();
+      showAdminToast({ type: 'success', title: 'Cron finished', description: data?.data?.message || 'Cron ran successfully.' });
+      router.refresh();
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'Daily cron failed.');
+      showAdminToast({ type: 'error', title: 'Cron failed', description: error instanceof Error ? error.message : 'Daily cron failed.' });
     } finally {
       setRunningCron(false);
     }

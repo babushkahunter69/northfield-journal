@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { showAdminToast } from '@/lib/admin/toast';
 
 type Props = {
   postId: string;
@@ -12,6 +13,7 @@ type Props = {
 
 export function PostTableActions({ postId, slug, status }: Props) {
   const router = useRouter();
+  const [currentStatus, setCurrentStatus] = useState(status);
   const [publishing, setPublishing] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
@@ -28,10 +30,12 @@ export function PostTableActions({ postId, slug, status }: Props) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Failed to publish post.');
+        showAdminToast({ type: 'error', title: 'Publish failed', description: data?.error || 'Failed to publish post.' });
         return;
       }
 
+      setCurrentStatus('published');
+      showAdminToast({ type: 'success', title: 'Article published', description: 'The article is now live.' });
       router.refresh();
     } finally {
       setPublishing(false);
@@ -57,10 +61,11 @@ export function PostTableActions({ postId, slug, status }: Props) {
       const data = await response.json().catch(() => null);
 
       if (!response.ok) {
-        alert(data?.error || 'Failed to delete post.');
+        showAdminToast({ type: 'error', title: 'Delete failed', description: data?.error || 'Failed to delete post.' });
         return;
       }
 
+      showAdminToast({ type: 'success', title: 'Article deleted', description: 'The article was removed from the admin list.' });
       router.refresh();
     } finally {
       setDeleting(false);
@@ -83,7 +88,7 @@ export function PostTableActions({ postId, slug, status }: Props) {
         View
       </Link>
 
-      {status !== 'published' ? (
+      {currentStatus !== 'published' ? (
         <button
           type="button"
           onClick={handlePublish}

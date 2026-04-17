@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { AdminSidebar } from '@/components/admin/admin-sidebar';
+import { AdminToastViewport } from '@/components/admin/admin-toast-viewport';
 
 export default function AdminDashboardLayout({
   children
@@ -30,6 +31,7 @@ export default function AdminDashboardLayout({
             </div>
 
             {children}
+            <AdminToastViewport />
           </div>
         </div>
       </div>
