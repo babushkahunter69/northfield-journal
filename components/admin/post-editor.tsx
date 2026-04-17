@@ -64,7 +64,7 @@ export function PostEditor({ post }: { post: Post }) {
     });
 
     if (nextPost.content !== undefined) {
-      editor?.commands.setContent(nextPost.content || '', false);
+      editor?.commands.setContent(nextPost.content || '', { emitUpdate: false });
     }
   }
 
