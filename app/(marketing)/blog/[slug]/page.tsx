@@ -40,8 +40,10 @@ export async function generateMetadata({
       description: post.meta_description || post.excerpt,
       url,
       type: 'article',
-      images: post.featured_image_url ? [{ url: post.featured_image_url }] : undefined
-    },
+      images: post.featured_image_url ? [{ url: post.featured_image_url }] : undefined,
+      publishedTime: post.published_at || undefined,
+      modifiedTime: post.updated_at || post.published_at || undefined
+},
     twitter: {
       card: 'summary_large_image',
       title: post.meta_title || post.title,
