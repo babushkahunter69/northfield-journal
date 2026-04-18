@@ -3,7 +3,7 @@ export const siteConfig = {
   shortName: 'NJ',
   tagline: 'An independent education publication for students, teachers, school leaders, and families.',
   description:
-    'Northfield Journal publishes thoughtful, practical education reporting, study strategies, classroom ideas, and expert commentary with a polished editorial standard.',
+    'Thoughtful, practical writing on education, teaching, learning, and school life for students, educators, and academic readers.',
   defaultKeywords: [
     'education magazine',
     'student success strategies',

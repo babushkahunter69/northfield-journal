@@ -13,6 +13,42 @@ import { NewsletterForm } from '@/components/newsletter-form';
 import { editorialPillars, siteConfig } from '@/lib/constants';
 import { getFeaturedPosts, getLatestPosts, getPublishedPosts } from '@/lib/data';
 
+import type { Metadata } from 'next';
+
+const siteUrl = 'https://northfieldjournal.com';
+const socialImage = '/opengraph-image';
+
+export const metadata: Metadata = {
+  title: 'Northfield Journal',
+  description:
+    'Thoughtful, practical writing on education, teaching, learning, and school life for students, educators, and academic readers.',
+  alternates: {
+    canonical: '/'
+  },
+  openGraph: {
+    title: 'Northfield Journal',
+    description:
+      'Thoughtful, practical writing on education, teaching, learning, and school life for students, educators, and academic readers.',
+    url: siteUrl,
+    type: 'website',
+    images: [
+      {
+        url: socialImage,
+        width: 1200,
+        height: 630,
+        alt: 'Northfield Journal'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Northfield Journal',
+    description:
+      'Thoughtful, practical writing on education, teaching, learning, and school life for students, educators, and academic readers.',
+    images: [socialImage]
+  }
+};
+
 const highlights = [
   {
     title: 'Thoughtful reporting',
