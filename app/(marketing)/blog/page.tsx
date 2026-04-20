@@ -5,11 +5,41 @@ import { PostCard } from '@/components/post-card';
 import { AdSenseSlot } from '@/components/adsense-slot';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { getCategories, getPublishedPosts } from '@/lib/data';
+import { getSiteUrl } from '@/lib/utils';
+
+const siteUrl = getSiteUrl();
+const canonicalUrl = `${siteUrl}/blog`;
+const socialImage = `${siteUrl}/opengraph-image`;
 
 export const metadata: Metadata = {
   title: 'Journal',
   description:
-    'Browse premium education articles on student success, teaching craft, school leadership, and academic writing.'
+    'Browse thoughtful education articles on student success, teaching craft, school leadership, and academic writing.',
+  alternates: {
+    canonical: canonicalUrl
+  },
+  openGraph: {
+    title: 'Northfield Journal',
+    description:
+      'Browse thoughtful education articles on student success, teaching craft, school leadership, and academic writing.',
+    url: canonicalUrl,
+    type: 'website',
+    images: [
+      {
+        url: socialImage,
+        width: 1200,
+        height: 630,
+        alt: 'Northfield Journal'
+      }
+    ]
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Northfield Journal',
+    description:
+      'Browse thoughtful education articles on student success, teaching craft, school leadership, and academic writing.',
+    images: [socialImage]
+  }
 };
 
 export default async function BlogPage() {
@@ -23,7 +53,6 @@ export default async function BlogPage() {
 
   return (
     <div className="container-shell py-14">
-      {/* HEADER */}
       <div className="max-w-4xl">
         <span className="eyebrow">Journal archive</span>
         <h1 className="display-font mt-5 text-5xl font-semibold tracking-tight text-slate-900">
@@ -34,7 +63,6 @@ export default async function BlogPage() {
         </p>
       </div>
 
-      {/* CATEGORY PILLS */}
       <div className="mt-8 flex flex-wrap gap-3">
         {categories.map((category) => (
           <span
@@ -46,19 +74,16 @@ export default async function BlogPage() {
         ))}
       </div>
 
-      {/* FEATURED LEAD */}
       {leadPost ? (
         <div className="mt-12">
           <PostCard post={leadPost} variant="featured" />
         </div>
       ) : null}
 
-      {/* ADS */}
       <div className="my-12">
         <AdSenseSlot className="min-h-[120px]" />
       </div>
 
-      {/* MAIN GRID */}
       <div className="grid gap-10 lg:grid-cols-[1fr_320px]">
         <div>
           <div className="section-header-row flex items-end justify-between">
@@ -81,7 +106,6 @@ export default async function BlogPage() {
           </div>
         </div>
 
-        {/* SIDEBAR */}
         <aside className="space-y-6">
           <NewsletterForm />
 

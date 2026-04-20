@@ -14,7 +14,9 @@ function getPostPriority(date?: string) {
   return 0.65
 }
 
-function getPostFrequency(date?: string): MetadataRoute.Sitemap[number]['changeFrequency'] {
+function getPostFrequency(
+  date?: string
+): MetadataRoute.Sitemap[number]['changeFrequency'] {
   if (!date) return 'monthly'
 
   const daysOld =
@@ -41,34 +43,14 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.9,
     },
     {
-      url: `${siteUrl}/guest-post`,
-      changeFrequency: 'monthly',
-      priority: 0.7,
-    },
-    {
       url: `${siteUrl}/about`,
       changeFrequency: 'monthly',
       priority: 0.6,
     },
-    {
-      url: `${siteUrl}/contact`,
-      changeFrequency: 'monthly',
-      priority: 0.6,
-    },
-    {
-      url: `${siteUrl}/privacy-policy`,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
-    {
-      url: `${siteUrl}/terms`,
-      changeFrequency: 'yearly',
-      priority: 0.3,
-    },
   ]
 
   const postRoutes: MetadataRoute.Sitemap = posts.map((post) => {
-    const date = post.published_at || post.created_at
+    const date = post.updated_at || post.published_at || post.created_at
 
     return {
       url: `${siteUrl}/blog/${post.slug}`,

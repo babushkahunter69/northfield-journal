@@ -8,10 +8,20 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        disallow: ['/admin']
+        allow: ['/', '/blog', '/blog/', '/about', '/authors'],
+        disallow: [
+          '/admin',
+          '/admin/',
+          '/api',
+          '/api/',
+          '/auth',
+          '/auth/',
+          '/_next/',
+          '/*?*'
+        ]
       }
     ],
-    sitemap: `${siteUrl}/sitemap.xml`
+    sitemap: `${siteUrl}/sitemap.xml`,
+    host: siteUrl
   };
 }
