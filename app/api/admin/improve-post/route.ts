@@ -3,6 +3,7 @@ import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
+import { estimateReadingTime } from '@/lib/utils';
 
 export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
@@ -61,6 +62,7 @@ export async function POST(request: Request) {
       title: improved.article.title,
       excerpt: improved.article.excerpt,
       content: improved.article.content,
+      reading_time_minutes: estimateReadingTime(improved.article.content),
       meta_title: improved.article.meta_title,
       meta_description: improved.article.meta_description,
       generation_status: `improved_${improved.after.score}`,

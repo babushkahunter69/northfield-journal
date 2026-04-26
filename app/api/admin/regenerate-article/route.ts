@@ -5,6 +5,7 @@ import { generateArticle } from '@/lib/ai/generate-article';
 import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import type { ContentBriefRow, GeneratedBrief } from '@/lib/types';
+import { estimateReadingTime } from '@/lib/utils';
 
 function toGeneratedBrief(
   brief: ContentBriefRow,
@@ -129,6 +130,7 @@ export async function POST(request: Request) {
         title: article.title || post.title,
         excerpt: article.excerpt || post.excerpt || '',
         content: article.content,
+        reading_time_minutes: estimateReadingTime(article.content),
         meta_title: article.meta_title || post.meta_title || post.title,
         meta_description:
           article.meta_description || post.meta_description || post.excerpt || '',

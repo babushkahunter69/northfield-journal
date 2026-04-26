@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { estimateReadingTime } from '@/lib/utils';
 
 function slugify(value: string) {
   return value
@@ -68,6 +69,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Title is required.' }, { status: 400 });
     }
 
+    const reading_time_minutes = estimateReadingTime(content);
+
     if (id) {
       const slug = await getUniqueSlug(title, id);
 
@@ -78,6 +81,7 @@ export async function POST(request: Request) {
           slug,
           excerpt,
           content,
+          reading_time_minutes,
           status,
           meta_title,
           meta_description,
@@ -85,7 +89,7 @@ export async function POST(request: Request) {
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
-        .select('id, slug, status, featured_image_url')
+        .select('id, slug, status, featured_image_url, reading_time_minutes')
         .single();
 
       if (error || !data) {
@@ -110,6 +114,7 @@ export async function POST(request: Request) {
         slug,
         excerpt,
         content,
+        reading_time_minutes,
         status,
         meta_title,
         meta_description,
@@ -118,7 +123,7 @@ export async function POST(request: Request) {
         source_type: 'manual',
         generation_status: 'manual_draft'
       })
-      .select('id, slug, status, featured_image_url')
+      .select('id, slug, status, featured_image_url, reading_time_minutes')
       .single();
 
     if (error || !data) {

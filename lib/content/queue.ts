@@ -9,6 +9,7 @@ import { generateBrief } from '@/lib/ai/generate-brief';
 import { generateArticle } from '@/lib/ai/generate-article';
 import { createCoverForPost } from '@/lib/cover/create-cover';
 import { validateGeneratedArticle } from '@/lib/content/quality';
+import { estimateReadingTime } from '@/lib/utils';
 
 type EducationKeyword = ContentKeyword & {
   audience?: string | null;
@@ -254,6 +255,7 @@ async function persistPost(
       slug: uniqueSlug,
       excerpt: article.excerpt,
       content: article.content,
+      reading_time_minutes: estimateReadingTime(article.content),
       featured_image_url: coverUrl,
       og_image_url: coverUrl,
       category_id: categoryId,
