@@ -197,29 +197,71 @@ export const getRelatedPostsBySlug = cache(async (slug: string, limit = 3) => {
 });
 
 export async function getStructuredDataForPost(slug: string) {
-  const post = await getPostBySlug(slug);
-  if (!post) return null;
+  const post = await getPostBySlug(slug)
+  if (!post) return null
 
-  const siteUrl = getSiteUrl();
+  const siteUrl = getSiteUrl()
+  const authorSlug = normalizeSlug(post.author_name)
 
   return {
     '@context': 'https://schema.org',
-    '@type': 'BlogPosting',
-    headline: post.title,
-    description: post.meta_description || post.excerpt,
-    image: post.featured_image_url ? [post.featured_image_url] : undefined,
-    datePublished: post.published_at,
-    dateModified: post.published_at,
-    author: {
-      '@type': 'Person',
-      name: post.author_name,
-      url: `${siteUrl}/authors/${normalizeSlug(post.author_name)}`
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: siteConfig.name,
-      url: siteUrl
-    },
-    mainEntityOfPage: `${siteUrl}/blog/${post.slug}`
-  };
+    '@graph': [
+      {
+        '@type': 'BlogPosting',
+        '@id': `${siteUrl}/blog/${post.slug}#article`,
+        headline: post.title,
+        description: post.meta_description || post.excerpt,
+        image: post.featured_image_url ? [post.featured_image_url] : undefined,
+        datePublished: post.published_at,
+        dateModified: post.updated_at || post.published_at,
+        author: {
+          '@type': 'Person',
+          '@id': `${siteUrl}/authors/${authorSlug}#person`,
+          name: post.author_name,
+          url: `${siteUrl}/authors/${authorSlug}`,
+          description: post.author_bio || undefined,
+          worksFor: {
+            '@type': 'Organization',
+            name: siteConfig.name,
+            url: siteUrl,
+          },
+        },
+        publisher: {
+          '@type': 'Organization',
+          '@id': `${siteUrl}/#organization`,
+          name: siteConfig.name,
+          url: siteUrl,
+          description: siteConfig.description,
+        },
+        mainEntityOfPage: {
+          '@type': 'WebPage',
+          '@id': `${siteUrl}/blog/${post.slug}`,
+        },
+        articleSection: post.categories?.name || siteConfig.primaryTopic,
+        keywords: post.keywords || siteConfig.defaultKeywords,
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${siteUrl}/blog/${post.slug}#faq`,
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'Who is this article for?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'This article is written for students, educators, families, and academic readers looking for clear, practical education guidance.',
+            },
+          },
+          {
+            '@type': 'Question',
+            name: 'How is Northfield Journal content reviewed?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Northfield Journal content is edited for clarity, usefulness, topical relevance, and practical value for education-focused readers.',
+            },
+          },
+        ],
+      },
+    ],
+  }
 }

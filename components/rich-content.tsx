@@ -1,19 +1,68 @@
-import ReactMarkdown from 'react-markdown';
-import remarkGfm from 'remark-gfm';
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 type RichContentProps = {
-  content: string;
-  className?: string;
-};
-
-function looksLikeHtml(content: string) {
-  return /<\/?[a-z][\s\S]*>/i.test(content);
+  content: string
+  className?: string
 }
 
-export function RichContent({
-  content,
-  className = ''
-}: RichContentProps) {
+function looksLikeHtml(content: string) {
+  return /<\/?[a-z][\s\S]*>/i.test(content)
+}
+
+function hasHeading(content: string, heading: string) {
+  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return new RegExp(`(^|\\n)#{2,3}\\s+${escaped}\\s*($|\\n)`, 'i').test(content)
+}
+
+function enhanceMarkdownContent(content: string) {
+  let enhanced = content?.trim() || ''
+
+  if (!enhanced) return enhanced
+
+  if (!hasHeading(enhanced, 'Key Takeaways')) {
+    enhanced =
+      `## Key Takeaways
+
+- This guide is designed to be practical, clear, and useful for students, educators, or families.
+- The recommendations should be adapted to the reader’s academic context, age, goals, and learning needs.
+- Strong learning outcomes usually come from consistent systems, not one-time motivation.
+
+` + enhanced
+  }
+
+  if (!hasHeading(enhanced, 'FAQ')) {
+    enhanced += `
+
+## FAQ
+
+### Who is this guide for?
+
+This guide is written for readers who want practical, plain-English education guidance they can apply in real academic settings.
+
+### How should I use this advice?
+
+Use the ideas as a starting point, then adapt them to the learner, classroom, school, or family context.
+
+### Is this article based on editorial review?
+
+Northfield Journal content is edited for clarity, usefulness, and relevance to students, educators, and academic readers.
+`
+  }
+
+  if (!hasHeading(enhanced, 'Sources')) {
+    enhanced += `
+
+## Sources
+
+- Add credible education research, university resources, government data, classroom examples, or expert references here.
+`
+  }
+
+  return enhanced
+}
+
+export function RichContent({ content, className = '' }: RichContentProps) {
   const proseClassName = [
     'journal-prose prose prose-lg max-w-none',
     'prose-p:my-5 prose-p:leading-9',
@@ -32,26 +81,15 @@ export function RichContent({
     'dark:prose-a:text-amber-400',
     '[&>*:first-child]:mt-0',
     '[&>*:last-child]:mb-0',
-    '[&>p:first-of-type]:text-[1.18rem]',
-    '[&>p:first-of-type]:leading-9',
-    '[&>p:first-of-type:first-letter]:float-left',
-    '[&>p:first-of-type:first-letter]:mr-3',
-    '[&>p:first-of-type:first-letter]:mt-2',
-    '[&>p:first-of-type:first-letter]:font-serif',
-    '[&>p:first-of-type:first-letter]:text-6xl',
-    '[&>p:first-of-type:first-letter]:font-semibold',
-    '[&>p:first-of-type:first-letter]:leading-[0.8]',
-    '[&>p:first-of-type:first-letter]:text-slate-900',
-    'dark:[&>p:first-of-type:first-letter]:text-white',
-    className
-  ].join(' ');
+    className,
+  ].join(' ')
 
   if (!content?.trim()) {
     return (
       <div className={proseClassName}>
         <p>Nothing to preview yet.</p>
       </div>
-    );
+    )
   }
 
   if (looksLikeHtml(content)) {
@@ -62,8 +100,10 @@ export function RichContent({
           dangerouslySetInnerHTML={{ __html: content }}
         />
       </div>
-    );
+    )
   }
+
+  const enhancedContent = enhanceMarkdownContent(content)
 
   return (
     <div className="overflow-x-auto">
@@ -92,12 +132,12 @@ export function RichContent({
               <td className="border border-slate-300 px-4 py-3 align-top">
                 {children}
               </td>
-            )
+            ),
           }}
         >
-          {content}
+          {enhancedContent}
         </ReactMarkdown>
       </div>
     </div>
-  );
+  )
 }
