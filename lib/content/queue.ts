@@ -124,9 +124,13 @@ function ensureEducationFaq(article: GeneratedArticle): GeneratedArticle {
 
   let content = article.content || '';
 
-  if (!/<h2>\s*FAQ\s*<\/h2>/i.test(content)) {
-    content += `
-<h2>FAQ</h2>
+  content = content.replace(
+    /<h2[^>]*>\s*(FAQ|Frequently Asked Questions)\s*<\/h2>[\s\S]*?(?=<h2|$)/i,
+    ''
+  );
+
+  content += `
+<h2>Frequently Asked Questions</h2>
 ${faq
   .map(
     (item) => `
@@ -135,7 +139,6 @@ ${faq
   )
   .join('\n')}
 `;
-  }
 
   return {
     ...article,

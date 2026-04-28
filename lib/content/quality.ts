@@ -88,10 +88,13 @@ function extractHeadings(html: string) {
 }
 
 function extractFaqCount(html: string) {
-  const faqSectionExists = /<h2[^>]*>\s*Frequently Asked Questions\s*<\/h2>/i.test(html);
-  if (!faqSectionExists) return 0;
+  const faqMatch = String(html || '').match(
+    /<h2[^>]*>\s*(FAQ|Frequently Asked Questions)\s*<\/h2>([\s\S]*?)(?=<h2|$)/i
+  );
 
-  const faqHeadings = html.match(/<h3[^>]*>.*?<\/h3>/gi) || [];
+  if (!faqMatch?.[2]) return 0;
+
+  const faqHeadings = faqMatch[2].match(/<h3[^>]*>.*?<\/h3>/gi) || [];
   return faqHeadings.length;
 }
 
