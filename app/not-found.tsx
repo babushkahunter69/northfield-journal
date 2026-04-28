@@ -1,20 +1,31 @@
+import Link from 'next/link';
+
 export default function NotFound() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[#f5f1ea] text-[#1a1a1a] px-6">
-      <div className="text-center max-w-xl">
-        <h1 className="text-4xl font-serif mb-4">Page not found</h1>
+    <main className="min-h-screen bg-[#f7f1e8] px-6 py-24 text-slate-900">
+      <div className="mx-auto flex min-h-[60vh] max-w-2xl flex-col items-center justify-center text-center">
+        <h1 className="font-serif text-4xl font-semibold">Page not found</h1>
 
-        <p className="text-lg text-gray-600 mb-6">
+        <p className="mt-4 text-lg leading-8 text-slate-600">
           This article may still be a draft or the link is incorrect.
         </p>
 
-        <a
-          href="/journal"
-          className="inline-block px-6 py-3 bg-[#1a1a1a] text-white rounded-lg"
-        >
-          Back to Journal
-        </a>
+        <div className="mt-8 flex flex-wrap justify-center gap-3">
+          <Link
+            href="/blog"
+            className="rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white"
+          >
+            Back to Journal
+          </Link>
+
+          <Link
+            href="/"
+            className="rounded-full border border-[#d8cdbb] bg-white px-6 py-3 text-sm font-semibold text-slate-700"
+          >
+            Go Home
+          </Link>
+        </div>
       </div>
-    </div>
-  )
+    </main>
+  );
 }
