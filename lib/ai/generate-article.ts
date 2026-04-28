@@ -11,6 +11,11 @@ type EducationBrief = GeneratedBrief & {
   subject_area?: string | null;
 };
 
+type FaqItem = {
+  question: string;
+  answer: string;
+};
+
 function stripHtml(html: string) {
   return String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
 }
@@ -40,48 +45,79 @@ function safeParse(text: string): Partial<GeneratedArticle> {
   return JSON.parse(text.slice(start, end + 1)) as Partial<GeneratedArticle>;
 }
 
-function fallbackFaq(title: string) {
+function naturalTopicLabel(brief: EducationBrief) {
+  return String(brief.working_title || brief.slug || 'this topic')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function fallbackFaq(title: string): FaqItem[] {
   return [
     {
-      question: `What is the main idea of ${title}?`,
+      question: `What is the best way to start with ${title}?`,
       answer:
-        'The main idea is to give students, teachers, and families practical guidance they can apply in real learning situations.'
+        'Start with one clear goal, choose a simple strategy, and practice it consistently before adding more techniques.'
     },
     {
       question: 'Who is this guide for?',
       answer:
-        'This guide is for students, educators, and families who want clear, practical education advice.'
+        'This guide is for students, teachers, and families who want practical education advice that can be used in real learning situations.'
     },
     {
-      question: 'How should students use this advice?',
+      question: 'How long does it take to see progress?',
       answer:
-        'Students should choose one or two strategies, apply them consistently, and review what improves their learning.'
+        'Progress depends on the learner and the topic, but most students notice improvement when they apply one strategy consistently for several weeks.'
     },
     {
       question: 'How can teachers or parents help?',
       answer:
-        'Teachers and parents can help by giving structure, feedback, and encouragement while allowing students to build independence.'
+        'Teachers and parents can help by giving structure, feedback, encouragement, and space for students to practice independently.'
     },
     {
-      question: 'Why does this topic matter?',
+      question: 'What is the most common mistake to avoid?',
       answer:
-        'It matters because strong learning habits and clear academic strategies can improve confidence, focus, and long-term progress.'
+        'The most common mistake is trying to change everything at once instead of building one reliable habit or process at a time.'
     }
   ];
 }
 
-function ensureFaq(article: GeneratedArticle): GeneratedArticle {
-  const faq =
-    Array.isArray(article.faq) && article.faq.length >= 5
-      ? article.faq.slice(0, 5)
-      : fallbackFaq(article.title);
+function normalizeFaq(input: unknown, title: string): FaqItem[] {
+  const fallback = fallbackFaq(title);
+  const raw = Array.isArray(input) ? input : [];
 
-  let content = article.content || '';
+  const cleaned = raw
+    .map((item: any) => ({
+      question: String(item?.question || '').trim(),
+      answer: String(item?.answer || '').trim()
+    }))
+    .filter((item) => item.question.length > 8 && item.answer.length > 20);
 
-  content = content.replace(
+  const merged = [...cleaned, ...fallback];
+  const seen = new Set<string>();
+  const unique: FaqItem[] = [];
+
+  for (const item of merged) {
+    const key = item.question.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    unique.push(item);
+    if (unique.length === 5) break;
+  }
+
+  return unique;
+}
+
+function removeWeakFaqSection(content: string) {
+  return String(content || '').replace(
     /<h2[^>]*>\s*(FAQ|Frequently Asked Questions)\s*<\/h2>[\s\S]*?(?=<h2|$)/i,
     ''
   );
+}
+
+function ensureFaq(article: GeneratedArticle): GeneratedArticle {
+  const faq = normalizeFaq(article.faq, article.title);
+  let content = removeWeakFaqSection(article.content || '');
 
   content += `
 <h2>Frequently Asked Questions</h2>
@@ -94,32 +130,121 @@ ${faq
   .join('\n')}
 `;
 
-  return { ...article, content, faq };
+  return {
+    ...article,
+    content,
+    faq
+  };
+}
+
+function ensureSources(article: GeneratedArticle): GeneratedArticle {
+  let content = article.content || '';
+
+  if (!/<h2[^>]*>\s*Sources\s*<\/h2>/i.test(content)) {
+    content += `
+<h2>Sources</h2>
+<ul>
+<li><a href="https://ies.ed.gov/ncee/wwc/" target="_blank" rel="noopener noreferrer">Institute of Education Sciences: What Works Clearinghouse</a></li>
+<li><a href="https://www.edutopia.org/" target="_blank" rel="noopener noreferrer">Edutopia education resources</a></li>
+</ul>
+`;
+  }
+
+  return {
+    ...article,
+    content
+  };
+}
+
+function ensureRequiredHeadings(article: GeneratedArticle, brief: EducationBrief): GeneratedArticle {
+  const topic = naturalTopicLabel(brief);
+  let content = article.content || '';
+
+  const sections: Array<{ heading: string; html: string }> = [
+    {
+      heading: 'Quick Answer',
+      html: `<h2>Quick Answer</h2><p>The best way to approach ${topic} is to start with a clear purpose, use a simple repeatable process, and review progress regularly. Students usually improve faster when the strategy is specific, realistic, and easy to practice consistently.</p>`
+    },
+    {
+      heading: 'Key Takeaways',
+      html: `<h2>Key Takeaways</h2><ul><li>Focus on one practical strategy before adding more.</li><li>Use examples, feedback, and short practice cycles to improve.</li><li>Measure progress by confidence, consistency, and quality of work, not only grades.</li></ul>`
+    },
+    {
+      heading: 'Why This Matters',
+      html: `<h2>Why This Matters</h2><p>${topic} matters because students need practical learning systems, not just motivation. A clear process helps learners understand what to do next and gives teachers or parents a better way to support progress.</p>`
+    },
+    {
+      heading: 'Step-by-Step Explanation',
+      html: `<h2>Step-by-Step Explanation</h2><p>Start by identifying the main goal. Next, break the task into smaller steps. Then practice one step at a time, check the result, and adjust the strategy based on feedback. This makes learning easier to manage and less overwhelming.</p>`
+    },
+    {
+      heading: 'Real Examples',
+      html: `<h2>Real Examples</h2><p>For example, a student who struggles with a large assignment might begin by writing a short plan, completing one section, and asking for feedback before moving on. A teacher might model the process first, then let students practice independently with a checklist.</p>`
+    },
+    {
+      heading: 'Common Mistakes',
+      html: `<h2>Common Mistakes</h2><ul><li>Trying to do too much at once.</li><li>Skipping feedback or reflection.</li><li>Using a strategy once and giving up too quickly.</li><li>Focusing only on grades instead of habits and process.</li></ul>`
+    },
+    {
+      heading: 'What You Should Do Next',
+      html: `<h2>What You Should Do Next</h2><p>Choose one strategy from this guide and use it for a week. At the end of the week, review what improved, what felt difficult, and what should change next. Small, consistent adjustments are usually more useful than dramatic changes.</p>`
+    }
+  ];
+
+  for (const section of sections) {
+    const pattern = new RegExp(`<h2[^>]*>\\s*${section.heading}\\s*<\\/h2>`, 'i');
+    if (!pattern.test(content)) {
+      content += `\n${section.html}\n`;
+    }
+  }
+
+  content = content.replace(/<h2[^>]*>\s*Next Steps\s*<\/h2>/gi, '<h2>What You Should Do Next</h2>');
+
+  return {
+    ...article,
+    content
+  };
 }
 
 function ensureMinimumLength(article: GeneratedArticle, brief: EducationBrief): GeneratedArticle {
-  if (wordCount(article.content) >= 950) return article;
+  if (wordCount(article.content) >= 1100) return article;
+
+  const topic = naturalTopicLabel(brief);
 
   return {
     ...article,
     content:
       article.content +
       `
-<h2>Putting These Ideas Into Practice</h2>
-<p>The most useful education advice is the kind that can be applied consistently in real settings. Rather than trying to overhaul everything at once, students, teachers, and families usually get better results by choosing one or two practical changes and using them deliberately over time.</p>
-<p>For ${brief.working_title}, that means starting with a simple routine, watching what improves, and adjusting the strategy when something is not working. A student might use a short checklist, a weekly reflection note, or a teacher-approved practice routine to make progress easier to track.</p>
-<p>Teachers can support this process by modeling the strategy first, giving students guided practice, and then helping them use it independently. Parents can support the same process at home by creating a predictable study environment and asking calm, specific questions about what was learned.</p>
+<h2>How to Apply This in Real Learning Situations</h2>
+<p>The most useful education advice is specific enough to use but flexible enough to adapt. For ${topic}, students should begin with a small routine that can be repeated. This might mean using a checklist, planning a short practice session, or asking for feedback before moving to the next step.</p>
+<p>Teachers can support this by demonstrating the strategy, giving students guided practice, and then asking them to apply it independently. Parents can support it at home by creating a predictable study environment and asking calm, specific questions about what the student tried and what they learned.</p>
+<p>The goal is not to make the process perfect on the first attempt. The goal is to create a learning loop: try a strategy, notice the result, make an adjustment, and repeat. That loop helps students become more independent and confident over time.</p>
 
 <h2>How to Measure Progress</h2>
-<p>Progress is not always limited to grades. It can also appear as stronger confidence, better organization, fewer repeated mistakes, improved class participation, or a clearer understanding of what to do next. These signs matter because they show that the learner is developing a stronger process, not just completing a task once.</p>
-<p>A simple way to measure progress is to review one question each week: what worked, what was difficult, and what should change next? This reflection helps students become more independent learners and helps teachers or parents provide more useful support.</p>
-
-<h2>Sources</h2>
-<ul>
-<li><a href="https://ies.ed.gov/ncee/wwc/" target="_blank" rel="noopener noreferrer">Institute of Education Sciences: What Works Clearinghouse</a></li>
-<li><a href="https://www.edutopia.org/" target="_blank" rel="noopener noreferrer">Edutopia education resources</a></li>
-</ul>
+<p>Progress can show up in several ways. A student may finish work with less stress, explain an idea more clearly, make fewer repeated mistakes, participate more confidently, or organize assignments with less help. These signs matter because they show improvement in the learning process.</p>
+<p>A simple weekly reflection can help. Students can write down what they practiced, what improved, what still felt difficult, and what they will try next. Teachers and parents can use those notes to give better support without taking over the work.</p>
 `
+  };
+}
+
+function removeAwkwardExactKeywordStuffing(article: GeneratedArticle, brief: EducationBrief): GeneratedArticle {
+  const awkward = String(brief.slug || '')
+    .replace(/[-_]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+  if (!awkward || awkward.length < 12) return article;
+
+  const natural = naturalTopicLabel(brief);
+  const pattern = new RegExp(awkward.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+
+  return {
+    ...article,
+    content: article.content.replace(pattern, natural),
+    excerpt: article.excerpt.replace(pattern, natural),
+    meta_title: article.meta_title.replace(pattern, natural),
+    meta_description: article.meta_description.replace(pattern, natural)
   };
 }
 
@@ -136,7 +261,9 @@ function normalizeArticle(parsed: Partial<GeneratedArticle>, brief: EducationBri
       excerpt ||
       `Learn practical, student-friendly strategies for ${title.toLowerCase()}.`
   ).trim();
-  const keywords = Array.isArray(parsed.keywords) ? parsed.keywords : [brief.slug.replace(/-/g, ' ')];
+  const keywords = Array.isArray(parsed.keywords)
+    ? parsed.keywords.map((keyword) => String(keyword).trim()).filter(Boolean)
+    : [String(brief.slug || title).replace(/-/g, ' ')];
 
   let article: GeneratedArticle = {
     title,
@@ -154,13 +281,18 @@ function normalizeArticle(parsed: Partial<GeneratedArticle>, brief: EducationBri
     article.content = `<p>${excerpt}</p>`;
   }
 
+  article = removeAwkwardExactKeywordStuffing(article, brief);
+  article = ensureRequiredHeadings(article, brief);
   article = ensureMinimumLength(article, brief);
+  article = ensureSources(article);
   article = ensureFaq(article);
 
   return article;
 }
 
 function buildPrompt(brief: EducationBrief) {
+  const topic = naturalTopicLabel(brief);
+
   return `
 You are an expert education writer for Northfield Journal.
 
@@ -183,6 +315,7 @@ Return ONLY valid JSON in this exact shape:
 }
 
 Topic: ${brief.working_title}
+Natural topic phrase: ${topic}
 Audience: ${brief.audience || 'students and educators'}
 Grade level: ${brief.grade_band || 'mixed'}
 Subject area: ${brief.subject_area || 'general education'}
@@ -192,8 +325,12 @@ Mandatory rules:
 - HTML only inside content. No markdown.
 - Use <p>, <h2>, <h3>, <ul>, <li>.
 - The faq JSON array must contain exactly 5 items.
-- The content must include <h2>Frequently Asked Questions</h2> with matching questions.
+- The content must include <h2>Frequently Asked Questions</h2> with exactly 5 visible questions.
 - Include at least 2 source links in a Sources section.
+- Use the exact heading <h2>What You Should Do Next</h2>.
+- Do not use the heading "Next Steps".
+- Do not awkwardly force the exact keyword phrase.
+- Use natural variations of the topic instead of keyword stuffing.
 - Avoid generic filler and hype.
 
 Required sections:
@@ -215,7 +352,7 @@ async function callModel(prompt: string) {
   const res = await openai.chat.completions.create({
     model: process.env.AI_MODEL || 'gpt-4.1-mini',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.6,
+    temperature: 0.55,
     max_tokens: 6500
   });
 

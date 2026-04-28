@@ -33,6 +33,29 @@ type KeywordIdeaResponse = {
   ideas: GeneratedKeywordIdea[];
 };
 
+const STRONG_KEYWORD_PATTERNS = [
+  /^how to /i,
+  /^why /i,
+  /^what is /i,
+  /^best /i,
+  /^examples of /i,
+  /^ways to /i,
+  /^strategies for /i,
+  /^checklist for /i,
+  /^guide to /i
+];
+
+const WEAK_KEYWORDS = [
+  'education tips',
+  'student success',
+  'learning advice',
+  'study better',
+  'teaching tips',
+  'school advice',
+  'academic success',
+  'education guide'
+];
+
 function inferCluster(input: {
   subject_area?: string;
   content_type?: string;
@@ -56,9 +79,20 @@ function inferCluster(input: {
   return 'student-success';
 }
 
+function isSeoWorthyKeyword(keyword: string) {
+  const normalized = keyword.toLowerCase().trim();
+
+  if (normalized.length < 18) return false;
+  if (normalized.split(/\s+/).length < 4) return false;
+  if (WEAK_KEYWORDS.includes(normalized)) return false;
+
+  return STRONG_KEYWORD_PATTERNS.some((pattern) => pattern.test(normalized));
+}
+
 function normalizeIdea(input: Partial<GeneratedKeywordIdea>): GeneratedKeywordIdea | null {
-  const keyword = String(input.keyword || '').trim();
+  const keyword = String(input.keyword || '').trim().toLowerCase();
   if (!keyword) return null;
+  if (!isSeoWorthyKeyword(keyword)) return null;
 
   const audience = String(input.audience || 'students').trim() as GeneratedKeywordIdea['audience'];
   const gradeBand = String(input.grade_band || 'high-school').trim() as GeneratedKeywordIdea['grade_band'];
@@ -66,8 +100,8 @@ function normalizeIdea(input: Partial<GeneratedKeywordIdea>): GeneratedKeywordId
 
   const safePriority =
     typeof input.priority === 'number' && Number.isFinite(input.priority)
-      ? Math.max(1, Math.min(100, Math.round(input.priority)))
-      : 80;
+      ? Math.max(70, Math.min(100, Math.round(input.priority)))
+      : 85;
 
   const cluster =
     String(input.cluster || '').trim() ||
@@ -115,7 +149,8 @@ function normalizeIdea(input: Partial<GeneratedKeywordIdea>): GeneratedKeywordId
     learning_objective:
       String(input.learning_objective || '').trim() ||
       `Help readers understand and apply ${keyword}.`,
-    tone: String(input.tone || 'supportive').trim() || 'supportive'
+    tone: String(input.tone || 'supportive, practical, evidence-informed').trim() ||
+      'supportive, practical, evidence-informed'
   };
 }
 
@@ -126,37 +161,43 @@ export async function generateKeywordIdeas(input: {
   grade_band?: string;
 }) {
   const count = Math.max(1, Math.min(input.count ?? 20, 50));
+  const requestCount = Math.min(count * 2, 80);
   const focus = String(input.focus || 'education').trim();
   const audience = String(input.audience || 'mixed').trim();
   const gradeBand = String(input.grade_band || 'mixed').trim();
 
   const prompt = `
-You are a content strategist for Northfield Journal, an education-focused publication.
+You are a senior SEO strategist for Northfield Journal, an education-focused publication.
 
-Generate ${count} keyword ideas for blog articles.
+Generate ${requestCount} SEO-worthy keyword ideas for blog articles.
 
 Context:
 - Site niche: education
 - Focus area: ${focus}
 - Preferred audience mix: ${audience}
 - Preferred grade-band mix: ${gradeBand}
+- Main markets: US, UK, Canada, Australia
 
-Requirements:
-- Generate realistic, publishable education topics.
+Keyword requirements:
+- Long-tail and searchable.
+- At least 4 words.
+- Specific enough to become a useful article.
+- Must match realistic student, parent, or teacher search intent.
+- Prefer how-to, checklist, examples, comparison, mistakes, and strategy topics.
+- Avoid generic phrases like "education tips", "student success", "study better", or "learning advice".
+- Avoid awkward robotic phrases.
 - Avoid duplicate or near-duplicate ideas.
-- Avoid overly broad, vague, or spammy SEO keywords.
-- Favor practical, helpful topics for students, teachers, parents, or general education readers.
-- Include a healthy mix of:
-  - study skills
-  - exam prep
-  - teaching strategies
-  - parent support
-  - academic writing
-  - edtech
-  - career guidance
-- Keywords should sound natural and useful, not robotic.
-- Keep them appropriate for a trustworthy education website.
-- Priority should be 60 to 100 based on likely usefulness and publishability.
+- Priority should be 70 to 100 based on SEO usefulness.
+
+Strong examples:
+- how to write a thesis statement for an argumentative essay
+- how to avoid procrastination while studying
+- examples of good essay introductions for college students
+- active recall vs rereading for exam preparation
+- how parents can help with homework without taking over
+- strategies for supporting students with learning differences
+- checklist for preparing for final exams in high school
+- how to improve reading comprehension in middle school
 
 Cluster rules:
 - cluster must be one of:
@@ -181,11 +222,11 @@ Return JSON with exactly this shape:
       "subject_area": "string",
       "content_type": "study-guide | exam-prep | lesson-summary | teaching-strategy | parent-guide | career-guidance | edtech | concept-explainer | resource-roundup",
       "cluster": "student-success | exam-prep | academic-writing | teaching-strategies | parent-guides | career-guidance | edtech | math-learning | science-learning | reading-skills",
-      "priority": 80,
+      "priority": 85,
       "target_country": "US",
       "curriculum": "general",
       "learning_objective": "string",
-      "tone": "string"
+      "tone": "supportive, practical, evidence-informed"
     }
   ]
 }

@@ -147,6 +147,7 @@ ${faq
   };
 }
 
+
 function hasGenericFillerValidationErrors(errors: string[]) {
   return errors.some((error) => /generic filler phrase/i.test(error));
 }
@@ -298,11 +299,35 @@ async function ensureCategoryId(categorySlug: string | null | undefined) {
   return createResponse.data.id;
 }
 
+function countArticleWords(html: string) {
+  const text = String(html || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+  return text ? text.split(' ').filter(Boolean).length : 0;
+}
+
+function hasCompleteFaq(article: GeneratedArticle) {
+  return Array.isArray(article.faq) && article.faq.length >= 5;
+}
+
+function hasSourcesSection(article: GeneratedArticle) {
+  return /<h2[^>]*>\s*Sources\s*<\/h2>/i.test(article.content || '') && /<a\s+/i.test(article.content || '');
+}
+
+function shouldAutoPublishArticle(article: GeneratedArticle, validation: { ok: boolean }) {
+  return (
+    validation.ok === true &&
+    countArticleWords(article.content) >= 1000 &&
+    hasCompleteFaq(article) &&
+    hasSourcesSection(article)
+  );
+}
+
+
 async function persistPost(
   keyword: EducationKeyword,
   brief: EducationBrief,
   article: GeneratedArticle,
-  coverUrl: string | null
+  coverUrl: string | null,
+  autoPublish = false
 ) {
   const uniqueSlug = await getUniqueSlug(article.slug || brief.slug || brief.working_title);
   const categoryId = await ensureCategoryId(brief.category_slug);
@@ -322,9 +347,9 @@ async function persistPost(
       meta_title: article.meta_title,
       meta_description: article.meta_description,
       keywords: article.keywords || [],
-      status: 'draft',
+      status: autoPublish ? 'published' : 'draft',
       source_type: 'automation',
-      generation_status: 'ai_draft',
+      generation_status: autoPublish ? 'auto_published' : 'ai_draft',
       faq_json: article.faq || null
     })
     .select('*')
@@ -497,7 +522,8 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
       });
     }
 
-    const post = await persistPost(keyword, briefWithUniqueSlug, article, coverUrl);
+    const autoPublish = shouldAutoPublishArticle(article, validation);
+    const post = await persistPost(keyword, briefWithUniqueSlug, article, coverUrl, autoPublish);
 
     await supabaseAdmin
       .from('content_keywords')
@@ -520,7 +546,8 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
       },
       output_snapshot: {
         post_id: post.id,
-        category_id: post.category_id ?? null
+        category_id: post.category_id ?? null,
+        auto_published: autoPublish
       }
     });
 
