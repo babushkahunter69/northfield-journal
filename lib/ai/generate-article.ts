@@ -5,7 +5,13 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
 })
 
-function buildPrompt(brief: GeneratedBrief) {
+type EducationBrief = GeneratedBrief & {
+  audience?: string | null
+  grade_band?: string | null
+  subject_area?: string | null
+}
+
+function buildPrompt(brief: EducationBrief) {
   return `
 You are an expert education content writer for Northfield Journal.
 
@@ -18,109 +24,49 @@ Return ONLY valid JSON:
   "meta_description": "",
   "content": "",
   "faq": [
+    { "question": "", "answer": "" },
+    { "question": "", "answer": "" },
+    { "question": "", "answer": "" },
+    { "question": "", "answer": "" },
     { "question": "", "answer": "" }
-  ]
+  ],
+  "keywords": []
 }
 
-TOPIC:
-${brief.working_title}
+Topic: ${brief.working_title}
+Audience: ${brief.audience || 'students and educators'}
+Grade level: ${brief.grade_band || 'mixed'}
+Subject area: ${brief.subject_area || 'general education'}
 
-KEYWORD:
-${brief.slug}
-
-AUDIENCE:
-${brief.audience || 'students'}
-
-GRADE LEVEL:
-${brief.grade_band || 'mixed'}
-
-SUBJECT:
-${brief.subject_area || 'general education'}
-
----
-
-GOAL:
-Write a clear, practical, SEO-optimized education article that helps students, teachers, or learners solve a real problem.
-
----
-
-STRICT STRUCTURE (MANDATORY):
-
-Intro (answer-first, 2–3 paragraphs)
+Requirements:
+- Write 1,300 to 1,800 words.
+- HTML only inside "content".
+- No markdown.
+- Include these exact sections in content:
 
 <h2>Quick Answer</h2>
-
 <h2>Key Takeaways</h2>
-<ul>
-<li>...</li>
-<li>...</li>
-<li>...</li>
-</ul>
-
-<h2>What This Means for ${brief.audience || 'Students'}</h2>
-
+<h2>Why This Matters</h2>
 <h2>Step-by-Step Explanation</h2>
-
 <h2>Real Examples</h2>
-
 <h2>Common Mistakes</h2>
-
 <h2>What You Should Do Next</h2>
-
 <h2>FAQ</h2>
-
 <h2>Sources</h2>
 
----
+FAQ rules:
+- The "faq" JSON array must contain exactly 5 FAQ items.
+- The content must also include an FAQ section with the same questions and answers.
 
-CONTENT RULES:
+Sources:
+- Include at least 2 credible education/research sources.
+- Use real links.
 
-- HTML only (no markdown)
-- Use <p>, <h2>, <h3>, <ul>, <li>
-- No fluff
-- No generic phrases
-- No hype language
-
----
-
-EDUCATION REQUIREMENTS:
-
-- Include student or classroom examples
-- Use simple explanations
-- Avoid jargon unless explained
-- Make it usable for real learning situations
-
----
-
-SEO:
-
-- Title must be compelling
-- Meta description must be clear and useful
-- Include keyword naturally
-
----
-
-SOURCES:
-
-- Include at least 2 real educational or research sources
-- Format:
-<a href="URL" target="_blank">Source Name</a>
-
----
-
-FAQ:
-
-- 4–6 questions
-- Short, clear answers
-
----
-
-FINAL RULE:
-
-This article should:
-- Help a real student or teacher
-- Be easy to understand
-- Be structured for Google + AI extraction
+Style:
+- Practical
+- Clear
+- Helpful for real students, teachers, or parents
+- No generic filler
 `
 }
 
@@ -135,24 +81,55 @@ function safeParse(text: string): GeneratedArticle {
   return JSON.parse(text.slice(start, end + 1)) as GeneratedArticle
 }
 
-export async function generateArticle(
-  brief: GeneratedBrief
-): Promise<GeneratedArticle> {
-  const prompt = buildPrompt(brief)
+function wordCount(html: string) {
+  return html.replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length
+}
 
+async function callModel(prompt: string) {
   const res = await openai.chat.completions.create({
     model: 'gpt-4.1-mini',
     messages: [{ role: 'user', content: prompt }],
-    temperature: 0.7
+    temperature: 0.7,
+    max_tokens: 5000
   })
 
-  const text = res.choices[0].message.content || ''
-
-  const parsed: GeneratedArticle = safeParse(text)
-
-return {
-  ...parsed,
-  faq: parsed.faq || [],
-  keywords: parsed.keywords || []
+  return res.choices[0].message.content || ''
 }
+
+export async function generateArticle(
+  brief: EducationBrief
+): Promise<GeneratedArticle> {
+  let text = await callModel(buildPrompt(brief))
+  let parsed: GeneratedArticle = safeParse(text)
+
+  const needsRetry =
+    wordCount(parsed.content || '') < 1200 ||
+    !Array.isArray(parsed.faq) ||
+    parsed.faq.length < 5
+
+  if (needsRetry) {
+    text = await callModel(`
+The previous article was too short or missing FAQ items.
+
+Rewrite it again.
+
+Mandatory:
+- 1,300 to 1,800 words
+- exactly 5 FAQ items in the JSON faq array
+- FAQ section inside content
+- Sources section inside content
+- HTML only inside content
+- Return ONLY valid JSON
+
+Original brief:
+${buildPrompt(brief)}
+`)
+    parsed = safeParse(text)
+  }
+
+  return {
+    ...parsed,
+    faq: Array.isArray(parsed.faq) ? parsed.faq.slice(0, 5) : [],
+    keywords: parsed.keywords || []
+  }
 }
