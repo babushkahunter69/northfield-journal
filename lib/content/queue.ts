@@ -78,12 +78,22 @@ function rewriteGenericFillerText(value: string) {
 }
 
 function autoFixBannedPhrases(article: GeneratedArticle): GeneratedArticle {
+  return {
+    ...article,
+    title: rewriteGenericFillerText(article.title),
+    excerpt: rewriteGenericFillerText(article.excerpt),
+    meta_title: rewriteGenericFillerText(article.meta_title),
+    meta_description: rewriteGenericFillerText(article.meta_description),
+    content: rewriteGenericFillerText(article.content)
+  };
+}
+
 function ensureEducationFaq(article: GeneratedArticle): GeneratedArticle {
   const fallbackFaq = [
     {
       question: `What is the main idea of ${article.title}?`,
       answer:
-        'The main idea is to give students, teachers, or parents practical guidance they can apply in real learning situations.'
+        'The main idea is to give students, teachers, and families practical guidance they can apply in real learning situations.'
     },
     {
       question: 'Who is this guide for?',
@@ -105,14 +115,14 @@ function ensureEducationFaq(article: GeneratedArticle): GeneratedArticle {
       answer:
         'It matters because strong learning habits and clear academic strategies can improve confidence, focus, and long-term progress.'
     }
-  ]
+  ];
 
   const faq =
     Array.isArray(article.faq) && article.faq.length >= 5
       ? article.faq.slice(0, 5)
-      : fallbackFaq
+      : fallbackFaq;
 
-  let content = article.content || ''
+  let content = article.content || '';
 
   if (!/<h2>\s*FAQ\s*<\/h2>/i.test(content)) {
     content += `
@@ -124,22 +134,13 @@ ${faq
 <p>${item.answer}</p>`
   )
   .join('\n')}
-`
+`;
   }
 
   return {
     ...article,
     content,
     faq
-  }
-}
-  return {  
-    ...article,
-    title: rewriteGenericFillerText(article.title),
-    excerpt: rewriteGenericFillerText(article.excerpt),
-    meta_title: rewriteGenericFillerText(article.meta_title),
-    meta_description: rewriteGenericFillerText(article.meta_description),
-    content: rewriteGenericFillerText(article.content)
   };
 }
 
@@ -386,7 +387,7 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
     let validation = validateGeneratedArticle(article, briefWithUniqueSlug);
 
     if (!validation.ok && hasGenericFillerValidationErrors(validation.errors)) {
-      const cleanedArticle = autoFixBannedPhrases(article);
+      const cleanedArticle = ensureEducationFaq(autoFixBannedPhrases(article));
       const cleanedValidation = validateGeneratedArticle(cleanedArticle, briefWithUniqueSlug);
 
       await logGenerationRun({
@@ -399,13 +400,13 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
         error_message: cleanedValidation.ok ? null : `Auto-fix still failing: ${cleanedValidation.errors.join(' | ')}`
       });
 
-      article = ensureEducationFaq(cleanedArticle);
-      validation = validateGeneratedArticle(article, briefWithUniqueSlug);
+      article = cleanedArticle;
+      validation = cleanedValidation;
     }
 
     if (!validation.ok) {
       const retriedArticle = await generateArticle(briefWithUniqueSlug);
-      const cleanedRetriedArticle = autoFixBannedPhrases(retriedArticle);
+      const cleanedRetriedArticle = ensureEducationFaq(autoFixBannedPhrases(retriedArticle));
       const retriedValidation = validateGeneratedArticle(cleanedRetriedArticle, briefWithUniqueSlug);
 
       await logGenerationRun({
@@ -418,8 +419,8 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
         error_message: retriedValidation.ok ? null : `Retry validation failed: ${retriedValidation.errors.join(' | ')}`
       });
 
-      article = ensureEducationFaq(cleanedRetriedArticle);
-      validation = validateGeneratedArticle(article, briefWithUniqueSlug);
+      article = cleanedRetriedArticle;
+      validation = retriedValidation;
     }
 
     if (!validation.ok) {
@@ -543,62 +544,6 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
     });
 
     throw error;
-  }
-}
-
-function ensureEducationFaq(article: GeneratedArticle): GeneratedArticle {
-  const fallbackFaq = [
-    {
-      question: `What is the main idea of ${article.title}?`,
-      answer:
-        'The main idea is to give students, teachers, and families practical guidance they can apply in real learning situations.'
-    },
-    {
-      question: 'Who is this guide for?',
-      answer:
-        'This guide is for students, educators, and families who want clear, practical education advice.'
-    },
-    {
-      question: 'How should students use this advice?',
-      answer:
-        'Students should choose one or two strategies, apply them consistently, and review what improves their learning.'
-    },
-    {
-      question: 'How can teachers or parents help?',
-      answer:
-        'Teachers and parents can help by giving structure, feedback, and encouragement while allowing students to build independence.'
-    },
-    {
-      question: 'Why does this topic matter?',
-      answer:
-        'It matters because strong learning habits and clear academic strategies can improve confidence, focus, and long-term progress.'
-    }
-  ]
-
-  const faq =
-    Array.isArray(article.faq) && article.faq.length >= 5
-      ? article.faq.slice(0, 5)
-      : fallbackFaq
-
-  let content = article.content || ''
-
-  if (!/<h2>\s*FAQ\s*<\/h2>/i.test(content)) {
-    content += `
-<h2>FAQ</h2>
-${faq
-  .map(
-    (item) => `
-<h3>${item.question}</h3>
-<p>${item.answer}</p>`
-  )
-  .join('\n')}
-`
-  }
-
-  return {
-    ...article,
-    content,
-    faq
   }
 }
 
