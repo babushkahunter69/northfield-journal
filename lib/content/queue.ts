@@ -78,7 +78,62 @@ function rewriteGenericFillerText(value: string) {
 }
 
 function autoFixBannedPhrases(article: GeneratedArticle): GeneratedArticle {
+function ensureEducationFaq(article: GeneratedArticle): GeneratedArticle {
+  const fallbackFaq = [
+    {
+      question: `What is the main idea of ${article.title}?`,
+      answer:
+        'The main idea is to give students, teachers, or parents practical guidance they can apply in real learning situations.'
+    },
+    {
+      question: 'Who is this guide for?',
+      answer:
+        'This guide is for students, educators, and families who want clear, practical education advice.'
+    },
+    {
+      question: 'How should students use this advice?',
+      answer:
+        'Students should choose one or two strategies, apply them consistently, and review what improves their learning.'
+    },
+    {
+      question: 'How can teachers or parents help?',
+      answer:
+        'Teachers and parents can help by giving structure, feedback, and encouragement while allowing students to build independence.'
+    },
+    {
+      question: 'Why does this topic matter?',
+      answer:
+        'It matters because strong learning habits and clear academic strategies can improve confidence, focus, and long-term progress.'
+    }
+  ]
+
+  const faq =
+    Array.isArray(article.faq) && article.faq.length >= 5
+      ? article.faq.slice(0, 5)
+      : fallbackFaq
+
+  let content = article.content || ''
+
+  if (!/<h2>\s*FAQ\s*<\/h2>/i.test(content)) {
+    content += `
+<h2>FAQ</h2>
+${faq
+  .map(
+    (item) => `
+<h3>${item.question}</h3>
+<p>${item.answer}</p>`
+  )
+  .join('\n')}
+`
+  }
+
   return {
+    ...article,
+    content,
+    faq
+  }
+}
+  return {  
     ...article,
     title: rewriteGenericFillerText(article.title),
     excerpt: rewriteGenericFillerText(article.excerpt),
@@ -326,7 +381,7 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
       output_snapshot: briefWithUniqueSlug
     });
 
-    let article = await generateArticle(briefWithUniqueSlug);
+    let article = ensureEducationFaq(await generateArticle(briefWithUniqueSlug));
 
     let validation = validateGeneratedArticle(article, briefWithUniqueSlug);
 
@@ -344,8 +399,8 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
         error_message: cleanedValidation.ok ? null : `Auto-fix still failing: ${cleanedValidation.errors.join(' | ')}`
       });
 
-      article = cleanedArticle;
-      validation = cleanedValidation;
+      article = ensureEducationFaq(cleanedArticle);
+      validation = validateGeneratedArticle(article, briefWithUniqueSlug);
     }
 
     if (!validation.ok) {
@@ -363,8 +418,8 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
         error_message: retriedValidation.ok ? null : `Retry validation failed: ${retriedValidation.errors.join(' | ')}`
       });
 
-      article = cleanedRetriedArticle;
-      validation = retriedValidation;
+      article = ensureEducationFaq(cleanedRetriedArticle);
+      validation = validateGeneratedArticle(article, briefWithUniqueSlug);
     }
 
     if (!validation.ok) {
@@ -488,6 +543,62 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
     });
 
     throw error;
+  }
+}
+
+function ensureEducationFaq(article: GeneratedArticle): GeneratedArticle {
+  const fallbackFaq = [
+    {
+      question: `What is the main idea of ${article.title}?`,
+      answer:
+        'The main idea is to give students, teachers, and families practical guidance they can apply in real learning situations.'
+    },
+    {
+      question: 'Who is this guide for?',
+      answer:
+        'This guide is for students, educators, and families who want clear, practical education advice.'
+    },
+    {
+      question: 'How should students use this advice?',
+      answer:
+        'Students should choose one or two strategies, apply them consistently, and review what improves their learning.'
+    },
+    {
+      question: 'How can teachers or parents help?',
+      answer:
+        'Teachers and parents can help by giving structure, feedback, and encouragement while allowing students to build independence.'
+    },
+    {
+      question: 'Why does this topic matter?',
+      answer:
+        'It matters because strong learning habits and clear academic strategies can improve confidence, focus, and long-term progress.'
+    }
+  ]
+
+  const faq =
+    Array.isArray(article.faq) && article.faq.length >= 5
+      ? article.faq.slice(0, 5)
+      : fallbackFaq
+
+  let content = article.content || ''
+
+  if (!/<h2>\s*FAQ\s*<\/h2>/i.test(content)) {
+    content += `
+<h2>FAQ</h2>
+${faq
+  .map(
+    (item) => `
+<h3>${item.question}</h3>
+<p>${item.answer}</p>`
+  )
+  .join('\n')}
+`
+  }
+
+  return {
+    ...article,
+    content,
+    faq
   }
 }
 
