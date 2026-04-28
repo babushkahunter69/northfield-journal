@@ -126,6 +126,9 @@ export type GeneratedBrief = {
   working_title: string;
   slug: string;
   angle: string;
+   audience?: string | null
+  grade_band?: string | null
+  subject_area?: string | null
   seo_title: string;
   seo_description: string;
   target_word_count: number;
