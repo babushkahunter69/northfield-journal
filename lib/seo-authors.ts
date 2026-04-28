@@ -25,7 +25,7 @@ export function getAutoAuthor(site: SiteKey, category?: string): AutoAuthor {
         role: 'Personal Finance Writer',
         bio: 'Daniel Reeves writes practical money advice focused on better habits, stronger savings, and realistic ways to increase income.',
         initials: 'DR',
-        reviewerName: 'CashClimb Editorial',
+        reviewerName: 'CashClimb Review Desk',
         reviewerRole: 'Editorial Review Team',
         reviewerBio: 'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
       }
@@ -36,7 +36,7 @@ export function getAutoAuthor(site: SiteKey, category?: string): AutoAuthor {
       role: 'Finance Writer',
       bio: 'Sophie Tran covers budgeting, digital banking, and simple financial systems that help readers stay organized and in control.',
       initials: 'ST',
-      reviewerName: 'CashClimb Editorial',
+      reviewerName: 'CashClimb Review Desk',
       reviewerRole: 'Editorial Review Team',
       reviewerBio: 'CashClimb articles are reviewed for clarity, usefulness, and responsible financial education. Content is informational only and is not personal financial advice.',
     }
@@ -47,14 +47,16 @@ export function getAutoAuthor(site: SiteKey, category?: string): AutoAuthor {
     c.includes('learning') ||
     c.includes('memory') ||
     c.includes('education') ||
-    c.includes('academic')
+    c.includes('academic') ||
+    c.includes('student') ||
+    c.includes('exam')
   ) {
     return {
       name: 'Emily Carter',
       role: 'Learning Specialist',
       bio: 'Emily Carter writes about study skills, learning systems, productivity, and academic improvement for students and lifelong learners.',
       initials: 'EC',
-      reviewerName: 'Northfield Journal Editorial Review',
+      reviewerName: 'Northfield Journal Education Review Desk',
       reviewerRole: 'Education Review Desk',
       reviewerBio: 'Northfield Journal reviews education content for clarity, practical usefulness, and alignment with established learning principles.',
     }
@@ -65,7 +67,7 @@ export function getAutoAuthor(site: SiteKey, category?: string): AutoAuthor {
     role: 'Academic Skills Coach',
     bio: 'Mark Reyes focuses on practical education strategies, student productivity, memory improvement, and exam preparation.',
     initials: 'MR',
-    reviewerName: 'Northfield Journal Editorial Review',
+    reviewerName: 'Northfield Journal Education Review Desk',
     reviewerRole: 'Education Review Desk',
     reviewerBio: 'Northfield Journal reviews education content for clarity, practical usefulness, and alignment with established learning principles.',
   }

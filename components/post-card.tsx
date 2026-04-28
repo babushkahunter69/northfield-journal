@@ -8,6 +8,10 @@ type PostCardProps = {
   variant?: 'default' | 'featured';
 };
 
+function authorLabel(post: Post) {
+  return post.author?.name || post.author_name || 'Northfield Journal Contributor';
+}
+
 export function PostCard({ post, variant = 'default' }: PostCardProps) {
   if (variant === 'featured') {
     return (
@@ -51,7 +55,7 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
             </Link>
 
             <div className="mt-8 flex items-center justify-between gap-4 border-t border-slate-200/70 pt-5">
-              <p className="text-sm text-slate-500">By {post.author_name}</p>
+              <p className="text-sm text-slate-500">By {authorLabel(post)}</p>
               <Link
                 href={`/blog/${post.slug}`}
                 className="inline-flex items-center gap-1 text-sm font-semibold text-brand-700 transition hover:text-brand-900"
@@ -107,7 +111,7 @@ export function PostCard({ post, variant = 'default' }: PostCardProps) {
         </Link>
 
         <div className="mt-6 flex items-center justify-between gap-4 border-t border-slate-200/70 pt-4">
-          <p className="text-sm text-slate-500">By {post.author_name}</p>
+          <p className="text-sm text-slate-500">By {authorLabel(post)}</p>
 
           <Link
             href={`/blog/${post.slug}`}

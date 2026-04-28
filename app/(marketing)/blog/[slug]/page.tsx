@@ -14,6 +14,15 @@ import {
 import { getSiteUrl } from '@/lib/utils';
 import { getAutoAuthor } from '@/lib/seo-authors';
 
+function slugFromName(name: string) {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, '')
+    .replace(/\s+/g, '-')
+    .replace(/-+/g, '-');
+}
+
 export async function generateMetadata({
   params
 }: {
@@ -44,7 +53,7 @@ export async function generateMetadata({
       images: post.featured_image_url ? [{ url: post.featured_image_url }] : undefined,
       publishedTime: post.published_at || undefined,
       modifiedTime: post.updated_at || post.published_at || undefined
-},
+    },
     twitter: {
       card: 'summary_large_image',
       title: post.meta_title || post.title,
@@ -74,11 +83,15 @@ export default async function PostPage({
   if (!post) notFound();
 
   const articleUrl = `${getSiteUrl()}/blog/${normalizedSlug}`;
-  const fallbackAuthor = getAutoAuthor('northfield', post.categories?.name);
-  const displayAuthorName = post.author_name || fallbackAuthor.name;
-  const displayAuthorBio = post.author_bio || fallbackAuthor.bio;
+  const fallbackAuthor = getAutoAuthor(
+    'northfield',
+    [post.categories?.name, post.title].filter(Boolean).join(' ')
+  );
+
+  const displayAuthorName = post.author?.name || post.author_name || fallbackAuthor.name;
+  const displayAuthorBio = post.author?.bio || post.author_bio || fallbackAuthor.bio;
   const displayAuthorInitials = post.author?.avatarInitials || fallbackAuthor.initials;
-  const displayAuthorSlug = post.author?.slug || '';
+  const displayAuthorSlug = post.author?.slug || slugFromName(displayAuthorName);
 
   return (
     <article className="container-shell article-page pt-12 pb-6 sm:pt-14 sm:pb-8">
@@ -148,15 +161,9 @@ export default async function PostPage({
                     <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
                       {displayAuthorName}
                     </h2>
-                    {displayAuthorBio ? (
-                      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                        {displayAuthorBio}
-                      </p>
-                    ) : (
-                      <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                        Read more from this contributor in the Northfield Journal.
-                      </p>
-                    )}
+                    <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                      {displayAuthorBio}
+                    </p>
 
                     <span className="mt-4 inline-flex items-center text-sm font-semibold text-brand-700">
                       View contributor page →
@@ -246,7 +253,7 @@ export default async function PostPage({
 
                           <div className="mt-5 flex items-center justify-between gap-3 border-t border-slate-200 pt-4 dark:border-slate-700">
                             <span className="text-sm text-slate-600 dark:text-slate-300">
-                              By {relatedPost.author_name}
+                              By {relatedPost.author?.name || relatedPost.author_name}
                             </span>
                             <span className="text-sm font-semibold text-brand-700">
                               Read article →

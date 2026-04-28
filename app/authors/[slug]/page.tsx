@@ -106,41 +106,50 @@ export default async function AuthorPage({
             </h2>
           </div>
 
-          <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {posts.map((post) => (
-              <Link
-                key={post.id}
-                href={`/blog/${post.slug}`}
-                className="paper group rounded-[24px] p-6 transition duration-200 hover:-translate-y-[2px]"
-              >
-                <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                  <span className="text-brand-700">
-                    {post.categories?.name || 'Journal'}
-                  </span>
-                  {post.published_at ? (
-                    <span>{format(new Date(post.published_at), 'MMM d, yyyy')}</span>
-                  ) : null}
-                </div>
+          {posts.length ? (
+            <div className="mt-8 grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+              {posts.map((post) => (
+                <Link
+                  key={post.id}
+                  href={`/blog/${post.slug}`}
+                  className="paper group rounded-[24px] p-6 transition duration-200 hover:-translate-y-[2px]"
+                >
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                    <span className="text-brand-700">
+                      {post.categories?.name || 'Journal'}
+                    </span>
+                    {post.published_at ? (
+                      <span>{format(new Date(post.published_at), 'MMM d, yyyy')}</span>
+                    ) : null}
+                  </div>
 
-                <h3 className="mt-4 text-2xl font-semibold leading-snug text-slate-900 transition group-hover:text-brand-700">
-                  {post.title}
-                </h3>
+                  <h3 className="mt-4 text-2xl font-semibold leading-snug text-slate-900 transition group-hover:text-brand-700">
+                    {post.title}
+                  </h3>
 
-                <p className="mt-4 line-clamp-4 text-sm leading-7 text-slate-600">
-                  {post.excerpt}
-                </p>
+                  <p className="mt-4 line-clamp-4 text-sm leading-7 text-slate-600">
+                    {post.excerpt}
+                  </p>
 
-                <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
-                  <span className="text-sm text-slate-600">
-                    {post.reading_time_minutes} min read
-                  </span>
-                  <span className="text-sm font-semibold text-brand-700">
-                    Read article →
-                  </span>
-                </div>
-              </Link>
-            ))}
-          </div>
+                  <div className="mt-6 flex items-center justify-between gap-3 border-t border-slate-200 pt-4">
+                    <span className="text-sm text-slate-600">
+                      {post.reading_time_minutes} min read
+                    </span>
+                    <span className="text-sm font-semibold text-brand-700">
+                      Read article →
+                    </span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          ) : (
+            <div className="paper mt-8 rounded-[24px] p-8 text-center">
+              <p className="text-lg font-semibold text-slate-900">No articles yet</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">
+                New articles from this contributor will appear here.
+              </p>
+            </div>
+          )}
         </section>
       </div>
     </main>

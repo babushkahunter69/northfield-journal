@@ -3,6 +3,7 @@ import { siteConfig } from '@/lib/constants';
 import { getSiteUrl } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-server';
 import type { Author, Post } from '@/lib/types';
+import { getAutoAuthor } from '@/lib/seo-authors';
 
 function normalizeSlug(value: string) {
   return value
@@ -24,22 +25,60 @@ function getAuthorInitials(name: string) {
   return parts.map((part) => part[0]?.toUpperCase() ?? '').join('');
 }
 
-export function buildAuthorFromPost(
-  post: Pick<Post, 'author_name' | 'author_bio' | 'published_at'>
+function isEditorialAuthor(name?: string | null) {
+  if (!name) return true;
+
+  const normalized = name.toLowerCase();
+
+  return (
+    normalized.includes('editorial') ||
+    normalized.includes('northfield journal') ||
+    normalized.includes('journal desk') ||
+    normalized.includes('admin')
+  );
+}
+
+function resolvePostAuthor(
+  post: Pick<Post, 'author_name' | 'author_bio' | 'published_at' | 'categories' | 'title'>
 ): Author {
+  const topicHint = [
+    post.categories?.name,
+    post.title,
+  ]
+    .filter(Boolean)
+    .join(' ');
+
+  const fallbackAuthor = getAutoAuthor('northfield', topicHint);
+
+  const authorName = isEditorialAuthor(post.author_name)
+    ? fallbackAuthor.name
+    : post.author_name;
+
+  const authorBio = post.author_bio || fallbackAuthor.bio;
+
   return {
-    name: post.author_name,
-    slug: normalizeSlug(post.author_name),
-    bio: post.author_bio,
-    avatarInitials: getAuthorInitials(post.author_name),
+    name: authorName,
+    slug: normalizeSlug(authorName),
+    bio: authorBio,
+    avatarInitials: getAuthorInitials(authorName),
     latestPublishedAt: post.published_at ?? null
   };
 }
 
+export function buildAuthorFromPost(
+  post: Pick<Post, 'author_name' | 'author_bio' | 'published_at' | 'categories' | 'title'>
+): Author {
+  return resolvePostAuthor(post);
+}
+
 function attachAuthorToPost<T extends Post>(post: T): T {
+  const author = buildAuthorFromPost(post);
+
   return {
     ...post,
-    author: buildAuthorFromPost(post)
+    author_name: author.name,
+    author_bio: author.bio,
+    author
   };
 }
 
@@ -115,15 +154,13 @@ export const getAllAuthors = cache(async (): Promise<Author[]> => {
   const authorMap = new Map<string, Author>();
 
   for (const post of posts) {
-    const slug = normalizeSlug(post.author_name);
+    const author = buildAuthorFromPost(post);
+    const slug = author.slug;
     const existing = authorMap.get(slug);
 
     if (!existing) {
       authorMap.set(slug, {
-        name: post.author_name,
-        slug,
-        bio: post.author_bio,
-        avatarInitials: getAuthorInitials(post.author_name),
+        ...author,
         articleCount: 1,
         latestPublishedAt: post.published_at ?? null
       });
@@ -132,8 +169,8 @@ export const getAllAuthors = cache(async (): Promise<Author[]> => {
 
     existing.articleCount = (existing.articleCount ?? 0) + 1;
 
-    if (!existing.bio && post.author_bio) {
-      existing.bio = post.author_bio;
+    if (!existing.bio && author.bio) {
+      existing.bio = author.bio;
     }
 
     if (
@@ -162,7 +199,7 @@ export const getPostsByAuthorSlug = cache(async (slug: string) => {
   const normalizedSlug = normalizeSlug(slug);
   const posts = await getPublishedPosts();
 
-  return posts.filter((post) => normalizeSlug(post.author_name) === normalizedSlug);
+  return posts.filter((post) => buildAuthorFromPost(post).slug === normalizedSlug);
 });
 
 export const getRelatedPostsBySlug = cache(async (slug: string, limit = 3) => {
@@ -182,7 +219,7 @@ export const getRelatedPostsBySlug = cache(async (slug: string, limit = 3) => {
   const sameAuthor = posts.filter(
     (candidate) =>
       candidate.slug !== post.slug &&
-      normalizeSlug(candidate.author_name) === normalizeSlug(post.author_name) &&
+      buildAuthorFromPost(candidate).slug === buildAuthorFromPost(post).slug &&
       !sameCategory.some((item) => item.slug === candidate.slug)
   );
 
@@ -197,71 +234,129 @@ export const getRelatedPostsBySlug = cache(async (slug: string, limit = 3) => {
 });
 
 export async function getStructuredDataForPost(slug: string) {
-  const post = await getPostBySlug(slug)
-  if (!post) return null
+  const post = await getPostBySlug(slug);
+  if (!post) return null;
 
-  const siteUrl = getSiteUrl()
-  const authorSlug = normalizeSlug(post.author_name)
+  const siteUrl = getSiteUrl();
+  const author = buildAuthorFromPost(post);
+  const articleUrl = `${siteUrl}/blog/${post.slug}`;
+  const fallbackAuthor = getAutoAuthor(
+    'northfield',
+    [post.categories?.name, post.title].filter(Boolean).join(' ')
+  );
+
+  const rawFaqs = Array.isArray(post.faq_json) ? post.faq_json : [];
+  const faqs =
+    rawFaqs.length > 0
+      ? rawFaqs
+      : [
+          {
+            question: 'Who is this article for?',
+            answer:
+              'This article is written for students, educators, families, and academic readers looking for clear, practical education guidance.',
+          },
+          {
+            question: 'How is Northfield Journal content reviewed?',
+            answer:
+              'Northfield Journal content is edited for clarity, usefulness, topical relevance, and practical value for education-focused readers.',
+          },
+        ];
 
   return {
     '@context': 'https://schema.org',
     '@graph': [
       {
-        '@type': 'BlogPosting',
-        '@id': `${siteUrl}/blog/${post.slug}#article`,
+        '@type': 'Organization',
+        '@id': `${siteUrl}/#organization`,
+        name: siteConfig.name,
+        url: siteUrl,
+        description: siteConfig.description,
+      },
+      {
+        '@type': 'Person',
+        '@id': `${siteUrl}/authors/${author.slug}#person`,
+        name: author.name,
+        url: `${siteUrl}/authors/${author.slug}`,
+        description: author.bio || undefined,
+        jobTitle:
+          author.name === 'Emily Carter'
+            ? 'Learning Specialist'
+            : author.name === 'Mark Reyes'
+              ? 'Academic Skills Coach'
+              : 'Education Contributor',
+        worksFor: {
+          '@id': `${siteUrl}/#organization`,
+        },
+        knowsAbout: [
+          'Study skills',
+          'Learning methods',
+          'Academic writing',
+          'Student success',
+          'Education strategy',
+        ],
+      },
+      {
+        '@type': 'Article',
+        '@id': `${articleUrl}#article`,
         headline: post.title,
         description: post.meta_description || post.excerpt,
         image: post.featured_image_url ? [post.featured_image_url] : undefined,
         datePublished: post.published_at,
         dateModified: post.updated_at || post.published_at,
         author: {
-          '@type': 'Person',
-          '@id': `${siteUrl}/authors/${authorSlug}#person`,
-          name: post.author_name,
-          url: `${siteUrl}/authors/${authorSlug}`,
-          description: post.author_bio || undefined,
-          worksFor: {
-            '@type': 'Organization',
-            name: siteConfig.name,
-            url: siteUrl,
-          },
+          '@id': `${siteUrl}/authors/${author.slug}#person`,
+        },
+        reviewedBy: {
+          '@type': 'Organization',
+          name: fallbackAuthor.reviewerName,
+          description: fallbackAuthor.reviewerBio,
         },
         publisher: {
-          '@type': 'Organization',
           '@id': `${siteUrl}/#organization`,
-          name: siteConfig.name,
-          url: siteUrl,
-          description: siteConfig.description,
         },
         mainEntityOfPage: {
           '@type': 'WebPage',
-          '@id': `${siteUrl}/blog/${post.slug}`,
+          '@id': articleUrl,
         },
         articleSection: post.categories?.name || siteConfig.primaryTopic,
         keywords: post.keywords || siteConfig.defaultKeywords,
       },
       {
         '@type': 'FAQPage',
-        '@id': `${siteUrl}/blog/${post.slug}#faq`,
-        mainEntity: [
+        '@id': `${articleUrl}#faq`,
+        mainEntity: faqs.map((faq) => ({
+          '@type': 'Question',
+          name: faq.question,
+          acceptedAnswer: {
+            '@type': 'Answer',
+            text: faq.answer,
+          },
+        })),
+      },
+      {
+        '@type': 'BreadcrumbList',
+        '@id': `${articleUrl}#breadcrumb`,
+        itemListElement: [
           {
-            '@type': 'Question',
-            name: 'Who is this article for?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'This article is written for students, educators, families, and academic readers looking for clear, practical education guidance.',
-            },
+            '@type': 'ListItem',
+            position: 1,
+            name: 'Home',
+            item: siteUrl,
           },
           {
-            '@type': 'Question',
-            name: 'How is Northfield Journal content reviewed?',
-            acceptedAnswer: {
-              '@type': 'Answer',
-              text: 'Northfield Journal content is edited for clarity, usefulness, topical relevance, and practical value for education-focused readers.',
-            },
+            '@type': 'ListItem',
+            position: 2,
+            name: 'Journal',
+            item: `${siteUrl}/blog`,
+          },
+          {
+            '@type': 'ListItem',
+            position: 3,
+            name: post.title,
+            item: articleUrl,
           },
         ],
       },
     ],
-  }
+  };
 }
