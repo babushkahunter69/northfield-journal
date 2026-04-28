@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { evaluatePublishGate } from '@/lib/admin/publish-gate';
 import { estimateReadingTime } from '@/lib/utils';
 
 function slugify(value: string) {
@@ -39,6 +40,14 @@ async function getUniqueSlug(baseTitle: string, currentId?: string) {
   return `${baseSlug}-${i}`;
 }
 
+function defaultAuthorBio(authorName: string) {
+  if (authorName === 'Mark Reyes') {
+    return 'Mark Reyes focuses on practical education strategies, student productivity, memory improvement, and exam preparation.';
+  }
+
+  return 'Emily Carter writes about study skills, learning systems, productivity, and academic improvement for students and lifelong learners.';
+}
+
 export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
 
@@ -54,22 +63,53 @@ export async function POST(request: Request) {
     const excerpt = typeof body?.excerpt === 'string' ? body.excerpt.trim() : '';
     const content = typeof body?.content === 'string' ? body.content.trim() : '';
     const status = body?.status === 'published' ? 'published' : 'draft';
-    const meta_title =
-      typeof body?.meta_title === 'string' ? body.meta_title.trim() : '';
-    const meta_description =
-      typeof body?.meta_description === 'string'
-        ? body.meta_description.trim()
-        : '';
+    const meta_title = typeof body?.meta_title === 'string' ? body.meta_title.trim() : '';
+    const meta_description = typeof body?.meta_description === 'string' ? body.meta_description.trim() : '';
     const featured_image_url =
       typeof body?.featured_image_url === 'string' && body.featured_image_url.trim()
         ? body.featured_image_url.trim()
         : null;
+    const author_name =
+      typeof body?.author_name === 'string' && body.author_name.trim()
+        ? body.author_name.trim()
+        : 'Emily Carter';
+    const author_bio =
+      typeof body?.author_bio === 'string' && body.author_bio.trim()
+        ? body.author_bio.trim()
+        : defaultAuthorBio(author_name);
+    const primary_keyword =
+      typeof body?.primary_keyword === 'string' ? body.primary_keyword.trim() : '';
 
     if (!title) {
       return NextResponse.json({ error: 'Title is required.' }, { status: 400 });
     }
 
     const reading_time_minutes = estimateReadingTime(content);
+
+    if (status === 'published') {
+      const gate = evaluatePublishGate({
+        title,
+        excerpt,
+        content,
+        meta_title,
+        meta_description,
+        featured_image_url,
+        author_name,
+        primary_keyword
+      });
+
+      if (!gate.ok) {
+        return NextResponse.json(
+          {
+            error: 'This post is not ready to publish.',
+            score: gate.score,
+            failed: gate.failed,
+            stats: gate.stats
+          },
+          { status: 422 }
+        );
+      }
+    }
 
     if (id) {
       const slug = await getUniqueSlug(title, id);
@@ -86,6 +126,9 @@ export async function POST(request: Request) {
           meta_title,
           meta_description,
           featured_image_url,
+          author_name,
+          author_bio,
+          published_at: status === 'published' ? new Date().toISOString() : null,
           updated_at: new Date().toISOString()
         })
         .eq('id', id)
@@ -119,9 +162,11 @@ export async function POST(request: Request) {
         meta_title,
         meta_description,
         featured_image_url,
-        author_name: 'Northfield Journal Editorial Desk',
+        author_name,
+        author_bio,
         source_type: 'manual',
-        generation_status: 'manual_draft'
+        generation_status: 'manual_draft',
+        published_at: status === 'published' ? new Date().toISOString() : null
       })
       .select('id, slug, status, featured_image_url, reading_time_minutes')
       .single();

@@ -9,6 +9,8 @@ import { generateBrief } from '@/lib/ai/generate-brief';
 import { generateArticle } from '@/lib/ai/generate-article';
 import { createCoverForPost } from '@/lib/cover/create-cover';
 import { validateGeneratedArticle } from '@/lib/content/quality';
+import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
+import { getAutoAuthor } from '@/lib/seo-authors';
 import { estimateReadingTime } from '@/lib/utils';
 
 type EducationKeyword = ContentKeyword & {
@@ -312,12 +314,44 @@ function hasSourcesSection(article: GeneratedArticle) {
   return /<h2[^>]*>\s*Sources\s*<\/h2>/i.test(article.content || '') && /<a\s+/i.test(article.content || '');
 }
 
-function shouldAutoPublishArticle(article: GeneratedArticle, validation: { ok: boolean }) {
-  return (
-    validation.ok === true &&
-    countArticleWords(article.content) >= 1000 &&
-    hasCompleteFaq(article) &&
-    hasSourcesSection(article)
+function shouldAutoPublishArticle(
+  article: GeneratedArticle,
+  validation: { ok: boolean },
+  coverUrl: string | null,
+  authorName: string
+) {
+  if (!coverUrl) return false;
+  if (!authorName || /editorial|northfield journal|admin/i.test(authorName)) return false;
+  if (validation.ok !== true) return false;
+  if (countArticleWords(article.content) < 1000) return false;
+  if (!hasCompleteFaq(article)) return false;
+  if (!hasSourcesSection(article)) return false;
+
+  const score = evaluateEditorialScore({
+    title: article.title,
+    excerpt: article.excerpt,
+    content: article.content,
+    metaTitle: article.meta_title,
+    metaDescription: article.meta_description,
+    featuredImageUrl: coverUrl,
+    primaryKeyword: Array.isArray(article.keywords) && article.keywords.length > 0 ? article.keywords[0] : null
+  });
+
+  return score.score >= 80;
+}
+
+function getGeneratedAuthor(brief: EducationBrief, article: GeneratedArticle) {
+  return getAutoAuthor(
+    'northfield',
+    [
+      brief.category_slug,
+      brief.working_title,
+      brief.keyword,
+      article.title,
+      article.keywords?.join(' ')
+    ]
+      .filter(Boolean)
+      .join(' ')
   );
 }
 
@@ -327,7 +361,8 @@ async function persistPost(
   brief: EducationBrief,
   article: GeneratedArticle,
   coverUrl: string | null,
-  autoPublish = false
+  autoPublish = false,
+  author = getGeneratedAuthor(brief, article)
 ) {
   const uniqueSlug = await getUniqueSlug(article.slug || brief.slug || brief.working_title);
   const categoryId = await ensureCategoryId(brief.category_slug);
@@ -343,7 +378,8 @@ async function persistPost(
       featured_image_url: coverUrl,
       og_image_url: coverUrl,
       category_id: categoryId,
-      author_name: 'Northfield Journal Editorial Desk',
+      author_name: author.name,
+      author_bio: author.bio,
       meta_title: article.meta_title,
       meta_description: article.meta_description,
       keywords: article.keywords || [],
@@ -522,8 +558,9 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
       });
     }
 
-    const autoPublish = shouldAutoPublishArticle(article, validation);
-    const post = await persistPost(keyword, briefWithUniqueSlug, article, coverUrl, autoPublish);
+    const author = getGeneratedAuthor(briefWithUniqueSlug, article);
+    const autoPublish = shouldAutoPublishArticle(article, validation, coverUrl, author.name);
+    const post = await persistPost(keyword, briefWithUniqueSlug, article, coverUrl, autoPublish, author);
 
     await supabaseAdmin
       .from('content_keywords')

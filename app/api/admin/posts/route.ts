@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
+import { evaluatePublishGate } from '@/lib/admin/publish-gate';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import {
   estimateReadingTime,
@@ -7,6 +8,14 @@ import {
   makeSlug,
   splitKeywords
 } from '@/lib/utils';
+
+function defaultAuthorBio(authorName: string) {
+  if (authorName === 'Mark Reyes') {
+    return 'Mark Reyes focuses on practical education strategies, student productivity, memory improvement, and exam preparation.';
+  }
+
+  return 'Emily Carter writes about study skills, learning systems, productivity, and academic improvement for students and lifelong learners.';
+}
 
 export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
@@ -32,6 +41,8 @@ export async function POST(request: Request) {
 
     const slug = String(body.slug || '').trim() || makeSlug(title);
     const requestedPublishedAt = String(body.published_at || '').trim();
+    const authorName = String(body.author_name || 'Emily Carter').trim();
+    const keywords = splitKeywords(String(body.keywords || ''));
 
     const payload = {
       title,
@@ -44,14 +55,14 @@ export async function POST(request: Request) {
         String(body.featured_image_url || '').trim() || null,
       og_image_url: String(body.og_image_url || body.featured_image_url || '').trim() || null,
       canonical_url: String(body.canonical_url || '').trim() || null,
-      author_name: String(body.author_name || 'Editorial Team').trim(),
-      author_bio: String(body.author_bio || '').trim() || null,
+      author_name: authorName,
+      author_bio: String(body.author_bio || defaultAuthorBio(authorName)).trim() || null,
       category_id: String(body.category_id || '').trim() || null,
       meta_title: String(body.meta_title || '').trim() || title,
       meta_description:
         String(body.meta_description || '').trim() ||
         excerptFromContent(content, 155),
-      keywords: splitKeywords(String(body.keywords || '')),
+      keywords,
       faq_json: Array.isArray(body.faq_json) ? body.faq_json : null,
       source_type: String(body.source_type || 'editorial').trim(),
       generation_status: String(body.generation_status || 'manual').trim(),
@@ -59,6 +70,31 @@ export async function POST(request: Request) {
       status: body.status === 'published' ? 'published' : 'draft',
       reading_time_minutes: estimateReadingTime(content)
     };
+
+    if (payload.status === 'published') {
+      const gate = evaluatePublishGate({
+        title: payload.title,
+        excerpt: payload.excerpt,
+        content: payload.content,
+        meta_title: payload.meta_title,
+        meta_description: payload.meta_description,
+        featured_image_url: payload.featured_image_url,
+        author_name: payload.author_name,
+        primary_keyword: keywords.length > 0 ? String(keywords[0]) : ''
+      });
+
+      if (!gate.ok) {
+        return NextResponse.json(
+          {
+            error: 'This post is not ready to publish.',
+            score: gate.score,
+            failed: gate.failed,
+            stats: gate.stats
+          },
+          { status: 422 }
+        );
+      }
+    }
 
     if (body.id) {
       const existingResponse = await supabaseAdmin
