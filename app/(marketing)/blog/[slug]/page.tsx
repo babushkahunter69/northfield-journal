@@ -12,6 +12,7 @@ import {
   getStructuredDataForPost
 } from '@/lib/data';
 import { getSiteUrl } from '@/lib/utils';
+import { getAutoAuthor } from '@/lib/seo-authors';
 
 export async function generateMetadata({
   params
@@ -73,6 +74,11 @@ export default async function PostPage({
   if (!post) notFound();
 
   const articleUrl = `${getSiteUrl()}/blog/${normalizedSlug}`;
+  const fallbackAuthor = getAutoAuthor('northfield', post.categories?.name);
+  const displayAuthorName = post.author_name || fallbackAuthor.name;
+  const displayAuthorBio = post.author_bio || fallbackAuthor.bio;
+  const displayAuthorInitials = post.author?.avatarInitials || fallbackAuthor.initials;
+  const displayAuthorSlug = post.author?.slug || '';
 
   return (
     <article className="container-shell article-page pt-12 pb-6 sm:pt-14 sm:pb-8">
@@ -127,12 +133,12 @@ export default async function PostPage({
               </p>
 
               <Link
-                href={`/authors/${post.author?.slug ?? ''}`}
+                href={`/authors/${displayAuthorSlug}`}
                 className="article-author-card mt-8 mb-8 block rounded-[28px] border border-slate-200 bg-stone-50 p-5 transition duration-200 hover:-translate-y-[1px] hover:border-slate-300"
               >
                 <div className="flex items-start gap-4">
                   <div className="article-author-avatar flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase tracking-[0.18em] text-slate-900 dark:text-white">
-                    {post.author?.avatarInitials ?? 'NJ'}
+                    {displayAuthorInitials}
                   </div>
 
                   <div className="min-w-0 flex-1">
@@ -140,11 +146,11 @@ export default async function PostPage({
                       Contributor
                     </p>
                     <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
-                      {post.author_name}
+                      {displayAuthorName}
                     </h2>
-                    {post.author_bio ? (
+                    {displayAuthorBio ? (
                       <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
-                        {post.author_bio}
+                        {displayAuthorBio}
                       </p>
                     ) : (
                       <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
@@ -160,6 +166,21 @@ export default async function PostPage({
               </Link>
 
               <RichContent content={post.content} />
+
+              <section className="mt-10 rounded-[28px] border border-slate-200 bg-stone-50 p-6 dark:border-slate-700 dark:bg-slate-900/40">
+                <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-700">
+                  Reviewed by
+                </p>
+                <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                  {fallbackAuthor.reviewerName}
+                </h2>
+                <p className="mt-1 text-sm font-medium text-slate-500 dark:text-slate-400">
+                  {fallbackAuthor.reviewerRole}
+                </p>
+                <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                  {fallbackAuthor.reviewerBio}
+                </p>
+              </section>
 
               {relatedPosts.length ? (
                 <section className="article-related mt-8 border-t border-slate-200 pt-8 dark:border-slate-700">
@@ -280,15 +301,24 @@ export default async function PostPage({
               Contributor
             </p>
             <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
-              Written by {post.author_name}
-              {post.author_bio ? ` — ${post.author_bio}` : '.'}
+              Written by {displayAuthorName}
+              {displayAuthorBio ? ` — ${displayAuthorBio}` : '.'}
             </p>
             <Link
-              href={`/authors/${post.author?.slug ?? ''}`}
+              href={`/authors/${displayAuthorSlug}`}
               className="mt-4 inline-flex items-center text-sm font-semibold text-brand-700 hover:text-brand-900"
             >
               Visit contributor page →
             </Link>
+          </div>
+
+          <div className="paper p-6">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
+              Reviewed by
+            </p>
+            <p className="mt-3 text-sm leading-7 text-slate-600 dark:text-slate-300">
+              {fallbackAuthor.reviewerName} — {fallbackAuthor.reviewerBio}
+            </p>
           </div>
 
           <div className="paper p-6">
