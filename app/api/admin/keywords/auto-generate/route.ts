@@ -40,7 +40,9 @@ export async function POST(request: Request) {
       .select('keyword')
       .in('keyword', keywords);
 
-    if (existingError) throw existingError;
+    if (existingError) {
+      throw existingError;
+    }
 
     const existingSet = new Set(
       (existing || []).map((row) => String(row.keyword || '').toLowerCase())
@@ -50,13 +52,8 @@ export async function POST(request: Request) {
       .filter((item) => !existingSet.has(item.keyword.toLowerCase()))
       .map((item) => ({
         keyword: item.keyword,
-        status: 'candidate',
-        priority: item.quality_score,
-        quality_score: item.quality_score,
-        approval_recommendation: item.approval_recommendation,
-        scoring_notes: item.scoring_notes,
-        score_breakdown: item.score_breakdown,
-        pillar: item.pillar,
+        status: 'queued',
+        priority: item.priority,
         audience: item.audience,
         grade_band: item.grade_band,
         subject_area: item.subject_area,
@@ -81,7 +78,9 @@ export async function POST(request: Request) {
       .from('content_keywords')
       .insert(rows);
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      throw insertError;
+    }
 
     return NextResponse.json({
       success: true,

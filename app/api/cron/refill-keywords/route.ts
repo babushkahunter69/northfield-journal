@@ -20,31 +20,31 @@ export async function GET(request: Request) {
   }
 
   try {
-    const minCandidateSize = 30;
+    const minQueueSize = 30;
     const refillAmount = 20;
 
     const { count, error: countError } = await supabaseAdmin
       .from('content_keywords')
       .select('*', { count: 'exact', head: true })
-      .eq('status', 'candidate');
+      .eq('status', 'queued');
 
     if (countError) throw countError;
 
-    const candidateCount = count ?? 0;
+    const queuedCount = count ?? 0;
 
-    if (candidateCount >= minCandidateSize) {
+    if (queuedCount >= minQueueSize) {
       await logAutomationEvent({
         source: 'cron:refill-keywords',
         event_type: 'refill',
         status: 'info',
-        message: 'Candidate pool healthy, no refill needed',
-        meta: { candidate_count: candidateCount, min_candidate_size: minCandidateSize }
+        message: 'Queue healthy, no refill needed',
+        meta: { queued_count: queuedCount, min_queue_size: minQueueSize }
       });
 
       return NextResponse.json({
         success: true,
-        message: 'Candidate keyword pool is healthy. No refill needed.',
-        candidate_count: candidateCount,
+        message: 'Queue is healthy. No refill needed.',
+        queued_count: queuedCount,
         inserted: 0
       });
     }
@@ -73,13 +73,8 @@ export async function GET(request: Request) {
       .filter((item) => !existingSet.has(item.keyword.toLowerCase()))
       .map((item) => ({
         keyword: item.keyword,
-        status: 'candidate',
-        priority: item.quality_score,
-        quality_score: item.quality_score,
-        approval_recommendation: item.approval_recommendation,
-        scoring_notes: item.scoring_notes,
-        score_breakdown: item.score_breakdown,
-        pillar: item.pillar,
+        status: 'queued',
+        priority: item.priority,
         audience: item.audience,
         grade_band: item.grade_band,
         subject_area: item.subject_area,
@@ -103,9 +98,9 @@ export async function GET(request: Request) {
       source: 'cron:refill-keywords',
       event_type: 'refill',
       status: 'success',
-      message: `Keyword refill inserted ${rows.length} candidate keywords`,
+      message: `Keyword refill inserted ${rows.length} new keywords`,
       meta: {
-        candidate_count_before: candidateCount,
+        queued_count_before: queuedCount,
         inserted: rows.length,
         skipped: generated.length - rows.length
       }
@@ -113,7 +108,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      candidate_count_before: candidateCount,
+      queued_count_before: queuedCount,
       inserted: rows.length,
       skipped: generated.length - rows.length
     });

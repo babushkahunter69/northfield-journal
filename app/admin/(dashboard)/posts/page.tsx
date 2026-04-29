@@ -1,120 +1,110 @@
-'use client'
+import { supabaseAdmin } from '@/lib/supabase-admin';
+import { PostTableActions } from '@/components/admin/post-table-actions';
 
-import { useEffect, useState } from 'react'
-import { getPublishReadiness } from '@/lib/seo/publish-readiness'
+export default async function AdminPostsPage() {
+  const { data: posts } = await supabaseAdmin
+    .from('posts')
+    .select('*, categories(name)')
+    .order('created_at', { ascending: false });
 
-type Post = {
-  id: string
-  title: string
-  status: string
-  content: string
-  faq_json: any
-  featured_image_url?: string
-  og_image_url?: string
-  meta_title?: string
-  meta_description?: string
-}
-
-export default function AdminPostsPage() {
-  const [posts, setPosts] = useState<Post[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    fetch('/api/admin/posts') // FIXED
-      .then((res) => res.json())
-      .then((data) => {
-        setPosts(data)
-        setLoading(false)
-      })
-  }, [])
-
-  async function publishPost(id: string) {
-    await fetch('/api/admin/publish-post', {
-      method: 'POST',
-      body: JSON.stringify({ id }),
-    })
-    location.reload()
-  }
-
-  async function regeneratePost(id: string) {
-  await fetch('/api/admin/auto-fix-post', {
-    method: 'POST',
-    body: JSON.stringify({ id }),
-  })
-  location.reload()
-  }
-
-  if (loading) return <div>Loading...</div>
+  const totalPosts = posts?.length || 0;
+  const publishedPosts =
+    posts?.filter((post) => post.status === 'published').length || 0;
+  const draftPosts =
+    posts?.filter((post) => post.status === 'draft').length || 0;
 
   return (
-    <div style={{ padding: 20 }}>
-      <h1>Admin Dashboard</h1>
+    <div className="space-y-8">
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="rounded-[24px] border border-[#e2d9cb] bg-[#fffdf8] p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Total posts
+          </p>
+          <p className="mt-4 text-5xl font-semibold text-slate-900">{totalPosts}</p>
+        </div>
 
-      <table style={{ width: '100%', marginTop: 20, borderCollapse: 'collapse' }}>
-        <thead>
-          <tr>
-            <th align="left">Title</th>
-            <th>Status</th>
-            <th>Readiness</th>
-            <th>Details</th>
-            <th>Actions</th>
-          </tr>
-        </thead>
+        <div className="rounded-[24px] border border-[#e2d9cb] bg-[#fffdf8] p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Published
+          </p>
+          <p className="mt-4 text-5xl font-semibold text-slate-900">{publishedPosts}</p>
+        </div>
 
-        <tbody>
-          {posts.map((post) => {
-            const readiness = getPublishReadiness(post)
+        <div className="rounded-[24px] border border-[#e2d9cb] bg-[#fffdf8] p-6">
+          <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">
+            Drafts
+          </p>
+          <p className="mt-4 text-5xl font-semibold text-slate-900">{draftPosts}</p>
+        </div>
+      </div>
 
-            return (
-              <tr key={post.id} style={{ borderTop: '1px solid #ddd' }}>
-                <td>{post.title}</td>
-
-                <td>{post.status}</td>
-
-                <td>
-                  {readiness.status === 'ready' && (
-                    <span style={{ color: 'green' }}>Ready</span>
-                  )}
-                  {readiness.status === 'needs_review' && (
-                    <span style={{ color: 'orange' }}>Needs Review</span>
-                  )}
-                  {readiness.status === 'failed' && (
-                    <span style={{ color: 'red' }}>Failed</span>
-                  )}
-                </td>
-
-                <td>
-                  {readiness.blockers.map((b: string) => (
-                    <div key={b} style={{ color: 'red', fontSize: 12 }}>
-                      {b}
-                    </div>
-                  ))}
-
-                  {readiness.warnings.map((w: string) => (
-                    <div key={w} style={{ color: 'orange', fontSize: 12 }}>
-                      {w}
-                    </div>
-                  ))}
-                </td>
-
-                <td>
-                  <button
-                    disabled={readiness.status !== 'ready'}
-                    onClick={() => publishPost(post.id)}
-                    style={{ marginRight: 8 }}
-                  >
-                    Publish
-                  </button>
-
-                  <button onClick={() => regeneratePost(post.id)}>
-                    Auto-fix
-                  </button>
-                </td>
+      <div className="overflow-hidden rounded-[28px] border border-[#e2d9cb] bg-[#fffdf8] shadow-[0_20px_50px_rgba(15,23,42,0.08)]">
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left">
+            <thead className="border-b border-[#e7dfd2] bg-[#f8f3ea] text-xs uppercase tracking-[0.18em] text-slate-500">
+              <tr>
+                <th className="px-6 py-5">Title</th>
+                <th className="px-6 py-5">Category</th>
+                <th className="px-6 py-5">Author</th>
+                <th className="px-6 py-5">Status</th>
+                <th className="px-6 py-5">Date</th>
+                <th className="px-6 py-5">Actions</th>
               </tr>
-            )
-          })}
-        </tbody>
-      </table>
+            </thead>
+
+            <tbody>
+              {(posts || []).map((post) => (
+                <tr key={post.id} className="border-b border-[#efe7da] last:border-b-0">
+                  <td className="px-6 py-6">
+                    <div className="max-w-[420px]">
+                      <p className="truncate text-xl font-medium text-slate-900">
+                        {post.title}
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500">/blog/{post.slug}</p>
+                    </div>
+                  </td>
+
+                  <td className="px-6 py-6 text-sm text-slate-600">
+                    {post.categories?.name || '—'}
+                  </td>
+
+                  <td className="px-6 py-6 text-sm text-slate-600">
+                    {post.author_name}
+                  </td>
+
+                  <td className="px-6 py-6">
+                    <span
+                      className={`inline-flex rounded-full px-3 py-1 text-xs font-semibold ${
+                        post.status === 'published'
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-700'
+                      }`}
+                    >
+                      {post.status === 'published' ? 'Live' : 'Draft'}
+                    </span>
+                  </td>
+
+                  <td className="px-6 py-6 text-sm text-slate-500">
+                    {post.published_at
+                      ? new Date(post.published_at).toLocaleDateString()
+                      : post.created_at
+                        ? new Date(post.created_at).toLocaleDateString()
+                        : '—'}
+                  </td>
+
+                  <td className="px-6 py-6">
+                    <PostTableActions
+                      postId={post.id}
+                      slug={post.slug}
+                      status={post.status}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
-  )
+  );
 }
