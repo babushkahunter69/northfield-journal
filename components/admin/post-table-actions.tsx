@@ -17,28 +17,52 @@ export function PostTableActions({ postId, slug, status }: Props) {
   async function publishPost() {
     setLoading(true)
 
-    await fetch(`/api/posts/${postId}`, {
-      method: 'PATCH',
+    const res = await fetch('/api/posts', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status: 'published' }),
+      body: JSON.stringify({
+        id: postId,
+        status: 'published',
+      }),
     })
 
-    router.refresh()
     setLoading(false)
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      alert(data?.error || 'Publish failed')
+      return
+    }
+
+    router.refresh()
   }
 
   async function deletePost() {
-    const confirmed = window.confirm('Delete this post? This cannot be undone.')
+    const confirmed = window.confirm(
+      'Delete this post? This cannot be undone.'
+    )
+
     if (!confirmed) return
 
     setLoading(true)
 
-    await fetch(`/api/posts/${postId}`, {
+    const res = await fetch('/api/posts', {
       method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        id: postId,
+      }),
     })
 
-    router.refresh()
     setLoading(false)
+
+    if (!res.ok) {
+      const data = await res.json().catch(() => null)
+      alert(data?.error || 'Delete failed')
+      return
+    }
+
+    router.refresh()
   }
 
   return (
@@ -83,7 +107,7 @@ export function PostTableActions({ postId, slug, status }: Props) {
         disabled={loading}
         className="rounded-full border border-red-300 px-4 py-2 text-sm font-semibold text-red-600 disabled:opacity-50"
       >
-        Delete
+        {loading ? 'Working...' : 'Delete'}
       </button>
     </div>
   )
