@@ -17,22 +17,19 @@ export function PostTableActions({ postId, slug, status }: Props) {
   async function publishPost() {
     setLoading(true)
 
-    const res = await fetch('/api/posts', {
+    const res = await fetch('/api/admin/publish-post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: postId,
-        status: 'published',
-      }),
+      body: JSON.stringify({ id: postId }),
     })
 
     setLoading(false)
 
     if (!res.ok) {
-  const data = await res.json().catch(() => null)
-  alert(data?.error || `Delete failed with status ${res.status}`)
-  return
-  }
+      const data = await res.json().catch(() => null)
+      alert(data?.error || `Publish failed with status ${res.status}`)
+      return
+    }
 
     router.refresh()
   }
@@ -46,19 +43,18 @@ export function PostTableActions({ postId, slug, status }: Props) {
 
     setLoading(true)
 
-    const res = await fetch('/api/posts', {
-      method: 'DELETE',
+    const res = await fetch('/api/admin/delete-post', {
+      method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        id: postId,
-      }),
+      body: JSON.stringify({ id: postId }),
     })
 
     setLoading(false)
 
     if (!res.ok) {
       const data = await res.json().catch(() => null)
-      alert(data?.error || 'Delete failed')
+      console.log('DELETE ERROR:', data)
+      alert(data?.error || `Delete failed with status ${res.status}`)
       return
     }
 
