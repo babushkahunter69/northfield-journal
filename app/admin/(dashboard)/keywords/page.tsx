@@ -6,6 +6,7 @@ import AutoKeywordGenerator from '@/components/admin/AutoKeywordGenerator';
 import { AutomationDashboard } from '@/components/admin/AutomationDashboard';
 import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
 import { generateDraftFromKeywordId } from '@/lib/content/queue';
+import { getClusterLabel, getRecommendationLabel } from '@/lib/seo/keyword-intelligence';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,6 +15,14 @@ type KeywordRow = {
   keyword: string;
   status: string;
   priority: number | null;
+  quality_score?: number | null;
+  approval_recommendation?: string | null;
+  scoring_notes?: {
+    reasons?: string[];
+    risks?: string[];
+  } | null;
+  score_breakdown?: Record<string, number> | null;
+  pillar?: string | null;
   cluster: string | null;
   audience: string | null;
   grade_band?: string | null;
@@ -31,7 +40,7 @@ async function approveKeyword(formData: FormData) {
 
   await supabaseAdmin
     .from('content_keywords')
-    .update({ status: 'queued', last_error: null })
+    .update({ status: 'queued', approved_at: new Date().toISOString(), last_error: null })
     .eq('id', id);
 
   revalidatePath('/admin/keywords');
@@ -44,7 +53,7 @@ async function rejectKeyword(formData: FormData) {
 
   await supabaseAdmin
     .from('content_keywords')
-    .update({ status: 'rejected', last_error: null })
+    .update({ status: 'rejected', rejected_at: new Date().toISOString(), last_error: null })
     .eq('id', id);
 
   revalidatePath('/admin/keywords');
@@ -57,7 +66,7 @@ async function generateDraftNow(formData: FormData) {
 
   await supabaseAdmin
     .from('content_keywords')
-    .update({ status: 'queued', last_error: null })
+    .update({ status: 'queued', approved_at: new Date().toISOString(), last_error: null })
     .eq('id', id);
 
   await generateDraftFromKeywordId(id);
@@ -74,12 +83,7 @@ async function generateCandidateKeywords(formData: FormData) {
   const countValue = Number(formData.get('count') || 15);
   const count = Number.isFinite(countValue) ? Math.max(5, Math.min(30, countValue)) : 15;
 
-  const generated = await generateKeywordIdeas({
-    count,
-    focus,
-    audience,
-    grade_band: gradeBand
-  });
+  const generated = await generateKeywordIdeas({ count, focus, audience, grade_band: gradeBand });
 
   if (generated.length === 0) {
     revalidatePath('/admin/keywords');
@@ -93,16 +97,19 @@ async function generateCandidateKeywords(formData: FormData) {
     .select('keyword')
     .in('keyword', lowerKeywords);
 
-  const existingSet = new Set(
-    (existing || []).map((row) => String(row.keyword || '').toLowerCase())
-  );
+  const existingSet = new Set((existing || []).map((row) => String(row.keyword || '').toLowerCase()));
 
   const rows = generated
     .filter((item) => !existingSet.has(item.keyword.toLowerCase()))
     .map((item) => ({
       keyword: item.keyword,
       status: 'candidate',
-      priority: item.priority,
+      priority: item.quality_score,
+      quality_score: item.quality_score,
+      approval_recommendation: item.approval_recommendation,
+      scoring_notes: item.scoring_notes,
+      score_breakdown: item.score_breakdown,
+      pillar: item.pillar,
       audience: item.audience,
       grade_band: item.grade_band,
       subject_area: item.subject_area,
@@ -139,49 +146,97 @@ function KeywordStatusBadge({ status }: { status: string }) {
   );
 }
 
+function RecommendationBadge({ recommendation }: { recommendation?: string | null }) {
+  const normalized = recommendation || 'review';
+  const styles: Record<string, string> = {
+    approve_first: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+    review: 'bg-blue-100 text-blue-800 border-blue-200',
+    reject: 'bg-rose-100 text-rose-800 border-rose-200'
+  };
+
+  return (
+    <span className={`inline-flex rounded-full border px-3 py-1 text-xs font-semibold ${styles[normalized] || styles.review}`}>
+      {getRecommendationLabel(normalized)}
+    </span>
+  );
+}
+
+function ScorePill({ score }: { score: number }) {
+  const color =
+    score >= 84
+      ? 'bg-emerald-100 text-emerald-800 border-emerald-200'
+      : score >= 72
+        ? 'bg-blue-100 text-blue-800 border-blue-200'
+        : 'bg-rose-100 text-rose-800 border-rose-200';
+
+  return (
+    <span className={`inline-flex min-w-14 justify-center rounded-full border px-3 py-1 text-sm font-bold ${color}`}>
+      {score}
+    </span>
+  );
+}
+
 function CandidateKeywordReview({ keywords }: { keywords: KeywordRow[] }) {
   const candidates = keywords.filter((item) => item.status === 'candidate');
   const queued = keywords.filter((item) => item.status === 'queued');
+  const approveFirst = candidates.filter((item) => (item.approval_recommendation || 'review') === 'approve_first');
+  const review = candidates.filter((item) => (item.approval_recommendation || 'review') === 'review');
+  const reject = candidates.filter((item) => (item.approval_recommendation || 'review') === 'reject');
+
+  const clusterCounts = candidates.reduce<Record<string, number>>((acc, item) => {
+    const key = item.cluster || 'student-success';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  const sortedCandidates = [...candidates].sort((a, b) => {
+    const recWeight = (value?: string | null) =>
+      value === 'approve_first' ? 3 : value === 'review' ? 2 : 1;
+
+    const recDiff = recWeight(b.approval_recommendation) - recWeight(a.approval_recommendation);
+    if (recDiff !== 0) return recDiff;
+
+    return (b.quality_score ?? b.priority ?? 0) - (a.quality_score ?? a.priority ?? 0);
+  });
 
   return (
     <section className="rounded-[28px] border border-amber-200 bg-amber-50/70 p-6 shadow-sm">
       <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">
-            Hybrid Pipeline
+            Keyword Intelligence
           </p>
           <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Review keyword ideas before drafting
+            Review scored keyword ideas before drafting
           </h2>
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-            Auto-generated keywords now land here as candidates. Approve the best
-            ideas to move them into the draft queue. The cron job only drafts approved queued keywords.
+            The system now groups keywords into clusters, scores quality, and tells you which ideas to approve first.
+            Only approved keywords enter the draft queue.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-3">
+        <div className="grid grid-cols-2 gap-3 text-center sm:grid-cols-4">
           <div className="rounded-2xl border border-amber-200 bg-white px-5 py-4">
             <p className="text-2xl font-semibold text-slate-900">{candidates.length}</p>
             <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Candidates</p>
           </div>
+          <div className="rounded-2xl border border-emerald-200 bg-white px-5 py-4">
+            <p className="text-2xl font-semibold text-slate-900">{approveFirst.length}</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Approve First</p>
+          </div>
           <div className="rounded-2xl border border-blue-200 bg-white px-5 py-4">
             <p className="text-2xl font-semibold text-slate-900">{queued.length}</p>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Approved</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Queued</p>
           </div>
-          <div className="rounded-2xl border border-stone-200 bg-white px-5 py-4">
-            <p className="text-2xl font-semibold text-slate-900">85+</p>
-            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Target Score</p>
+          <div className="rounded-2xl border border-rose-200 bg-white px-5 py-4">
+            <p className="text-2xl font-semibold text-slate-900">{reject.length}</p>
+            <p className="text-xs uppercase tracking-[0.18em] text-slate-500">Reject</p>
           </div>
         </div>
       </div>
 
       <form action={generateCandidateKeywords} className="mt-6 grid gap-3 rounded-2xl border border-amber-200 bg-white p-4 lg:grid-cols-[1fr_180px_180px_120px_auto]">
-        <input
-          name="focus"
-          defaultValue="study techniques"
-          className="rounded-xl border border-stone-300 px-4 py-3 text-sm text-slate-900"
-          placeholder="Focus, e.g. study techniques"
-        />
+        <input name="focus" defaultValue="study techniques" className="rounded-xl border border-stone-300 px-4 py-3 text-sm text-slate-900" placeholder="Focus, e.g. study techniques" />
         <select name="audience" defaultValue="students" className="rounded-xl border border-stone-300 px-4 py-3 text-sm text-slate-900">
           <option value="students">Students</option>
           <option value="teachers">Teachers</option>
@@ -195,72 +250,107 @@ function CandidateKeywordReview({ keywords }: { keywords: KeywordRow[] }) {
           <option value="college">College</option>
           <option value="adult">Adult learners</option>
         </select>
-        <input
-          name="count"
-          defaultValue="15"
-          type="number"
-          min="5"
-          max="30"
-          className="rounded-xl border border-stone-300 px-4 py-3 text-sm text-slate-900"
-        />
+        <input name="count" defaultValue="15" type="number" min="5" max="30" className="rounded-xl border border-stone-300 px-4 py-3 text-sm text-slate-900" />
         <button className="rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white">
           Generate Ideas
         </button>
       </form>
 
+      {Object.keys(clusterCounts).length > 0 ? (
+        <div className="mt-6 rounded-2xl border border-amber-200 bg-white p-5">
+          <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700">
+            Cluster map
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {Object.entries(clusterCounts)
+              .sort((a, b) => b[1] - a[1])
+              .map(([cluster, count]) => (
+                <span key={cluster} className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs font-semibold text-slate-700">
+                  {getClusterLabel(cluster)} · {count}
+                </span>
+              ))}
+          </div>
+        </div>
+      ) : null}
+
       <div className="mt-6 overflow-hidden rounded-2xl border border-amber-200 bg-white">
         <div className="border-b border-amber-100 px-5 py-4">
           <h3 className="font-semibold text-slate-900">Candidate keywords</h3>
-          <p className="mt-1 text-sm text-slate-500">Approve only ideas that fit the site strategy.</p>
+          <p className="mt-1 text-sm text-slate-500">
+            Start with keywords marked “Approve first.” Review keywords can still be good, but need your judgment.
+          </p>
         </div>
 
-        {candidates.length === 0 ? (
-          <div className="px-5 py-8 text-sm text-slate-500">
-            No candidate keywords waiting for review.
-          </div>
+        {sortedCandidates.length === 0 ? (
+          <div className="px-5 py-8 text-sm text-slate-500">No candidate keywords waiting for review.</div>
         ) : (
           <div className="divide-y divide-stone-100">
-            {candidates.slice(0, 30).map((item) => (
-              <div key={item.id} className="grid gap-4 px-5 py-4 lg:grid-cols-[1fr_120px_140px_260px] lg:items-center">
-                <div>
-                  <p className="font-medium text-slate-900">{item.keyword}</p>
-                  <p className="mt-1 text-xs text-slate-500">
-                    {item.cluster || 'student-success'} · {item.audience || 'students'} · {item.grade_band || 'general'}
-                  </p>
-                  {item.last_error ? (
-                    <p className="mt-2 text-xs text-rose-600">{item.last_error}</p>
-                  ) : null}
-                </div>
+            {sortedCandidates.slice(0, 40).map((item) => {
+              const score = item.quality_score ?? item.priority ?? 70;
+              const notes = item.scoring_notes || {};
+              const reasons = Array.isArray(notes.reasons) ? notes.reasons : [];
+              const risks = Array.isArray(notes.risks) ? notes.risks : [];
 
-                <div>
-                  <p className="text-xs uppercase tracking-[0.16em] text-slate-500">Score</p>
-                  <p className="text-lg font-semibold text-slate-900">{item.priority ?? 70}</p>
-                </div>
+              return (
+                <div key={item.id} className="grid gap-4 px-5 py-5 xl:grid-cols-[1fr_120px_150px_180px_250px] xl:items-center">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium text-slate-900">{item.keyword}</p>
+                      <RecommendationBadge recommendation={item.approval_recommendation} />
+                    </div>
+                    <p className="mt-1 text-xs text-slate-500">
+                      {getClusterLabel(item.cluster)} · {item.pillar || 'Study Skills and Student Success'} · {item.audience || 'students'} · {item.grade_band || 'general'}
+                    </p>
+                    {reasons.length ? (
+                      <ul className="mt-2 flex flex-wrap gap-2">
+                        {reasons.slice(0, 3).map((reason) => (
+                          <li key={reason} className="rounded-full bg-emerald-50 px-2.5 py-1 text-[11px] font-medium text-emerald-700">
+                            {reason}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {risks.length ? (
+                      <ul className="mt-2 flex flex-wrap gap-2">
+                        {risks.slice(0, 2).map((risk) => (
+                          <li key={risk} className="rounded-full bg-rose-50 px-2.5 py-1 text-[11px] font-medium text-rose-700">
+                            {risk}
+                          </li>
+                        ))}
+                      </ul>
+                    ) : null}
+                    {item.last_error ? <p className="mt-2 text-xs text-rose-600">{item.last_error}</p> : null}
+                  </div>
 
-                <KeywordStatusBadge status={item.status} />
+                  <div>
+                    <p className="mb-1 text-xs uppercase tracking-[0.16em] text-slate-500">Quality</p>
+                    <ScorePill score={score} />
+                  </div>
 
-                <div className="flex flex-wrap gap-2 lg:justify-end">
-                  <form action={approveKeyword}>
-                    <input type="hidden" name="id" value={item.id} />
-                    <button className="rounded-full bg-blue-700 px-4 py-2 text-xs font-semibold text-white">
-                      Approve
-                    </button>
-                  </form>
-                  <form action={generateDraftNow}>
-                    <input type="hidden" name="id" value={item.id} />
-                    <button className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white">
-                      Draft Now
-                    </button>
-                  </form>
-                  <form action={rejectKeyword}>
-                    <input type="hidden" name="id" value={item.id} />
-                    <button className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700">
-                      Reject
-                    </button>
-                  </form>
+                  <KeywordStatusBadge status={item.status} />
+
+                  <div>
+                    <p className="mb-1 text-xs uppercase tracking-[0.16em] text-slate-500">Suggested Action</p>
+                    <p className="text-sm font-semibold text-slate-900">{getRecommendationLabel(item.approval_recommendation)}</p>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2 xl:justify-end">
+                    <form action={approveKeyword}>
+                      <input type="hidden" name="id" value={item.id} />
+                      <button className="rounded-full bg-blue-700 px-4 py-2 text-xs font-semibold text-white">Approve</button>
+                    </form>
+                    <form action={generateDraftNow}>
+                      <input type="hidden" name="id" value={item.id} />
+                      <button className="rounded-full bg-slate-900 px-4 py-2 text-xs font-semibold text-white">Draft Now</button>
+                    </form>
+                    <form action={rejectKeyword}>
+                      <input type="hidden" name="id" value={item.id} />
+                      <button className="rounded-full border border-rose-200 px-4 py-2 text-xs font-semibold text-rose-700">Reject</button>
+                    </form>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
@@ -273,6 +363,7 @@ export default async function AdminKeywordsPage() {
     supabaseAdmin
       .from('content_keywords')
       .select('*')
+      .order('quality_score', { ascending: false, nullsFirst: false })
       .order('priority', { ascending: false })
       .order('created_at', { ascending: false }),
     supabaseAdmin
@@ -294,14 +385,10 @@ export default async function AdminKeywordsPage() {
         <details className="group">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-4 px-6 py-5">
             <div>
-              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">
-                Manual Import
-              </p>
-              <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-                Paste or upload your own keywords
-              </h2>
+              <p className="mb-2 text-xs font-semibold uppercase tracking-[0.28em] text-amber-700">Manual Import</p>
+              <h2 className="text-2xl font-semibold tracking-tight text-slate-900">Paste or upload your own keywords</h2>
               <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
-                Imported keywords are saved for review first. Approve the ones you want the system to draft.
+                Imported keywords are scored and saved for review first. Approve the ones you want the system to draft.
               </p>
             </div>
 

@@ -1,3 +1,4 @@
+import { scoreKeywordIdea } from '@/lib/seo/keyword-intelligence';
 import { generateJson } from './client';
 
 export type GeneratedKeywordIdea = {
@@ -23,6 +24,11 @@ export type GeneratedKeywordIdea = {
     | 'resource-roundup';
   cluster: string;
   priority: number;
+  quality_score: number;
+  approval_recommendation: 'approve_first' | 'review' | 'reject';
+  scoring_notes: { reasons: string[]; risks: string[] };
+  score_breakdown: Record<string, number>;
+  pillar: string;
   target_country: string;
   curriculum: string;
   learning_objective: string;
@@ -42,7 +48,8 @@ const STRONG_KEYWORD_PATTERNS = [
   /^ways to /i,
   /^strategies for /i,
   /^checklist for /i,
-  /^guide to /i
+  /^guide to /i,
+  /\bvs\b/i
 ];
 
 const WEAK_KEYWORDS = [
@@ -53,7 +60,9 @@ const WEAK_KEYWORDS = [
   'teaching tips',
   'school advice',
   'academic success',
-  'education guide'
+  'education guide',
+  'study skills',
+  'learning strategies'
 ];
 
 function inferCluster(input: {
@@ -98,18 +107,27 @@ function normalizeIdea(input: Partial<GeneratedKeywordIdea>): GeneratedKeywordId
   const gradeBand = String(input.grade_band || 'high-school').trim() as GeneratedKeywordIdea['grade_band'];
   const contentType = String(input.content_type || 'study-guide').trim() as GeneratedKeywordIdea['content_type'];
 
-  const safePriority =
-    typeof input.priority === 'number' && Number.isFinite(input.priority)
-      ? Math.max(70, Math.min(100, Math.round(input.priority)))
-      : 85;
-
-  const cluster =
+  const inferredCluster =
     String(input.cluster || '').trim() ||
     inferCluster({
       subject_area: input.subject_area,
       content_type: input.content_type,
       audience: input.audience
     });
+
+  const intelligence = scoreKeywordIdea({
+    keyword,
+    cluster: inferredCluster,
+    audience,
+    grade_band: gradeBand,
+    subject_area: input.subject_area,
+    content_type: contentType
+  });
+
+  const safePriority =
+    typeof input.priority === 'number' && Number.isFinite(input.priority)
+      ? Math.max(intelligence.quality_score, Math.max(60, Math.min(100, Math.round(input.priority))))
+      : intelligence.quality_score;
 
   return {
     keyword,
@@ -142,14 +160,20 @@ function normalizeIdea(input: Partial<GeneratedKeywordIdea>): GeneratedKeywordId
       contentType === 'resource-roundup'
         ? contentType
         : 'study-guide',
-    cluster,
+    cluster: intelligence.cluster,
     priority: safePriority,
+    quality_score: intelligence.quality_score,
+    approval_recommendation: intelligence.recommendation,
+    scoring_notes: { reasons: intelligence.reasons, risks: intelligence.risks },
+    score_breakdown: intelligence.score_breakdown,
+    pillar: intelligence.pillar,
     target_country: String(input.target_country || 'US').trim() || 'US',
     curriculum: String(input.curriculum || 'general').trim() || 'general',
     learning_objective:
       String(input.learning_objective || '').trim() ||
       `Help readers understand and apply ${keyword}.`,
-    tone: String(input.tone || 'supportive, practical, evidence-informed').trim() ||
+    tone:
+      String(input.tone || 'supportive, practical, evidence-informed').trim() ||
       'supportive, practical, evidence-informed'
   };
 }
@@ -244,6 +268,7 @@ Return JSON with exactly this shape:
       seen.add(key);
       return true;
     })
+    .sort((a, b) => b.quality_score - a.quality_score)
     .slice(0, count);
 
   return ideas;

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { scoreKeywordIdea } from '@/lib/seo/keyword-intelligence';
 
 type Defaults = {
   audience?: string;
@@ -15,33 +16,6 @@ type Defaults = {
 
 function normalizeText(value: unknown) {
   return String(value || '').trim();
-}
-
-function inferCluster(input: {
-  subject_area?: string;
-  content_type?: string;
-  audience?: string;
-  cluster?: string;
-}) {
-  const explicit = normalizeText(input.cluster);
-  if (explicit) return explicit;
-
-  const subject = normalizeText(input.subject_area).toLowerCase();
-  const type = normalizeText(input.content_type).toLowerCase();
-  const audience = normalizeText(input.audience).toLowerCase();
-
-  if (type.includes('parent') || audience === 'parents') return 'parent-guides';
-  if (type.includes('teaching') || audience === 'teachers') return 'teaching-strategies';
-  if (type.includes('exam')) return 'exam-prep';
-  if (type.includes('career')) return 'career-guidance';
-  if (type.includes('edtech')) return 'edtech';
-  if (subject.includes('writing')) return 'academic-writing';
-  if (subject.includes('math')) return 'math-learning';
-  if (subject.includes('science')) return 'science-learning';
-  if (subject.includes('reading')) return 'reading-skills';
-  if (subject.includes('study')) return 'student-success';
-
-  return 'student-success';
 }
 
 function parseCSVLine(line: string) {
@@ -98,31 +72,39 @@ export async function POST(request: Request) {
       seen.add(dedupeKey);
 
       const audience = normalizeText(parsed.audience || defaults.audience) || 'students';
-      const gradeBand =
-        normalizeText(parsed.grade_band || defaults.grade_band) || 'high-school';
-      const subjectArea =
-        normalizeText(parsed.subject_area || defaults.subject_area) || 'study-skills';
-      const contentType =
-        normalizeText(parsed.content_type || defaults.content_type) || 'study-guide';
-      const cluster = inferCluster({
-        cluster: parsed.cluster || defaults.cluster,
-        audience,
-        subject_area: subjectArea,
-        content_type: contentType
-      });
+      const gradeBand = normalizeText(parsed.grade_band || defaults.grade_band) || 'high-school';
+      const subjectArea = normalizeText(parsed.subject_area || defaults.subject_area) || 'study-skills';
+      const contentType = normalizeText(parsed.content_type || defaults.content_type) || 'study-guide';
+      const cluster = normalizeText(parsed.cluster || defaults.cluster);
 
-      rows.push({
+      const intelligence = scoreKeywordIdea({
         keyword,
-        status: 'queued',
-        priority:
-          typeof parsed.priority === 'number' && Number.isFinite(parsed.priority)
-            ? parsed.priority
-            : Number(defaults.priority ?? 80),
         audience,
         grade_band: gradeBand,
         subject_area: subjectArea,
         content_type: contentType,
-        cluster,
+        cluster
+      });
+
+      const externalPriority =
+        typeof parsed.priority === 'number' && Number.isFinite(parsed.priority)
+          ? parsed.priority
+          : Number(defaults.priority ?? intelligence.quality_score);
+
+      rows.push({
+        keyword,
+        status: 'candidate',
+        priority: Math.max(intelligence.quality_score, Math.round(externalPriority)),
+        quality_score: intelligence.quality_score,
+        approval_recommendation: intelligence.recommendation,
+        scoring_notes: { reasons: intelligence.reasons, risks: intelligence.risks },
+        score_breakdown: intelligence.score_breakdown,
+        pillar: intelligence.pillar,
+        audience,
+        grade_band: gradeBand,
+        subject_area: subjectArea,
+        content_type: contentType,
+        cluster: intelligence.cluster,
         target_country: normalizeText(defaults.target_country) || 'US',
         curriculum: normalizeText(defaults.curriculum) || 'general',
         tone: normalizeText(defaults.tone) || 'supportive',
@@ -139,9 +121,7 @@ export async function POST(request: Request) {
 
     const { error } = await supabaseAdmin.from('content_keywords').insert(rows);
 
-    if (error) {
-      throw error;
-    }
+    if (error) throw error;
 
     return NextResponse.json({
       success: true,
@@ -150,9 +130,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Import failed.'
-      },
+      { error: error instanceof Error ? error.message : 'Import failed.' },
       { status: 500 }
     );
   }

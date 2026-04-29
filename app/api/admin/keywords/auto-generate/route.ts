@@ -1,5 +1,4 @@
 import { NextResponse } from 'next/server';
-import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
 
@@ -8,11 +7,6 @@ function normalizeText(value: unknown) {
 }
 
 export async function POST(request: Request) {
-  const allowed = await isCookieAdmin();
-  if (!allowed) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
   try {
     const body = await request.json().catch(() => ({}));
 
@@ -46,9 +40,7 @@ export async function POST(request: Request) {
       .select('keyword')
       .in('keyword', keywords);
 
-    if (existingError) {
-      throw existingError;
-    }
+    if (existingError) throw existingError;
 
     const existingSet = new Set(
       (existing || []).map((row) => String(row.keyword || '').toLowerCase())
@@ -59,7 +51,12 @@ export async function POST(request: Request) {
       .map((item) => ({
         keyword: item.keyword,
         status: 'candidate',
-        priority: item.priority,
+        priority: item.quality_score,
+        quality_score: item.quality_score,
+        approval_recommendation: item.approval_recommendation,
+        scoring_notes: item.scoring_notes,
+        score_breakdown: item.score_breakdown,
+        pillar: item.pillar,
         audience: item.audience,
         grade_band: item.grade_band,
         subject_area: item.subject_area,
@@ -68,8 +65,7 @@ export async function POST(request: Request) {
         target_country: item.target_country,
         curriculum: item.curriculum,
         learning_objective: item.learning_objective,
-        tone: item.tone,
-        last_error: null
+        tone: item.tone
       }));
 
     if (rows.length === 0) {
@@ -77,7 +73,7 @@ export async function POST(request: Request) {
         success: true,
         inserted: 0,
         skipped: generated.length,
-        message: 'All generated keyword ideas already exist.'
+        message: 'All generated keywords already exist.'
       });
     }
 
@@ -85,16 +81,12 @@ export async function POST(request: Request) {
       .from('content_keywords')
       .insert(rows);
 
-    if (insertError) {
-      throw insertError;
-    }
+    if (insertError) throw insertError;
 
     return NextResponse.json({
       success: true,
       inserted: rows.length,
       skipped: generated.length - rows.length,
-      status: 'candidate',
-      message: 'Keyword ideas were saved for review. Approve the best ones before drafting.',
       ideas: rows
     });
   } catch (error) {

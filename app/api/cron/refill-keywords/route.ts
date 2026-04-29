@@ -20,7 +20,7 @@ export async function GET(request: Request) {
   }
 
   try {
-    const minCandidateSize = 20;
+    const minCandidateSize = 30;
     const refillAmount = 20;
 
     const { count, error: countError } = await supabaseAdmin
@@ -37,7 +37,7 @@ export async function GET(request: Request) {
         source: 'cron:refill-keywords',
         event_type: 'refill',
         status: 'info',
-        message: 'Candidate keyword pool is healthy, no refill needed',
+        message: 'Candidate pool healthy, no refill needed',
         meta: { candidate_count: candidateCount, min_candidate_size: minCandidateSize }
       });
 
@@ -74,7 +74,12 @@ export async function GET(request: Request) {
       .map((item) => ({
         keyword: item.keyword,
         status: 'candidate',
-        priority: item.priority,
+        priority: item.quality_score,
+        quality_score: item.quality_score,
+        approval_recommendation: item.approval_recommendation,
+        scoring_notes: item.scoring_notes,
+        score_breakdown: item.score_breakdown,
+        pillar: item.pillar,
         audience: item.audience,
         grade_band: item.grade_band,
         subject_area: item.subject_area,
@@ -83,8 +88,7 @@ export async function GET(request: Request) {
         target_country: item.target_country,
         curriculum: item.curriculum,
         learning_objective: item.learning_objective,
-        tone: item.tone,
-        last_error: null
+        tone: item.tone
       }));
 
     if (rows.length > 0) {
@@ -99,7 +103,7 @@ export async function GET(request: Request) {
       source: 'cron:refill-keywords',
       event_type: 'refill',
       status: 'success',
-      message: `Keyword refill inserted ${rows.length} new candidate keywords`,
+      message: `Keyword refill inserted ${rows.length} candidate keywords`,
       meta: {
         candidate_count_before: candidateCount,
         inserted: rows.length,
@@ -111,8 +115,7 @@ export async function GET(request: Request) {
       success: true,
       candidate_count_before: candidateCount,
       inserted: rows.length,
-      skipped: generated.length - rows.length,
-      status: 'candidate'
+      skipped: generated.length - rows.length
     });
   } catch (error) {
     const message =
