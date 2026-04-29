@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 
+const VALID_STATUSES = new Set(['candidate', 'queued', 'in_progress', 'done', 'rejected', 'skipped']);
+
 export async function GET() {
   const allowed = await isCookieAdmin();
   if (!allowed) {
@@ -30,6 +32,9 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'Keyword is required.' }, { status: 400 });
   }
 
+  const requestedStatus = String(body?.status || 'candidate').trim();
+  const status = VALID_STATUSES.has(requestedStatus) ? requestedStatus : 'candidate';
+
   const insert = await supabaseAdmin
     .from('content_keywords')
     .insert({
@@ -37,9 +42,10 @@ export async function POST(request: Request) {
       cluster: String(body?.cluster || 'student-success').trim(),
       search_intent: String(body?.search_intent || 'informational').trim(),
       audience: String(body?.audience || 'students').trim(),
-      priority: Number(body?.priority || 50),
+      priority: Number(body?.priority || 70),
       country_code: String(body?.country_code || 'US').trim(),
-      status: 'queued'
+      status,
+      last_error: null
     })
     .select('*')
     .single();

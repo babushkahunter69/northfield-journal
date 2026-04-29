@@ -39,7 +39,7 @@ export async function runNextDraftJob() {
   if (result.processed === 0) {
     return {
       success: true,
-      message: 'No queued keywords found.',
+      message: 'No approved queued keywords found.',
       processed: 0,
       succeeded: 0,
       failed: 0,
@@ -95,7 +95,7 @@ export async function runDraftBatch(limit = 3) {
   if (!keywords || keywords.length === 0) {
     return {
       success: true,
-      message: 'No queued keywords found.',
+      message: 'No approved queued keywords found.',
       processed: 0,
       succeeded: 0,
       failed: 0,

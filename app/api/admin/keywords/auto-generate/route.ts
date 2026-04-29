@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
 
@@ -7,6 +8,11 @@ function normalizeText(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  const allowed = await isCookieAdmin();
+  if (!allowed) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
 
@@ -52,7 +58,7 @@ export async function POST(request: Request) {
       .filter((item) => !existingSet.has(item.keyword.toLowerCase()))
       .map((item) => ({
         keyword: item.keyword,
-        status: 'queued',
+        status: 'candidate',
         priority: item.priority,
         audience: item.audience,
         grade_band: item.grade_band,
@@ -62,7 +68,8 @@ export async function POST(request: Request) {
         target_country: item.target_country,
         curriculum: item.curriculum,
         learning_objective: item.learning_objective,
-        tone: item.tone
+        tone: item.tone,
+        last_error: null
       }));
 
     if (rows.length === 0) {
@@ -70,7 +77,7 @@ export async function POST(request: Request) {
         success: true,
         inserted: 0,
         skipped: generated.length,
-        message: 'All generated keywords already exist.'
+        message: 'All generated keyword ideas already exist.'
       });
     }
 
@@ -86,6 +93,8 @@ export async function POST(request: Request) {
       success: true,
       inserted: rows.length,
       skipped: generated.length - rows.length,
+      status: 'candidate',
+      message: 'Keyword ideas were saved for review. Approve the best ones before drafting.',
       ideas: rows
     });
   } catch (error) {
