@@ -250,17 +250,33 @@ export async function DELETE(request: Request) {
       .delete()
       .eq('post_id', id);
 
+    await supabaseAdmin
+      .from('comments')
+      .delete()
+      .eq('post_id', id);
+
     const { error } = await supabaseAdmin
       .from('posts')
       .delete()
       .eq('id', id);
 
     if (error) {
-      return NextResponse.json({ error: error.message }, { status: 500 });
+      return NextResponse.json(
+        { error: error.message || 'Failed to delete post.' },
+        { status: 500 }
+      );
     }
 
     return NextResponse.json({ success: true });
-  } catch {
-    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown delete error.',
+      },
+      { status: 500 }
+    );
   }
 }

@@ -29,10 +29,10 @@ export function PostTableActions({ postId, slug, status }: Props) {
     setLoading(false)
 
     if (!res.ok) {
-      const data = await res.json().catch(() => null)
-      alert(data?.error || 'Publish failed')
-      return
-    }
+  const data = await res.json().catch(() => null)
+  alert(data?.error || `Delete failed with status ${res.status}`)
+  return
+  }
 
     router.refresh()
   }
