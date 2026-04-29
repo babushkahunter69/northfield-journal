@@ -46,7 +46,7 @@ export function PostTableActions({ postId, slug, status }: Props) {
     const res = await fetch('/api/admin/delete-post', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id: postId }),
+      body: JSON.stringify({ post_id: postId }),
     })
 
     setLoading(false)
