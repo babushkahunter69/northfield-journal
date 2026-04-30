@@ -139,8 +139,8 @@ export function validateGeneratedArticle(
   if (!metaTitle) errors.push('Missing meta_title.');
   if (!metaDescription) errors.push('Missing meta_description.');
 
-  if (wordCount < 900) {
-    errors.push(`Content too short: ${wordCount} words.`);
+  if (wordCount < 2000) {
+    errors.push(`Content too short: ${wordCount} words. Aim for 2,000-3,000 words.`);
   }
 
   if (headingCount < 4) {

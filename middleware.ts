@@ -1,25 +1,28 @@
 import { NextRequest, NextResponse } from 'next/server';
 
-export function middleware(req: NextRequest) {
-  const { pathname } = req.nextUrl;
+const ADMIN_COOKIE = 'nj-admin-token';
 
-  const publicPaths = ['/admin/login', '/api/auth/login', '/api/auth/logout'];
+function isAdminPath(pathname: string) {
+  return pathname.startsWith('/admin') && pathname !== '/admin/login';
+}
 
-  if (publicPaths.some((p) => pathname.startsWith(p))) {
+export function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  if (!isAdminPath(pathname)) {
     return NextResponse.next();
   }
 
-  if (pathname.startsWith('/admin')) {
-    const token = req.cookies.get('nj-admin-token')?.value;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const token = request.cookies.get(ADMIN_COOKIE)?.value;
 
-    if (token !== process.env.ADMIN_PASSWORD) {
-      const loginUrl = new URL('/admin/login', req.url);
-      loginUrl.searchParams.set('from', pathname);
-      return NextResponse.redirect(loginUrl);
-    }
+  if (adminPassword && token === adminPassword) {
+    return NextResponse.next();
   }
 
-  return NextResponse.next();
+  const loginUrl = new URL('/admin/login', request.url);
+  loginUrl.searchParams.set('from', pathname);
+  return NextResponse.redirect(loginUrl);
 }
 
 export const config = {

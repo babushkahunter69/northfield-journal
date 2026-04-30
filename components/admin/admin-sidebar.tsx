@@ -8,6 +8,7 @@ const navItems = [
   { href: '/admin/posts/new', label: 'New Post', icon: '✍️' },
   { href: '/admin/queue', label: 'Draft Queue', icon: '⚙️' },
   { href: '/admin/keywords', label: 'Keywords', icon: '🔎' },
+  { href: '/admin/automation', label: 'Automation', icon: '🤖' },
   { href: '/admin/legacy-editor', label: 'Legacy Editor', icon: '🛠️' }
 ];
 

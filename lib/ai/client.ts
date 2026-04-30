@@ -21,13 +21,13 @@ type ChatCompletionResponse<T> = {
 };
 
 function getAiConfig() {
-  const apiKey = process.env.AI_API_KEY;
+  const apiKey = process.env.AI_API_KEY || process.env.OPENAI_API_KEY;
   const model = process.env.AI_MODEL || 'gpt-4.1-mini';
   const apiUrl =
     process.env.AI_API_URL || 'https://api.openai.com/v1/chat/completions';
 
   if (!apiKey) {
-    throw new Error('Missing AI_API_KEY.');
+    throw new Error('Missing AI_API_KEY or OPENAI_API_KEY.');
   }
 
   return { apiKey, model, apiUrl };

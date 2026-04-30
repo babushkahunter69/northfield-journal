@@ -1,7 +1,7 @@
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 
 export const MINIMUM_PUBLISH_SCORE = 80;
-export const MINIMUM_PUBLISH_WORDS = 900;
+export const MINIMUM_PUBLISH_WORDS = 2000;
 
 type PublishGateInput = {
   title: string;
@@ -13,17 +13,6 @@ type PublishGateInput = {
   author_name?: string | null;
   primary_keyword?: string | null;
 };
-
-function isEditorialOrMissingAuthor(authorName?: string | null) {
-  const value = String(authorName || '').trim().toLowerCase();
-
-  return (
-    !value ||
-    value.includes('editorial') ||
-    value.includes('northfield journal') ||
-    value.includes('admin')
-  );
-}
 
 export function evaluatePublishGate(input: PublishGateInput) {
   const scoreResult = evaluateEditorialScore({
@@ -56,10 +45,6 @@ export function evaluatePublishGate(input: PublishGateInput) {
 
   if (!String(input.meta_description || '').trim()) {
     failed.push('A meta description is required before publishing.');
-  }
-
-  if (isEditorialOrMissingAuthor(input.author_name)) {
-    failed.push('A named non-editorial author is required before publishing.');
   }
 
   const faqCheck = scoreResult.checks.find((check) => check.key === 'faq');

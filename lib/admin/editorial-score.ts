@@ -141,8 +141,8 @@ export function evaluateEditorialScore(input: Input): EditorialScoreResult {
       hint: 'Aim for 120–160 characters.', detail: `${stats.metaDescriptionLength} characters`, weight: 6
     },
     {
-      key: 'content_substantial', label: 'Content is substantial', passed: stats.wordCount >= 900,
-      hint: 'Aim for at least 900 words.', detail: `${stats.wordCount} words`, weight: 14
+      key: 'content_substantial', label: 'Content is substantial', passed: stats.wordCount >= 2000,
+      hint: 'Aim for 2,000-3,000 words.', detail: `${stats.wordCount} words`, weight: 14
     },
     {
       key: 'internal_links', label: 'Has internal links', passed: stats.internalLinks >= 2,

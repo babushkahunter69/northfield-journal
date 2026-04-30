@@ -5,31 +5,20 @@ import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import { estimateReadingTime } from '@/lib/utils';
 
-function stripHtml(html: string) {
-  return String(html || '')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function countWords(html: string) {
-  const text = stripHtml(html);
-  return text ? text.split(/\s+/).filter(Boolean).length : 0;
-}
-
-export async function POST(request: Request) {
-  const allowed = await isCookieAdmin();
-  if (!allowed) {
+export async function POST(
+  _request: Request,
+  { params }: { params: Promise<{ postId: string }> | { postId: string } }
+) {
+  if (!(await isCookieAdmin())) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
   try {
-    const body = await request.json().catch(() => null);
-    const postId = String(body?.post_id || '').trim();
+    const resolved = await params;
+    const postId = String(resolved.postId || '').trim();
+
     if (!postId) {
-      return NextResponse.json({ error: 'post_id is required.' }, { status: 400 });
+      return NextResponse.json({ error: 'postId is required.' }, { status: 400 });
     }
 
     const postResponse = await supabaseAdmin
@@ -51,7 +40,11 @@ export async function POST(request: Request) {
       .limit(1)
       .maybeSingle();
 
-    const primaryKeyword = briefResponse.data?.working_title || post.slug.replace(/-/g, ' ');
+    const primaryKeyword =
+      briefResponse.data?.working_title ||
+      (Array.isArray(post.keywords) && post.keywords[0]) ||
+      post.slug.replace(/-/g, ' ');
+
     const improved = await improveArticleToThreshold({
       article: {
         title: post.title,
@@ -72,44 +65,30 @@ export async function POST(request: Request) {
       maxPasses: 4
     });
 
-    const improvedContent = improved.article.content || '';
-    const improvedWordCount = countWords(improvedContent);
-
-    if (improvedWordCount < 2000) {
-      return NextResponse.json(
-        {
-          error: 'Improve did not create enough article content. It produced ' + improvedWordCount + ' words, but the checklist requires at least 2,000.',
-          before: improved.before.score,
-          after: improved.after.score,
-          wordCount: improvedWordCount
-        },
-        { status: 500 }
-      );
-    }
-
-    const updatePayload = {
-      title: improved.article.title,
-      excerpt: improved.article.excerpt,
-      content: improvedContent,
-      reading_time_minutes: estimateReadingTime(improvedContent),
-      meta_title: improved.article.meta_title,
-      meta_description: improved.article.meta_description,
-      generation_status: 'improved_' + improved.after.score,
-      updated_at: new Date().toISOString()
-    };
-
     const updateResponse = await supabaseAdmin
       .from('posts')
-      .update(updatePayload)
+      .update({
+        title: improved.article.title,
+        excerpt: improved.article.excerpt,
+        content: improved.article.content,
+        reading_time_minutes: estimateReadingTime(improved.article.content),
+        meta_title: improved.article.meta_title,
+        meta_description: improved.article.meta_description,
+        generation_status: `seo_fixed_${improved.after.score}`,
+        updated_at: new Date().toISOString()
+      })
       .eq('id', postId)
       .select('id, slug, title, excerpt, content, meta_title, meta_description, featured_image_url, status')
       .single();
 
     if (updateResponse.error || !updateResponse.data) {
-      return NextResponse.json({ error: updateResponse.error?.message || 'Unable to update post.' }, { status: 500 });
+      return NextResponse.json(
+        { error: updateResponse.error?.message || 'Unable to update post.' },
+        { status: 500 }
+      );
     }
 
-    const rescored = evaluateEditorialScore({
+    const score = evaluateEditorialScore({
       title: updateResponse.data.title,
       excerpt: updateResponse.data.excerpt || '',
       content: updateResponse.data.content || '',
@@ -122,13 +101,14 @@ export async function POST(request: Request) {
     return NextResponse.json({
       success: true,
       before: improved.before.score,
-      after: rescored.score,
-      wordCount: rescored.stats.wordCount,
-      remainingFailed: rescored.checks.filter((check) => !check.passed).map((check) => check.key),
+      after: score.score,
+      remainingFailed: score.checks.filter((check) => !check.passed).map((check) => check.key),
       post: updateResponse.data
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Unknown improve failure';
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : 'SEO fix failed.' },
+      { status: 500 }
+    );
   }
 }

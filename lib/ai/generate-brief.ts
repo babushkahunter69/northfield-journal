@@ -161,7 +161,7 @@ Return JSON with exactly this shape:
   ],
   "seo_title": "string",
   "seo_description": "string",
-  "target_word_count": 1200,
+  "target_word_count": 2400,
   "internal_link_suggestions": ["string"],
   "secondary_keywords": ["string"],
   "faq": [
@@ -176,7 +176,7 @@ Constraints:
 - outline should contain 5 to 7 meaningful sections.
 - seo_title should be under 65 characters where possible.
 - seo_description should be around 140 to 160 characters.
-- target_word_count should usually be between 1000 and 1500.
+- target_word_count should usually be between 2000 and 3000, with 2400 as the default.
 - category_slug must be exactly one of:
   - student-success
   - exam-prep
@@ -206,10 +206,10 @@ Constraints:
     seo_description: trimMeta(result.seo_description || '', 160),
     target_word_count:
       typeof result.target_word_count === 'number' &&
-      result.target_word_count >= 900 &&
-      result.target_word_count <= 2000
+      result.target_word_count >= 2000 &&
+      result.target_word_count <= 3000
         ? result.target_word_count
-        : 1200,
+        : 2400,
     internal_link_suggestions: Array.isArray(result.internal_link_suggestions)
       ? result.internal_link_suggestions
           .map((item) => String(item || '').trim())

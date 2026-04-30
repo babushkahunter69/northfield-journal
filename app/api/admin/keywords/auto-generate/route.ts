@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
 
@@ -7,52 +8,37 @@ function normalizeText(value: unknown) {
 }
 
 export async function POST(request: Request) {
+  if (!(await isCookieAdmin())) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const body = await request.json().catch(() => ({}));
-
-    const count =
-      typeof body?.count === 'number' && Number.isFinite(body.count)
-        ? body.count
-        : 20;
-
+    const count = typeof body?.count === 'number' && Number.isFinite(body.count) ? body.count : 20;
     const focus = normalizeText(body?.focus) || 'education';
     const audience = normalizeText(body?.audience) || 'mixed';
     const gradeBand = normalizeText(body?.grade_band) || 'mixed';
 
-    const generated = await generateKeywordIdeas({
-      count,
-      focus,
-      audience,
-      grade_band: gradeBand
-    });
+    const generated = await generateKeywordIdeas({ count, focus, audience, grade_band: gradeBand });
 
     if (generated.length === 0) {
-      return NextResponse.json(
-        { error: 'No keyword ideas were generated.' },
-        { status: 500 }
-      );
+      return NextResponse.json({ error: 'No keyword ideas were generated.' }, { status: 500 });
     }
 
     const keywords = generated.map((item) => item.keyword.toLowerCase());
-
     const { data: existing, error: existingError } = await supabaseAdmin
       .from('content_keywords')
       .select('keyword')
       .in('keyword', keywords);
 
-    if (existingError) {
-      throw existingError;
-    }
+    if (existingError) throw existingError;
 
-    const existingSet = new Set(
-      (existing || []).map((row) => String(row.keyword || '').toLowerCase())
-    );
-
+    const existingSet = new Set((existing || []).map((row) => String(row.keyword || '').toLowerCase()));
     const rows = generated
       .filter((item) => !existingSet.has(item.keyword.toLowerCase()))
       .map((item) => ({
         keyword: item.keyword,
-        status: 'queued',
+        status: 'review',
         priority: item.priority,
         audience: item.audience,
         grade_band: item.grade_band,
@@ -66,34 +52,24 @@ export async function POST(request: Request) {
       }));
 
     if (rows.length === 0) {
-      return NextResponse.json({
-        success: true,
-        inserted: 0,
-        skipped: generated.length,
-        message: 'All generated keywords already exist.'
-      });
+      return NextResponse.json({ success: true, inserted: 0, skipped: generated.length, ideas: [], message: 'All generated keywords already exist.' });
     }
 
-    const { error: insertError } = await supabaseAdmin
+    const { data: insertedRows, error: insertError } = await supabaseAdmin
       .from('content_keywords')
-      .insert(rows);
+      .insert(rows)
+      .select('*');
 
-    if (insertError) {
-      throw insertError;
-    }
+    if (insertError) throw insertError;
 
     return NextResponse.json({
       success: true,
-      inserted: rows.length,
+      inserted: insertedRows?.length ?? rows.length,
       skipped: generated.length - rows.length,
-      ideas: rows
+      ideas: insertedRows ?? rows,
+      message: 'Generated keyword ideas are ready for review.'
     });
   } catch (error) {
-    return NextResponse.json(
-      {
-        error: error instanceof Error ? error.message : 'Auto keyword generation failed.'
-      },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: error instanceof Error ? error.message : 'Auto keyword generation failed.' }, { status: 500 });
   }
 }
