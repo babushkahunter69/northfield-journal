@@ -1,10 +1,11 @@
 -- Northfield Journal author cleanup and category-based assignment.
 -- Run this once in Supabase SQL editor to fix existing posts.
+-- This version fixes specialist-topic articles that were previously left as Emily Carter.
 
 update posts
 set
   author_name = case
-    when lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(special education|inclusive|learning difference|learning disability|dyslexia|adhd|autism|iep|504|accommodation|intervention|struggling learner)%'
+    when lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(special education|inclusive|inclusion|learning difference|learning differences|learning disability|learning disabilities|disability|disabilities|dyslexia|adhd|autism|iep|504|accommodation|accommodations|intervention|struggling learner|diverse learner|diverse learners|neurodiverse|special needs|differentiation)%'
       then 'Dr. Samuel Brooks'
     when lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(parent|parents|homework|homeschool|home school|family|guardian|child|children)%'
       then 'Laura Bennett'
@@ -15,7 +16,7 @@ set
     else 'Emily Carter'
   end,
   author_bio = case
-    when lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(special education|inclusive|learning difference|learning disability|dyslexia|adhd|autism|iep|504|accommodation|intervention|struggling learner)%'
+    when lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(special education|inclusive|inclusion|learning difference|learning differences|learning disability|learning disabilities|disability|disabilities|dyslexia|adhd|autism|iep|504|accommodation|accommodations|intervention|struggling learner|diverse learner|diverse learners|neurodiverse|special needs|differentiation)%'
       then 'Dr. Samuel Brooks focuses on inclusive education, learning differences, classroom accommodations, and practical support for diverse learners.'
     when lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(parent|parents|homework|homeschool|home school|family|guardian|child|children)%'
       then 'Laura Bennett writes practical guides for parents on homework routines, school support, homeschooling, and helping children build confidence as learners.'
@@ -35,10 +36,7 @@ where
     author_name = 'Mark Reyes'
     and lower(coalesce(author_bio, '')) like '%emily carter%'
   )
-  or (
-    author_name = 'Emily Carter'
-    and lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(parent|parents|homework|homeschool|exam|test|revision|essay|writing|thesis|research|special education|inclusive|learning difference|dyslexia|adhd|iep|accommodation)%'
-  );
+  or lower(coalesce(title, '') || ' ' || coalesce(meta_title, '') || ' ' || coalesce(excerpt, '')) similar to '%(parent|parents|homework|homeschool|home school|family|guardian|child|children|exam|test|revision|finals|assessment|quiz|sat|act|gcse|test anxiety|essay|writing|thesis|research|paper|assignment|citation|outline|paragraph|special education|inclusive|inclusion|learning difference|learning differences|learning disability|learning disabilities|disability|disabilities|dyslexia|adhd|autism|iep|504|accommodation|accommodations|intervention|struggling learner|diverse learner|diverse learners|neurodiverse|special needs|differentiation)%';
 
 select author_name, count(*) as post_count
 from posts

@@ -8,6 +8,7 @@ import StarterKit from '@tiptap/starter-kit';
 import { PostPreview } from '@/components/admin/post-preview';
 import { SeoChecklist } from '@/components/admin/seo-checklist';
 import { showAdminToast } from '@/lib/admin/toast';
+import { getNorthfieldAuthorAssignment } from '@/lib/seo-authors';
 
 type Post = {
   id?: string;
@@ -21,6 +22,8 @@ type Post = {
   slug?: string;
   is_featured_homepage?: boolean;
   primary_keyword?: string | null;
+  author_name?: string | null;
+  author_bio?: string | null;
 };
 
 export function PostEditor({ post }: { post: Post }) {
@@ -390,6 +393,16 @@ export function PostEditor({ post }: { post: Post }) {
     return form.meta_description?.trim() || form.excerpt || '';
   }, [form.meta_description, form.excerpt]);
 
+  const assignedAuthor = useMemo(() => {
+    return getNorthfieldAuthorAssignment({
+      primaryKeyword: form.primary_keyword || form.slug || form.title,
+      keyword: form.primary_keyword || form.slug || form.title,
+      title: form.title,
+      excerpt: form.excerpt,
+      content: form.content
+    });
+  }, [form.primary_keyword, form.slug, form.title, form.excerpt, form.content]);
+
   return (
     <div className="space-y-8">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -604,6 +617,29 @@ export function PostEditor({ post }: { post: Post }) {
         </div>
 
         <div className="space-y-6">
+          <div className="rounded-[24px] border border-[#e2d9cb] bg-[#fffdf8] p-5 shadow-[0_18px_40px_rgba(15,23,42,0.05)]">
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-[#9a6730]">
+              Assigned author
+            </p>
+            <div className="mt-3 flex items-start gap-3">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-[#e2d9cb] bg-white text-sm font-bold text-[#0f172a]">
+                {assignedAuthor.author.initials}
+              </div>
+              <div>
+                <p className="text-base font-bold text-[#0f172a]">{assignedAuthor.author.name}</p>
+                <p className="text-sm font-semibold text-slate-600">{assignedAuthor.author.role}</p>
+                <p className="mt-2 text-sm leading-6 text-slate-600">
+                  Reason: {assignedAuthor.reason}.
+                </p>
+                {assignedAuthor.matchedTerms.length > 0 ? (
+                  <p className="mt-2 text-xs uppercase tracking-[0.12em] text-slate-500">
+                    Matched: {assignedAuthor.matchedTerms.join(', ')}
+                  </p>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
           <SeoChecklist
             title={form.title}
             excerpt={form.excerpt}

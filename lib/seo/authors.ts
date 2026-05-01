@@ -31,7 +31,6 @@ export const AUTHORS: Record<SiteKey, Author[]> = {
       avatar: "/authors/jordan-lee.jpg",
     },
   ],
-
   northfield: [
     {
       id: "emily-carter",
@@ -45,43 +44,58 @@ export const AUTHORS: Record<SiteKey, Author[]> = {
     {
       id: "mark-reyes",
       name: "Mark Reyes",
-      role: "Academic Skills Coach",
-      bio: "Mark Reyes focuses on practical education strategies, student productivity, memory improvement, and exam preparation.",
-      expertise: ["Exam Prep", "Student Productivity", "Memory Techniques"],
+      role: "Academic Writing Coach",
+      bio: "Mark Reyes covers academic writing, essays, research projects, thesis statements, and practical ways students can communicate ideas clearly.",
+      expertise: ["Academic Writing", "Essays", "Research Projects"],
       location: "United States",
       avatar: "/authors/mark-reyes.jpg",
+    },
+    {
+      id: "aisha-patel",
+      name: "Aisha Patel",
+      role: "Exam Preparation Specialist",
+      bio: "Aisha Patel writes about exam preparation, revision planning, test confidence, and practical strategies for performing well under pressure.",
+      expertise: ["Exam Prep", "Revision Planning", "Test Confidence"],
+      location: "United Kingdom",
+      avatar: "/authors/aisha-patel.jpg",
+    },
+    {
+      id: "laura-bennett",
+      name: "Laura Bennett",
+      role: "Parent Education Writer",
+      bio: "Laura Bennett writes practical guides for parents on homework routines, school support, homeschooling, and helping children build confidence as learners.",
+      expertise: ["Parent Guides", "Homework Support", "Homeschooling"],
+      location: "United States",
+      avatar: "/authors/laura-bennett.jpg",
+    },
+    {
+      id: "samuel-brooks",
+      name: "Dr. Samuel Brooks",
+      role: "Inclusive Education Specialist",
+      bio: "Dr. Samuel Brooks focuses on inclusive education, learning differences, classroom accommodations, and practical support for diverse learners.",
+      expertise: ["Special Education", "Learning Differences", "Classroom Accommodations"],
+      location: "United Kingdom",
+      avatar: "/authors/samuel-brooks.jpg",
     },
   ],
 };
 
+function hasAny(value: string, terms: string[]) {
+  return terms.some((term) => value.includes(term));
+}
+
 export function getAuthorForArticle(site: SiteKey, category?: string): Author {
   const authors = AUTHORS[site];
-
   const normalized = category?.toLowerCase() ?? "";
 
   if (site === "cashclimb") {
-    if (
-      normalized.includes("side hustle") ||
-      normalized.includes("make money") ||
-      normalized.includes("online income")
-    ) {
-      return authors[0];
-    }
-
+    if (hasAny(normalized, ["side hustle", "make money", "online income"])) return authors[0];
     return authors[1];
   }
 
-  if (site === "northfield") {
-    if (
-      normalized.includes("study") ||
-      normalized.includes("learning") ||
-      normalized.includes("memory")
-    ) {
-      return authors[0];
-    }
-
-    return authors[1];
-  }
-
+  if (hasAny(normalized, ["special education", "inclusive", "learning difference", "dyslexia", "adhd", "iep", "accommodation"])) return authors[4];
+  if (hasAny(normalized, ["parent", "homework", "homeschool", "family", "child", "children"])) return authors[3];
+  if (hasAny(normalized, ["exam", "test", "revision", "finals", "assessment", "test anxiety"])) return authors[2];
+  if (hasAny(normalized, ["essay", "writing", "thesis", "research", "paper", "assignment", "citation"])) return authors[1];
   return authors[0];
 }

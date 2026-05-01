@@ -3,7 +3,7 @@ import { siteConfig } from '@/lib/constants';
 import { getSiteUrl } from '@/lib/utils';
 import { createClient } from '@/lib/supabase-server';
 import type { Author, Post } from '@/lib/types';
-import { getAutoAuthor } from '@/lib/seo-authors';
+import { getNorthfieldAuthorAssignment } from '@/lib/seo-authors';
 
 function normalizeSlug(value: string) {
   return value
@@ -39,34 +39,34 @@ function isEditorialAuthor(name?: string | null) {
 }
 
 function resolvePostAuthor(
-  post: Pick<Post, 'author_name' | 'author_bio' | 'published_at' | 'categories' | 'title'>
+  post: Pick<Post, 'author_name' | 'author_bio' | 'published_at' | 'categories' | 'title' | 'excerpt' | 'content' | 'keywords'>
 ): Author {
-  const topicHint = [
-    post.categories?.name,
-    post.title,
-  ]
-    .filter(Boolean)
-    .join(' ');
+  const assignment = getNorthfieldAuthorAssignment({
+    title: post.title,
+    excerpt: post.excerpt,
+    content: post.content,
+    category: post.categories?.name,
+    primaryKeyword: Array.isArray(post.keywords) ? String(post.keywords[0] || '') : '',
+    keyword: Array.isArray(post.keywords) ? String(post.keywords.join(' ')) : ''
+  });
 
-  const fallbackAuthor = getAutoAuthor('northfield', topicHint);
-
-  const authorName = isEditorialAuthor(post.author_name)
-    ? fallbackAuthor.name
-    : post.author_name;
-
-  const authorBio = post.author_bio || fallbackAuthor.bio;
+  const topicAuthor = assignment.author;
+  // Northfield author assignment is deterministic and topic-based.
+  // Stored DB authors are treated as stale display data and never override
+  // keyword/content routing.
+  const resolvedAuthor = topicAuthor;
 
   return {
-    name: authorName,
-    slug: normalizeSlug(authorName),
-    bio: authorBio,
-    avatarInitials: getAuthorInitials(authorName),
+    name: resolvedAuthor.name,
+    slug: normalizeSlug(resolvedAuthor.name),
+    bio: resolvedAuthor.bio,
+    avatarInitials: resolvedAuthor.initials || getAuthorInitials(resolvedAuthor.name),
     latestPublishedAt: post.published_at ?? null
   };
 }
 
 export function buildAuthorFromPost(
-  post: Pick<Post, 'author_name' | 'author_bio' | 'published_at' | 'categories' | 'title'>
+  post: Pick<Post, 'author_name' | 'author_bio' | 'published_at' | 'categories' | 'title' | 'excerpt' | 'content' | 'keywords'>
 ): Author {
   return resolvePostAuthor(post);
 }
@@ -240,10 +240,7 @@ export async function getStructuredDataForPost(slug: string) {
   const siteUrl = getSiteUrl();
   const author = buildAuthorFromPost(post);
   const articleUrl = `${siteUrl}/blog/${post.slug}`;
-  const fallbackAuthor = getAutoAuthor(
-    'northfield',
-    [post.categories?.name, post.title].filter(Boolean).join(' ')
-  );
+  const fallbackAuthor = getNorthfieldAuthorAssignment({ title: post.title, excerpt: post.excerpt, content: post.content, category: post.categories?.name, primaryKeyword: Array.isArray(post.keywords) ? String(post.keywords[0] || '') : '' }).author;
 
   const rawFaqs = Array.isArray(post.faq_json) ? post.faq_json : [];
   const faqs =

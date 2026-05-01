@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { evaluatePublishGate } from '@/lib/admin/publish-gate';
+import { getNorthfieldAuthorAssignment } from '@/lib/seo-authors';
+
+function plainTextFromHtml(value: string) {
+  return String(value || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
@@ -20,7 +25,7 @@ export async function POST(request: Request) {
 
     const postResponse = await supabaseAdmin
       .from('posts')
-      .select('id, slug, title, excerpt, content, meta_title, meta_description, featured_image_url, author_name, keywords')
+      .select('id, slug, title, excerpt, content, meta_title, meta_description, featured_image_url, author_name, author_bio, keywords, categories(name, slug)')
       .eq('id', postId)
       .single();
 
@@ -31,10 +36,19 @@ export async function POST(request: Request) {
       );
     }
 
-    const post = postResponse.data;
+    const post = postResponse.data as any;
     const primaryKeyword = Array.isArray(post.keywords) && post.keywords.length > 0
       ? String(post.keywords[0])
       : post.slug?.replace(/-/g, ' ');
+
+    const authorAssignment = getNorthfieldAuthorAssignment({
+      primaryKeyword,
+      keyword: primaryKeyword,
+      title: post.title,
+      excerpt: post.excerpt,
+      content: plainTextFromHtml(post.content || ''),
+      category: [post.categories?.name, post.categories?.slug].filter(Boolean).join(' '),
+    });
 
     const gate = evaluatePublishGate({
       title: post.title,
@@ -43,18 +57,13 @@ export async function POST(request: Request) {
       meta_title: post.meta_title,
       meta_description: post.meta_description,
       featured_image_url: post.featured_image_url,
-      author_name: post.author_name,
+      author_name: authorAssignment.author.name,
       primary_keyword: primaryKeyword
     });
 
     if (!gate.ok) {
       return NextResponse.json(
-        {
-          error: 'This post is not ready to publish.',
-          score: gate.score,
-          failed: gate.failed,
-          stats: gate.stats
-        },
+        { error: 'This post is not ready to publish.', score: gate.score, failed: gate.failed, stats: gate.stats },
         { status: 422 }
       );
     }
@@ -63,12 +72,14 @@ export async function POST(request: Request) {
       .from('posts')
       .update({
         status: 'published',
+        author_name: authorAssignment.author.name,
+        author_bio: authorAssignment.author.bio,
         published_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
-        generation_status: `published_score_${gate.score}`
+        generation_status: `published_score_${gate.score}_author_${authorAssignment.author.initials.toLowerCase()}`
       })
       .eq('id', postId)
-      .select('id, slug, status, published_at')
+      .select('id, slug, status, published_at, author_name, author_bio')
       .single();
 
     if (error || !data) {
@@ -78,11 +89,7 @@ export async function POST(request: Request) {
       );
     }
 
-    return NextResponse.json({
-      success: true,
-      score: gate.score,
-      post: data
-    });
+    return NextResponse.json({ success: true, score: gate.score, post: data, authorAssignment });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';
     return NextResponse.json({ error: message }, { status: 500 });
