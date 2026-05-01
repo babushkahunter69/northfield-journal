@@ -36,10 +36,10 @@ type RunOneResult =
 export async function runNextDraftJob() {
   const result = await runDraftBatch(1);
 
-  if (result.processed === 0) {
+  if (result.succeeded === 0 && result.processed === 0) {
     return {
       success: true,
-      message: 'No queued keywords found.',
+      message: 'No approved non-duplicate keywords found.',
       processed: 0,
       succeeded: 0,
       failed: 0,
@@ -47,33 +47,44 @@ export async function runNextDraftJob() {
     };
   }
 
-  const first = result.results[0];
+  const firstSuccess = result.results.find((item) => item.success);
 
-  if (first?.success) {
+  if (firstSuccess?.success) {
     return {
       success: true,
       processed: result.processed,
       succeeded: result.succeeded,
       failed: result.failed,
-      keyword: first.keyword,
-      post: first.post,
+      skipped: result.skipped,
+      keyword: firstSuccess.keyword,
+      post: firstSuccess.post,
       results: result.results
     };
   }
+
+  const first = result.results[0];
 
   return {
     success: false,
     processed: result.processed,
     succeeded: result.succeeded,
     failed: result.failed,
+    skipped: result.skipped,
     results: result.results,
     error: first && !first.success ? first.error : 'Draft generation failed.'
   };
 }
 
+function isDuplicateSkipError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  return /skipped duplicate/i.test(message);
+}
+
 export async function runDraftBatch(limit = 3) {
   const safeLimit = Math.max(1, Math.min(limit, 10));
 
+  // Fetch extra candidates so the daily cron can skip duplicates and still draft
+  // the next unique, approved topic in the same run.
   const { data: keywords, error } = await supabaseAdmin
     .from('content_keywords')
     .select(`
@@ -86,7 +97,7 @@ export async function runDraftBatch(limit = 3) {
     .eq('status', 'queued')
     .order('priority', { ascending: false })
     .order('created_at', { ascending: true })
-    .limit(safeLimit);
+    .limit(safeLimit * 10);
 
   if (error) {
     throw new Error(error.message || 'Failed to fetch queued keywords.');
@@ -99,15 +110,21 @@ export async function runDraftBatch(limit = 3) {
       processed: 0,
       succeeded: 0,
       failed: 0,
+      skipped: 0,
       results: [] as RunOneResult[]
     };
   }
 
   const results: RunOneResult[] = [];
+  let succeeded = 0;
+  let skipped = 0;
 
   for (const keyword of keywords) {
+    if (succeeded >= safeLimit) break;
+
     try {
       const post = await generateDraftFromKeywordId(keyword.id);
+      succeeded += 1;
 
       results.push({
         success: true,
@@ -123,6 +140,8 @@ export async function runDraftBatch(limit = 3) {
         }
       });
     } catch (error) {
+      if (isDuplicateSkipError(error)) skipped += 1;
+
       results.push({
         success: false,
         keyword: {
@@ -134,14 +153,20 @@ export async function runDraftBatch(limit = 3) {
     }
   }
 
-  const succeeded = results.filter((item) => item.success).length;
-  const failed = results.length - succeeded;
+  const failed = results.filter((item) => !item.success).length - skipped;
 
   return {
-    success: failed === 0,
+    success: succeeded >= safeLimit || failed === 0,
     processed: results.length,
     succeeded,
     failed,
+    skipped,
+    message:
+      succeeded > 0
+        ? `Created ${succeeded} draft(s). Skipped ${skipped} duplicate keyword(s).`
+        : skipped > 0
+          ? `Skipped ${skipped} duplicate keyword(s). No unique approved keywords were available.`
+          : 'No draft was created.',
     results
   };
 }

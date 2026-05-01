@@ -2,6 +2,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
 import { generateDraftFromKeywordId } from '@/lib/content/queue';
 import { runDraftBatch } from '@/lib/cron/run-next-draft';
+import { findExistingPostForTopic } from '@/lib/content/duplicate-guard';
 
 function clean(value: unknown) {
   return String(value || '').trim();
@@ -22,7 +23,7 @@ export async function generateAutomationKeywords(input: {
   });
 
   if (generated.length === 0) {
-    return { success: true, inserted: 0, skipped: 0, ideas: [], message: 'No keyword ideas were generated.' };
+    return { success: true, inserted: 0, skipped: 0, duplicatePosts: 0, ideas: [], message: 'No keyword ideas were generated.' };
   }
 
   const keywords = generated.map((item) => item.keyword.toLowerCase());
@@ -35,26 +36,53 @@ export async function generateAutomationKeywords(input: {
     throw new Error(existingResponse.error.message || 'Failed to check existing keywords.');
   }
 
-  const existing = new Set((existingResponse.data || []).map((row) => String(row.keyword || '').toLowerCase()));
-  const rows = generated
-    .filter((item) => !existing.has(item.keyword.toLowerCase()))
-    .map((item) => ({
-      keyword: item.keyword,
-      status: 'review',
-      priority: item.priority,
-      audience: item.audience,
-      grade_band: item.grade_band,
-      subject_area: item.subject_area,
-      content_type: item.content_type,
-      cluster: item.cluster,
-      target_country: item.target_country,
-      curriculum: item.curriculum,
-      learning_objective: item.learning_objective,
-      tone: item.tone
-    }));
+  const existingKeywords = new Set((existingResponse.data || []).map((row) => String(row.keyword || '').toLowerCase()));
+
+  const freshIdeas = [];
+  let skippedExistingKeyword = 0;
+  let skippedExistingPost = 0;
+
+  for (const item of generated) {
+    const normalized = item.keyword.toLowerCase().trim();
+
+    if (existingKeywords.has(normalized)) {
+      skippedExistingKeyword += 1;
+      continue;
+    }
+
+    const duplicatePost = await findExistingPostForTopic(item.keyword);
+    if (duplicatePost) {
+      skippedExistingPost += 1;
+      continue;
+    }
+
+    freshIdeas.push(item);
+  }
+
+  const rows = freshIdeas.map((item) => ({
+    keyword: item.keyword,
+    status: 'review',
+    priority: item.priority,
+    audience: item.audience,
+    grade_band: item.grade_band,
+    subject_area: item.subject_area,
+    content_type: item.content_type,
+    cluster: item.cluster,
+    target_country: item.target_country,
+    curriculum: item.curriculum,
+    learning_objective: item.learning_objective,
+    tone: item.tone
+  }));
 
   if (rows.length === 0) {
-    return { success: true, inserted: 0, skipped: generated.length, ideas: [], message: 'All generated keywords already exist.' };
+    return {
+      success: true,
+      inserted: 0,
+      skipped: skippedExistingKeyword + skippedExistingPost,
+      duplicatePosts: skippedExistingPost,
+      ideas: [],
+      message: 'All generated keywords already exist or match existing posts.'
+    };
   }
 
   const insertResponse = await supabaseAdmin.from('content_keywords').insert(rows).select('*');
@@ -66,9 +94,13 @@ export async function generateAutomationKeywords(input: {
   return {
     success: true,
     inserted: insertedRows.length,
-    skipped: generated.length - rows.length,
+    skipped: skippedExistingKeyword + skippedExistingPost,
+    duplicatePosts: skippedExistingPost,
     ideas: insertedRows,
-    message: 'Generated keyword ideas are ready for review.'
+    message:
+      skippedExistingPost > 0
+        ? `Generated keyword ideas are ready for review. Skipped ${skippedExistingPost} topic(s) that already have posts.`
+        : 'Generated keyword ideas are ready for review.'
   };
 }
 
@@ -79,19 +111,30 @@ export async function draftNextQueuedKeyword() {
     .eq('status', 'queued')
     .order('priority', { ascending: false })
     .order('created_at', { ascending: true })
-    .limit(1)
-    .maybeSingle();
+    .limit(10);
 
   if (nextResponse.error) {
     throw new Error(nextResponse.error.message || 'Failed to fetch next approved keyword.');
   }
 
-  if (!nextResponse.data?.id) {
+  if (!nextResponse.data || nextResponse.data.length === 0) {
     return { success: true, processed: 0, message: 'No approved keywords found. Approve keywords from the Keywords page first.', post: null };
   }
 
-  const post = await generateDraftFromKeywordId(nextResponse.data.id);
-  return { success: true, processed: 1, keyword: nextResponse.data, post };
+  const result = await runDraftBatch(1);
+  const success = result.results.find((item) => item.success);
+
+  if (success?.success) {
+    return { success: true, processed: result.processed, skipped: result.skipped, keyword: success.keyword, post: success.post };
+  }
+
+  return {
+    success: false,
+    processed: result.processed,
+    skipped: result.skipped,
+    post: null,
+    message: result.message || 'No unique approved keyword was available.'
+  };
 }
 
 export async function runAutomationBatch(input: {
@@ -116,14 +159,15 @@ export async function runAutomationBatch(input: {
       ...result,
       success: true,
       refilled: refill.inserted,
-      skipped: refill.skipped,
+      skipped: (result.skipped || 0) + refill.skipped,
+      duplicatePosts: refill.duplicatePosts,
       message: refill.inserted > 0
         ? 'Generated new keyword ideas for review. Approve keywords before drafting.'
         : result.message
     };
   }
 
-  return { ...result, refilled: 0, skipped: 0 };
+  return { ...result, refilled: 0, skipped: result.skipped || 0 };
 }
 
 export async function cleanupDuplicateKeywords() {

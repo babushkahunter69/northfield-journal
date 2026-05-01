@@ -12,6 +12,7 @@ import { validateGeneratedArticle } from '@/lib/content/quality';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import { getAutoAuthor } from '@/lib/seo-authors';
 import { estimateReadingTime } from '@/lib/utils';
+import { assertKeywordIsNotDuplicate } from '@/lib/content/duplicate-guard';
 
 type EducationKeyword = ContentKeyword & {
   audience?: string | null;
@@ -414,6 +415,7 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
   let savedBrief: ContentBriefRow | null = null;
 
   try {
+    await assertKeywordIsNotDuplicate(keyword);
     await markKeywordAttempt(keyword);
 
     const generatedBrief = await generateBrief(keyword);
