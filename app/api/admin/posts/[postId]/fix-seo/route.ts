@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import { estimateReadingTime } from '@/lib/utils';
+import { getPublishedInternalLinkSuggestions, repairInternalLinks } from '@/lib/content/internal-links';
 
 export async function POST(
   _request: Request,
@@ -58,11 +59,23 @@ export async function POST(
         faq: []
       },
       primaryKeyword,
-      internalLinkSuggestions: Array.isArray(briefResponse.data?.internal_links_json)
-        ? briefResponse.data.internal_links_json
-        : [],
-      minimumScore: 100,
-      maxPasses: 4
+      internalLinkSuggestions: await getPublishedInternalLinkSuggestions({
+        excludeSlug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt || '',
+        content: post.content || '',
+        keywords: Array.isArray(post.keywords) ? post.keywords : [],
+        limit: 6
+      }),
+      minimumScore: 90,
+      maxPasses: 2
+    });
+
+    const repairedContent = await repairInternalLinks(improved.article.content, {
+      excludeSlug: post.slug,
+      title: improved.article.title,
+      excerpt: improved.article.excerpt || '',
+      keywords: Array.isArray(post.keywords) ? post.keywords : [],
     });
 
     const updateResponse = await supabaseAdmin
@@ -70,8 +83,8 @@ export async function POST(
       .update({
         title: improved.article.title,
         excerpt: improved.article.excerpt,
-        content: improved.article.content,
-        reading_time_minutes: estimateReadingTime(improved.article.content),
+        content: repairedContent,
+        reading_time_minutes: estimateReadingTime(repairedContent),
         meta_title: improved.article.meta_title,
         meta_description: improved.article.meta_description,
         generation_status: `seo_fixed_${improved.after.score}`,

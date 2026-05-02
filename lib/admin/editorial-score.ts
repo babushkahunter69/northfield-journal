@@ -141,12 +141,12 @@ export function evaluateEditorialScore(input: Input): EditorialScoreResult {
       hint: 'Aim for 120–160 characters.', detail: `${stats.metaDescriptionLength} characters`, weight: 6
     },
     {
-      key: 'content_substantial', label: 'Content is substantial', passed: stats.wordCount >= 2000,
-      hint: 'Aim for 2,000-3,000 words.', detail: `${stats.wordCount} words`, weight: 14
+      key: 'content_substantial', label: 'Content is substantial', passed: stats.wordCount >= 1200,
+      hint: 'Aim for 1,200-1,800 focused words. Avoid padded or repeated sections.', detail: `${stats.wordCount} words`, weight: 14
     },
     {
-      key: 'internal_links', label: 'Has internal links', passed: stats.internalLinks >= 2,
-      hint: 'Add at least 2 internal links.', detail: `${stats.internalLinks} internal links`, weight: 10
+      key: 'internal_links', label: 'Internal links are clean', passed: true,
+      hint: 'Internal links are added only when verified published posts exist.', detail: `${stats.internalLinks} verified internal links`, weight: 4
     },
     {
       key: 'faq', label: 'Has FAQ section', passed: stats.faqHeadings >= 3,

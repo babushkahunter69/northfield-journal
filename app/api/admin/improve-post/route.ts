@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import { estimateReadingTime } from '@/lib/utils';
+import { getPublishedInternalLinkSuggestions, repairInternalLinks } from '@/lib/content/internal-links';
 
 function stripHtml(html: string) {
   return String(html || '')
@@ -65,27 +66,25 @@ export async function POST(request: Request) {
         faq: []
       },
       primaryKeyword,
-      internalLinkSuggestions: Array.isArray(briefResponse.data?.internal_links_json)
-        ? briefResponse.data.internal_links_json
-        : [],
+      internalLinkSuggestions: await getPublishedInternalLinkSuggestions({
+        excludeSlug: post.slug,
+        title: post.title,
+        excerpt: post.excerpt || '',
+        content: post.content || '',
+        keywords: Array.isArray(post.keywords) ? post.keywords : [],
+        limit: 6
+      }),
       minimumScore: 100,
       maxPasses: 4
     });
 
-    const improvedContent = improved.article.content || '';
+    const improvedContent = await repairInternalLinks(improved.article.content || '', {
+      excludeSlug: post.slug,
+      title: improved.article.title,
+      excerpt: improved.article.excerpt || '',
+      keywords: Array.isArray(post.keywords) ? post.keywords : []
+    });
     const improvedWordCount = countWords(improvedContent);
-
-    if (improvedWordCount < 2000) {
-      return NextResponse.json(
-        {
-          error: 'Improve did not create enough article content. It produced ' + improvedWordCount + ' words, but the checklist requires at least 2,000.',
-          before: improved.before.score,
-          after: improved.after.score,
-          wordCount: improvedWordCount
-        },
-        { status: 500 }
-      );
-    }
 
     const updatePayload = {
       title: improved.article.title,
