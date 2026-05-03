@@ -94,7 +94,7 @@ export default async function PostPage({
   const displayAuthorSlug = post.author?.slug || slugFromName(displayAuthorName);
 
   return (
-    <article className="container-shell article-page pt-12 pb-6 sm:pt-14 sm:pb-8">
+    <article className="container-shell article-page pt-12 pb-6 sm:pt-14 sm:pb-8" itemScope itemType="https://schema.org/Article">
       <ArticleEnhancements title={post.title} url={articleUrl} />
 
       {structuredData ? (
@@ -137,17 +137,17 @@ export default async function PostPage({
                 <span>{post.reading_time_minutes} min read</span>
               </div>
 
-              <h1 className="display-font article-title text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white">
+              <h1 itemProp="headline" className="display-font article-title text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl dark:text-white">
                 {post.title}
               </h1>
 
-              <p className="article-dek mt-5 max-w-3xl text-xl leading-9 text-slate-600 dark:text-slate-300">
+              <p itemProp="description" className="article-dek mt-5 max-w-3xl text-xl leading-9 text-slate-600 dark:text-slate-300">
                 {post.excerpt}
               </p>
 
               <Link
                 href={`/authors/${displayAuthorSlug}`}
-                className="article-author-card mt-8 mb-8 block rounded-[28px] border border-slate-200 bg-stone-50 p-5 transition duration-200 hover:-translate-y-[1px] hover:border-slate-300"
+                rel="author" itemProp="author" itemScope itemType="https://schema.org/Person" className="article-author-card mt-8 mb-8 block rounded-[28px] border border-slate-200 bg-stone-50 p-5 transition duration-200 hover:-translate-y-[1px] hover:border-slate-300"
               >
                 <div className="flex items-start gap-4">
                   <div className="article-author-avatar flex h-14 w-14 shrink-0 items-center justify-center rounded-full text-sm font-semibold uppercase tracking-[0.18em] text-slate-900 dark:text-white">
@@ -158,10 +158,10 @@ export default async function PostPage({
                     <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-brand-700">
                       Contributor
                     </p>
-                    <h2 className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
+                    <h2 itemProp="name" className="mt-2 text-xl font-semibold text-slate-900 dark:text-white">
                       {displayAuthorName}
                     </h2>
-                    <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
+                    <p itemProp="description" className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-300">
                       {displayAuthorBio}
                     </p>
 

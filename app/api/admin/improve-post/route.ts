@@ -74,15 +74,15 @@ export async function POST(request: Request) {
         keywords: Array.isArray(post.keywords) ? post.keywords : [],
         limit: 6
       }),
-      minimumScore: 100,
-      maxPasses: 4
+      minimumScore: 90,
+      maxPasses: 1
     });
 
     const improvedContent = await repairInternalLinks(improved.article.content || '', {
       excludeSlug: post.slug,
       title: improved.article.title,
       excerpt: improved.article.excerpt || '',
-      keywords: Array.isArray(post.keywords) ? post.keywords : []
+      keywords: Array.isArray(post.keywords) ? post.keywords : [],
     });
     const improvedWordCount = countWords(improvedContent);
 

@@ -125,8 +125,67 @@ export default async function HomePage() {
   const supportPosts = featuredCollection.slice(1, 3);
   const latestGridPosts = latestPosts.slice(0, 4);
 
+  const homeStructuredData = {
+    '@context': 'https://schema.org',
+    '@graph': [
+      {
+        '@type': 'Organization',
+        '@id': `${siteUrl}/#organization`,
+        name: siteConfig.name,
+        url: siteUrl,
+        description: siteConfig.description
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${siteUrl}/#website`,
+        url: siteUrl,
+        name: siteConfig.name,
+        description: siteConfig.description,
+        publisher: { '@id': `${siteUrl}/#organization` },
+        inLanguage: 'en-US'
+      },
+      {
+        '@type': 'WebPage',
+        '@id': `${siteUrl}/#webpage`,
+        url: siteUrl,
+        name: 'Northfield Journal - Practical Education Guides and Teaching Ideas',
+        description: siteConfig.description,
+        isPartOf: { '@id': `${siteUrl}/#website` },
+        about: { '@id': `${siteUrl}/#organization` },
+        reviewedBy: { '@id': `${siteUrl}/#organization` },
+        inLanguage: 'en-US'
+      },
+      {
+        '@type': 'FAQPage',
+        '@id': `${siteUrl}/#faq`,
+        mainEntity: [
+          {
+            '@type': 'Question',
+            name: 'What does Northfield Journal publish?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Northfield Journal publishes practical education guides, teaching ideas, study strategies, academic writing support, and student success resources.'
+            }
+          },
+          {
+            '@type': 'Question',
+            name: 'Who reviews Northfield Journal content?',
+            acceptedAnswer: {
+              '@type': 'Answer',
+              text: 'Northfield Journal content is reviewed by the education editorial desk for clarity, usefulness, and practical value.'
+            }
+          }
+        ]
+      }
+    ]
+  };
+
   return (
     <div className="homepage-editorial">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeStructuredData) }}
+      />
       <section className="container-shell pt-10 sm:pt-14">
         <div className="paper hero-shell overflow-hidden px-6 py-10 sm:px-10 sm:py-14">
           <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">

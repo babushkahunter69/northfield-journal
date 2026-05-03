@@ -68,7 +68,7 @@ export async function POST(
         limit: 6
       }),
       minimumScore: 90,
-      maxPasses: 2
+      maxPasses: 1
     });
 
     const repairedContent = await repairInternalLinks(improved.article.content, {

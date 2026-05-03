@@ -9,7 +9,7 @@ const socialImage = '/opengraph-image';
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: siteConfig.name,
+    default: 'Northfield Journal - Practical Education Guides and Teaching Ideas',
     template: `%s | ${siteConfig.name}`
   },
   description: siteConfig.description,
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     siteName: siteConfig.name,
-    title: siteConfig.name,
+    title: 'Northfield Journal - Practical Education Guides and Teaching Ideas',
     description: siteConfig.description,
     images: [
       {
@@ -39,7 +39,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: siteConfig.name,
+    title: 'Northfield Journal - Practical Education Guides and Teaching Ideas',
     description: siteConfig.description,
     images: [socialImage]
   }

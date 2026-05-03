@@ -1,65 +1,40 @@
-import ReactMarkdown from 'react-markdown'
-import remarkGfm from 'remark-gfm'
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 
 type RichContentProps = {
-  content: string
-  className?: string
-}
+  content: string;
+  className?: string;
+};
+
+const STATIC_INTERNAL_PATHS = new Set(['/', '/journal', '/about', '/contact', '/guest-post', '/contribute']);
 
 function looksLikeHtml(content: string) {
-  return /<\/?[a-z][\s\S]*>/i.test(content)
+  return /<\/?[a-z][\s\S]*>/i.test(content);
 }
 
-function hasHeading(content: string, heading: string) {
-  const escaped = heading.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
-  return new RegExp(`(^|\\n)#{2,3}\\s+${escaped}\\s*($|\\n)`, 'i').test(content)
+function normalizeContent(content: string) {
+  return String(content || '')
+    .replace(/^#\s+/gim, '## ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
-function enhanceMarkdownContent(content: string) {
-  let enhanced = content?.trim() || ''
+function safeHref(value: unknown) {
+  const href = String(value || '').trim();
+  if (!href) return '';
+  if (/^https?:\/\//i.test(href)) return href;
+  if (/^\/blog\/[a-z0-9][a-z0-9-]*$/i.test(href)) return href;
+  if (STATIC_INTERNAL_PATHS.has(href)) return href;
+  return '';
+}
 
-  if (!enhanced) return enhanced
-
-  if (!hasHeading(enhanced, 'Key Takeaways')) {
-    enhanced =
-      `## Key Takeaways
-
-- This guide is designed to be practical, clear, and useful for students, educators, or families.
-- The recommendations should be adapted to the reader’s academic context, age, goals, and learning needs.
-- Strong learning outcomes usually come from consistent systems, not one-time motivation.
-
-` + enhanced
-  }
-
-  if (!hasHeading(enhanced, 'FAQ')) {
-    enhanced += `
-
-## FAQ
-
-### Who is this guide for?
-
-This guide is written for readers who want practical, plain-English education guidance they can apply in real academic settings.
-
-### How should I use this advice?
-
-Use the ideas as a starting point, then adapt them to the learner, classroom, school, or family context.
-
-### Is this article based on editorial review?
-
-Northfield Journal content is edited for clarity, usefulness, and relevance to students, educators, and academic readers.
-`
-  }
-
-  if (!hasHeading(enhanced, 'Sources')) {
-    enhanced += `
-
-## Sources
-
-- Add credible education research, university resources, government data, classroom examples, or expert references here.
-`
-  }
-
-  return enhanced
+function stripKnownBadRenderedText(content: string) {
+  return String(content || '')
+    .replace(/(?:Related reading|Recommended reading|Further reading):\s*[^\n.]+(?:\.|\n|$)/gi, '')
+    .replace(/For more (?:advice|guidance|support)[^\n.]*?(?:see|explore)[^\n.]+(?:\.|\n|$)/gi, '')
+    .replace(/[^.!?]*\b(?:building motivation in students|effective parent-teacher communication|time management for students|effective study habits)\b[^.!?]*[.!?]/gi, '')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
 }
 
 export function RichContent({ content, className = '' }: RichContentProps) {
@@ -81,29 +56,26 @@ export function RichContent({ content, className = '' }: RichContentProps) {
     'dark:prose-a:text-amber-400',
     '[&>*:first-child]:mt-0',
     '[&>*:last-child]:mb-0',
-    className,
-  ].join(' ')
+    className
+  ].join(' ');
 
   if (!content?.trim()) {
     return (
       <div className={proseClassName}>
         <p>Nothing to preview yet.</p>
       </div>
-    )
+    );
   }
 
-  if (looksLikeHtml(content)) {
+  const cleanContent = stripKnownBadRenderedText(normalizeContent(content));
+
+  if (looksLikeHtml(cleanContent)) {
     return (
       <div className="overflow-x-auto">
-        <div
-          className={proseClassName}
-          dangerouslySetInnerHTML={{ __html: content }}
-        />
+        <div className={proseClassName} dangerouslySetInnerHTML={{ __html: cleanContent }} />
       </div>
-    )
+    );
   }
-
-  const enhancedContent = enhanceMarkdownContent(content)
 
   return (
     <div className="overflow-x-auto">
@@ -111,33 +83,30 @@ export function RichContent({ content, className = '' }: RichContentProps) {
         <ReactMarkdown
           remarkPlugins={[remarkGfm]}
           components={{
+            a: ({ href, children }) => {
+              const safe = safeHref(href);
+              if (!safe) return <span>{children}</span>;
+              return <a href={safe}>{children}</a>;
+            },
             table: ({ children }) => (
               <table className="my-8 w-full border-collapse overflow-hidden rounded-xl border border-slate-300 text-left text-base">
                 {children}
               </table>
             ),
-            thead: ({ children }) => (
-              <thead className="bg-stone-100">{children}</thead>
-            ),
+            thead: ({ children }) => <thead className="bg-stone-100">{children}</thead>,
             tbody: ({ children }) => <tbody>{children}</tbody>,
-            tr: ({ children }) => (
-              <tr className="border-b border-slate-200">{children}</tr>
-            ),
+            tr: ({ children }) => <tr className="border-b border-slate-200">{children}</tr>,
             th: ({ children }) => (
               <th className="border border-slate-300 px-4 py-3 align-top font-semibold text-slate-900">
                 {children}
               </th>
             ),
-            td: ({ children }) => (
-              <td className="border border-slate-300 px-4 py-3 align-top">
-                {children}
-              </td>
-            ),
+            td: ({ children }) => <td className="border border-slate-300 px-4 py-3 align-top">{children}</td>
           }}
         >
-          {enhancedContent}
+          {cleanContent}
         </ReactMarkdown>
       </div>
     </div>
-  )
+  );
 }
