@@ -72,10 +72,10 @@ export async function POST(request: Request) {
         excerpt: post.excerpt || '',
         content: post.content || '',
         keywords: Array.isArray(post.keywords) ? post.keywords : [],
-        limit: 6
+          limit: 6
       }),
-      minimumScore: 90,
-      maxPasses: 1
+      minimumScore: 100,
+      maxPasses: 4
     });
 
     const improvedContent = await repairInternalLinks(improved.article.content || '', {
@@ -85,6 +85,18 @@ export async function POST(request: Request) {
       keywords: Array.isArray(post.keywords) ? post.keywords : [],
     });
     const improvedWordCount = countWords(improvedContent);
+
+    if (improvedWordCount < 2000) {
+      return NextResponse.json(
+        {
+          error: 'Improve did not create enough article content. It produced ' + improvedWordCount + ' words, but the checklist requires at least 2,000.',
+          before: improved.before.score,
+          after: improved.after.score,
+          wordCount: improvedWordCount
+        },
+        { status: 500 }
+      );
+    }
 
     const updatePayload = {
       title: improved.article.title,

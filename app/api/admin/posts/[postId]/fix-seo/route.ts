@@ -65,10 +65,10 @@ export async function POST(
         excerpt: post.excerpt || '',
         content: post.content || '',
         keywords: Array.isArray(post.keywords) ? post.keywords : [],
-        limit: 6
+          limit: 6
       }),
       minimumScore: 90,
-      maxPasses: 1
+      maxPasses: 2
     });
 
     const repairedContent = await repairInternalLinks(improved.article.content, {
