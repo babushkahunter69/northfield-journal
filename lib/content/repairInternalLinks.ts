@@ -99,6 +99,111 @@ function unique<T>(values: T[]) {
   return Array.from(new Set(values));
 }
 
+
+const EXTERNAL_SOURCE_BLOCK_HEADINGS = [
+  'Sources',
+  'Related Resources',
+  'Additional Resources',
+  'References'
+];
+
+function isExternalUrl(value: string) {
+  return /^https?:\/\//i.test(String(value || '').trim());
+}
+
+function normalizeExternalUrl(value: string) {
+  try {
+    const parsed = new URL(String(value || '').trim());
+    if (!/^https?:$/i.test(parsed.protocol)) return '';
+    return parsed.toString();
+  } catch {
+    return '';
+  }
+}
+
+async function isReachableExternalUrl(url: string) {
+  const normalized = normalizeExternalUrl(url);
+  if (!normalized) return false;
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 4500);
+
+  try {
+    let response = await fetch(normalized, {
+      method: 'HEAD',
+      redirect: 'follow',
+      signal: controller.signal,
+      headers: {
+        'user-agent': 'Mozilla/5.0 NorthfieldJournalBot/1.0; link-checker',
+        accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+      }
+    });
+
+    if (response.status === 405 || response.status === 403) {
+      response = await fetch(normalized, {
+        method: 'GET',
+        redirect: 'follow',
+        signal: controller.signal,
+        headers: {
+          'user-agent': 'Mozilla/5.0 NorthfieldJournalBot/1.0; link-checker',
+          accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8'
+        }
+      });
+    }
+
+    return response.status >= 200 && response.status < 400;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function unlinkInvalidExternalAnchors(content: string) {
+  const cache = new Map<string, boolean>();
+
+  async function reachable(url: string) {
+    const normalized = normalizeExternalUrl(url);
+    if (!normalized) return false;
+    if (!cache.has(normalized)) cache.set(normalized, await isReachableExternalUrl(normalized));
+    return cache.get(normalized) === true;
+  }
+
+  let next = String(content || '');
+  const htmlMatches = Array.from(next.matchAll(/<a\s+[^>]*href=["']([^"']+)["'][^>]*>([\s\S]*?)<\/a>/gi));
+  for (const match of htmlMatches) {
+    const [full, href, label] = match;
+    if (!isExternalUrl(href)) continue;
+    if (!(await reachable(href))) next = next.replace(full, label);
+  }
+
+  const mdMatches = Array.from(next.matchAll(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/gi));
+  for (const match of mdMatches) {
+    const [full, label, href] = match;
+    if (!(await reachable(href))) next = next.replace(full, label);
+  }
+
+  return next;
+}
+
+function removeEmptySourceSections(content: string) {
+  let next = String(content || '');
+
+  for (const heading of EXTERNAL_SOURCE_BLOCK_HEADINGS) {
+    const escaped = escapeRegExp(heading);
+    next = next.replace(
+      new RegExp(`<h2[^>]*>\\s*${escaped}\\s*<\\/h2>\\s*(?:<ul>\\s*<\\/ul>|<p>\\s*<\\/p>|\\s)*(?=<h2|$)`, 'gi'),
+      ''
+    );
+    next = next.replace(
+      new RegExp(`(^|\\n)#{2,3}\\s*${escaped}\\s*(?:\\n\\s*)*(?=#{2,3}\\s|$)`, 'gi'),
+      '\n'
+    );
+  }
+
+  return next;
+}
+
 function extractLinkedSlugs(content: string) {
   const slugs: string[] = [];
 
@@ -259,8 +364,10 @@ export async function repairInternalLinks(content: string, _context: RepairConte
   const linkedSlugs = extractLinkedSlugs(next);
   const publishedSlugs = await fetchPublishedSlugs(linkedSlugs);
   next = unlinkInvalidAnchors(next, publishedSlugs);
+  next = await unlinkInvalidExternalAnchors(next);
 
   next = removeKnownBadGeneratedLinkText(next);
+  next = removeEmptySourceSections(next);
   next = removeRepeatedParagraphs(next);
 
   return cleanupEmptyArtifacts(next);

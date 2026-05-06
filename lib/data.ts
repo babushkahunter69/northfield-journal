@@ -5,29 +5,6 @@ import { createClient } from '@/lib/supabase-server';
 import type { Author, Post } from '@/lib/types';
 import { getNorthfieldAuthorAssignment } from '@/lib/seo-authors';
 
-
-function absoluteUrl(value?: string | null) {
-  if (!value) return null;
-
-  const trimmed = String(value).trim();
-  if (!trimmed) return null;
-
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.startsWith('//')) return `https:${trimmed}`;
-
-  const siteUrl = getSiteUrl().replace(/\/$/, '');
-  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${siteUrl}${path}`;
-}
-
-function getPostImageUrl(post: Pick<Post, 'featured_image_url' | 'og_image_url'>) {
-  return (
-    absoluteUrl(post.featured_image_url) ||
-    absoluteUrl(post.og_image_url) ||
-    absoluteUrl('/opengraph-image')
-  );
-}
-
 function normalizeSlug(value: string) {
   return value
     .toLowerCase()
@@ -320,7 +297,7 @@ export async function getStructuredDataForPost(slug: string) {
         '@id': `${articleUrl}#article`,
         headline: post.title,
         description: post.meta_description || post.excerpt,
-        image: getPostImageUrl(post) ? [getPostImageUrl(post)!] : undefined,
+        image: post.featured_image_url ? [post.featured_image_url] : undefined,
         datePublished: post.published_at,
         dateModified: post.updated_at || post.published_at,
         author: {

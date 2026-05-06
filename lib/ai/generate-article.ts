@@ -138,17 +138,12 @@ ${faq
 }
 
 function ensureSources(article: GeneratedArticle): GeneratedArticle {
-  let content = article.content || '';
-
-  if (!/<h2[^>]*>\s*Sources\s*<\/h2>/i.test(content)) {
-    content += `
-<h2>Sources</h2>
-<ul>
-<li><a href="https://ies.ed.gov/ncee/wwc/" target="_blank" rel="noopener noreferrer">Institute of Education Sciences: What Works Clearinghouse</a></li>
-<li><a href="https://www.edutopia.org/" target="_blank" rel="noopener noreferrer">Edutopia education resources</a></li>
-</ul>
-`;
-  }
+  // Do not invent external source links. Broken or guessed references are worse than no source section.
+  // Manually sourced articles can still keep verified links, and repairInternalLinks will remove bad ones.
+  const content = String(article.content || '')
+    .replace(/<h2[^>]*>\s*(Sources|Related Resources|Additional Resources|References)\s*<\/h2>[\s\S]*?(?=<h2[^>]*>|$)/gi, '')
+    .replace(/(^|\n)#{2,3}\s*(Sources|Related Resources|Additional Resources|References)[\s\S]*?(?=\n#{2,3}\s|$)/gi, '\n')
+    .trim();
 
   return {
     ...article,
@@ -345,7 +340,7 @@ Mandatory rules:
 - Use <p>, <h2>, <h3>, <ul>, <li>.
 - The faq JSON array must contain exactly 5 items.
 - The content must include <h2>Frequently Asked Questions</h2> with exactly 5 visible questions.
-- Include at least 2 source links in a Sources section.
+- Do not add external source links unless exact URLs are provided by the system. Do not invent Sources, Related Resources, or Additional Resources sections.
 - Use the exact heading <h2>What You Should Do Next</h2>.
 - Do not use the heading "Next Steps".
 - Do not awkwardly force the exact keyword phrase.
@@ -361,8 +356,6 @@ Required sections:
 <h2>Common Mistakes</h2>
 <h2>What You Should Do Next</h2>
 <h2>Frequently Asked Questions</h2>
-<h2>Sources</h2>
-
 Write practical, specific education advice that helps a real student, teacher, or parent.
 `;
 }

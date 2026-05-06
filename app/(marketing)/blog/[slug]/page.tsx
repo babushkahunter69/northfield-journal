@@ -14,25 +14,6 @@ import {
 import { getSiteUrl } from '@/lib/utils';
 import { getAutoAuthor } from '@/lib/seo-authors';
 
-
-function absoluteUrl(value?: string | null) {
-  if (!value) return null;
-
-  const trimmed = String(value).trim();
-  if (!trimmed) return null;
-
-  if (/^https?:\/\//i.test(trimmed)) return trimmed;
-  if (trimmed.startsWith('//')) return `https:${trimmed}`;
-
-  const siteUrl = getSiteUrl().replace(/\/$/, '');
-  const path = trimmed.startsWith('/') ? trimmed : `/${trimmed}`;
-  return `${siteUrl}${path}`;
-}
-
-function getPostImageUrl(post: { featured_image_url?: string | null; og_image_url?: string | null }) {
-  return absoluteUrl(post.featured_image_url) || absoluteUrl(post.og_image_url) || absoluteUrl('/opengraph-image');
-}
-
 function slugFromName(name: string) {
   return name
     .toLowerCase()
@@ -58,7 +39,6 @@ export async function generateMetadata({
   if (!post) return {};
 
   const url = `${getSiteUrl()}/blog/${normalizedSlug}`;
-  const imageUrl = getPostImageUrl(post);
 
   return {
     title: post.meta_title || post.title,
@@ -70,15 +50,14 @@ export async function generateMetadata({
       description: post.meta_description || post.excerpt,
       url,
       type: 'article',
-      images: imageUrl ? [{ url: imageUrl, width: 1200, height: 630, alt: post.title }] : undefined,
+      images: post.featured_image_url ? [{ url: post.featured_image_url }] : undefined,
       publishedTime: post.published_at || undefined,
       modifiedTime: post.updated_at || post.published_at || undefined
     },
     twitter: {
       card: 'summary_large_image',
       title: post.meta_title || post.title,
-      description: post.meta_description || post.excerpt,
-      images: imageUrl ? [imageUrl] : undefined
+      description: post.meta_description || post.excerpt
     }
   };
 }

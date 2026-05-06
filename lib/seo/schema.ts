@@ -11,7 +11,6 @@ type ArticleSchemaInput = {
   datePublished: string;
   dateModified?: string;
   authorName: string;
-  authorUrl?: string;
   siteName: string;
 };
 
@@ -27,7 +26,6 @@ export function buildArticleSchema(input: ArticleSchemaInput) {
     author: {
       "@type": "Person",
       name: input.authorName,
-      url: input.authorUrl,
     },
     publisher: {
       "@type": "Organization",

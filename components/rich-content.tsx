@@ -50,15 +50,6 @@ Northfield Journal content is edited for clarity, usefulness, and relevance to s
 `
   }
 
-  if (!hasHeading(enhanced, 'Sources')) {
-    enhanced += `
-
-## Sources
-
-- Add credible education research, university resources, government data, classroom examples, or expert references here.
-`
-  }
-
   return enhanced
 }
 
