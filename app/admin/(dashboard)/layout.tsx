@@ -11,7 +11,7 @@ export default function AdminDashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div data-admin-shell="true" className="admin-light min-h-screen bg-[#f7f4ee] text-slate-900">
+    <div className="admin-theme min-h-screen bg-[#f7f4ee] text-slate-900">
       <div className="flex min-h-screen">
         <AdminSidebar />
 

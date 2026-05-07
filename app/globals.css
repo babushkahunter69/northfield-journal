@@ -1136,92 +1136,147 @@ html.dark .article-page .journal-prose > p:first-of-type::first-letter {
 
 /* =========================
    ADMIN LIGHT THEME RESET
-   Admin screens should stay readable even if a visitor enabled dark mode
-   on the public site. These rules intentionally override global dark-mode
-   Tailwind utility overrides inside /admin.
 ========================= */
 
-body.admin-body {
+.admin-theme {
+  color-scheme: light !important;
   background: #f7f4ee !important;
   color: #0f172a !important;
 }
 
-.admin-route-shell,
-.admin-light {
-  color-scheme: light;
+html.dark .admin-theme,
+html.dark body .admin-theme {
+  color-scheme: light !important;
   background: #f7f4ee !important;
   color: #0f172a !important;
 }
 
-.admin-route-shell *,
-.admin-light * {
-  -webkit-text-fill-color: unset;
+html.dark .admin-theme aside {
+  background: #f3eee4 !important;
+  border-color: #e2d9cb !important;
 }
 
-.admin-route-shell input,
-.admin-route-shell textarea,
-.admin-route-shell select,
-.admin-light input,
-.admin-light textarea,
-.admin-light select {
+html.dark .admin-theme .paper,
+html.dark .admin-theme section,
+html.dark .admin-theme article,
+html.dark .admin-theme .bg-white,
+html.dark .admin-theme .bg-\[\#fffdf8\],
+html.dark .admin-theme .bg-\[\#fffdfa\] {
+  background-color: #fffdf8 !important;
+  color: #0f172a !important;
+  border-color: #e2d9cb !important;
+}
+
+html.dark .admin-theme .bg-\[\#f3eee4\] {
+  background-color: #f3eee4 !important;
+}
+
+html.dark .admin-theme .bg-\[\#f8f3ea\],
+html.dark .admin-theme thead,
+html.dark .admin-theme .bg-stone-50 {
+  background-color: #f8f3ea !important;
+  color: #0f172a !important;
+}
+
+html.dark .admin-theme .text-slate-950,
+html.dark .admin-theme .text-slate-900,
+html.dark .admin-theme .text-\[\#0f172a\],
+html.dark .admin-theme h1,
+html.dark .admin-theme h2,
+html.dark .admin-theme h3,
+html.dark .admin-theme h4,
+html.dark .admin-theme td,
+html.dark .admin-theme th,
+html.dark .admin-theme label {
+  color: #0f172a !important;
+}
+
+html.dark .admin-theme .text-slate-800,
+html.dark .admin-theme .text-slate-700,
+html.dark .admin-theme .text-slate-600 {
+  color: #334155 !important;
+}
+
+html.dark .admin-theme .text-slate-500,
+html.dark .admin-theme .text-stone-400 {
+  color: #64748b !important;
+}
+
+html.dark .admin-theme .text-\[\#9a6730\],
+html.dark .admin-theme .text-brand-700,
+html.dark .admin-theme .text-brand-800,
+html.dark .admin-theme .text-brand-900 {
+  color: #9a6730 !important;
+}
+
+html.dark .admin-theme .bg-\[\#0f1b3d\],
+html.dark .admin-theme .button-primary,
+html.dark .admin-theme button.bg-\[\#0f1b3d\],
+html.dark .admin-theme a.bg-\[\#0f1b3d\] {
+  background-color: #0f1b3d !important;
+  color: #ffffff !important;
+}
+
+html.dark .admin-theme .text-white,
+html.dark .admin-theme .bg-\[\#0f1b3d\] *,
+html.dark .admin-theme button.bg-\[\#0f1b3d\] *,
+html.dark .admin-theme a.bg-\[\#0f1b3d\] * {
+  color: #ffffff !important;
+}
+
+html.dark .admin-theme input,
+html.dark .admin-theme textarea,
+html.dark .admin-theme select {
   background: #fffdfa !important;
+  border-color: #d6cebf !important;
   color: #0f172a !important;
   -webkit-text-fill-color: #0f172a !important;
-  border-color: #d6cebf !important;
 }
 
-.admin-route-shell input::placeholder,
-.admin-route-shell textarea::placeholder,
-.admin-light input::placeholder,
-.admin-light textarea::placeholder {
+html.dark .admin-theme input::placeholder,
+html.dark .admin-theme textarea::placeholder {
   color: #94a3b8 !important;
   -webkit-text-fill-color: #94a3b8 !important;
   opacity: 1 !important;
 }
 
-html.dark .admin-route-shell,
-html.dark .admin-light,
-html.dark .admin-route-shell .bg-white,
-html.dark .admin-light .bg-white,
-html.dark .admin-route-shell .bg-stone-50,
-html.dark .admin-light .bg-stone-50 {
-  background-color: #f7f4ee !important;
-  color: #0f172a !important;
+html.dark .admin-theme .border-\[\#e2d9cb\],
+html.dark .admin-theme .border-\[\#e7dfd2\],
+html.dark .admin-theme .border-\[\#efe7da\],
+html.dark .admin-theme .border-slate-200,
+html.dark .admin-theme .border-slate-300 {
+  border-color: #e2d9cb !important;
 }
 
-html.dark .admin-route-shell .text-slate-900,
-html.dark .admin-route-shell .text-slate-800,
-html.dark .admin-route-shell .text-slate-700,
-html.dark .admin-light .text-slate-900,
-html.dark .admin-light .text-slate-800,
-html.dark .admin-light .text-slate-700 {
-  color: #0f172a !important;
+html.dark .admin-theme .shadow-\[0_20px_50px_rgba\(15\,23\,42\,0\.06\)\] {
+  box-shadow: 0 20px 50px rgba(15, 23, 42, 0.06) !important;
 }
 
-html.dark .admin-route-shell .text-slate-600,
-html.dark .admin-route-shell .text-slate-500,
-html.dark .admin-light .text-slate-600,
-html.dark .admin-light .text-slate-500 {
-  color: #475569 !important;
+html.dark .admin-theme .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+  color: #334155 !important;
 }
 
-.admin-route-shell table,
-.admin-light table,
-.admin-route-shell td,
-.admin-light td,
-.admin-route-shell th,
-.admin-light th,
-.admin-route-shell p,
-.admin-light p,
-.admin-route-shell span,
-.admin-light span,
-.admin-route-shell label,
-.admin-light label,
-.admin-route-shell h1,
-.admin-light h1,
-.admin-route-shell h2,
-.admin-light h2,
-.admin-route-shell h3,
-.admin-light h3 {
-  opacity: 1;
+html.dark .admin-theme .bg-emerald-50,
+html.dark .admin-theme .bg-emerald-100 {
+  background-color: #d1fae5 !important;
+  color: #065f46 !important;
 }
+
+html.dark .admin-theme .bg-amber-50,
+html.dark .admin-theme .bg-amber-100 {
+  background-color: #fef3c7 !important;
+  color: #92400e !important;
+}
+
+html.dark .admin-theme .bg-rose-50,
+html.dark .admin-theme .bg-rose-100 {
+  background-color: #ffe4e6 !important;
+  color: #9f1239 !important;
+}
+
+html.dark .admin-theme a:not(.bg-\[\#0f1b3d\]),
+html.dark .admin-theme button:not(.bg-\[\#0f1b3d\]) {
+  color: inherit;
+}
+
