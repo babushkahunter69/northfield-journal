@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import { SiteHeader } from '@/components/site-header';
 import { SiteFooter } from '@/components/site-footer';
@@ -8,8 +9,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdminRoute = pathname.startsWith('/admin');
 
+  useEffect(() => {
+    if (isAdminRoute) {
+      document.documentElement.classList.remove('dark');
+      document.documentElement.dataset.adminRoute = 'true';
+      document.body.classList.add('admin-body');
+      return;
+    }
+
+    document.documentElement.dataset.adminRoute = 'false';
+    document.body.classList.remove('admin-body');
+
+    const savedTheme = window.localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else if (savedTheme === 'light') {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [isAdminRoute]);
+
   if (isAdminRoute) {
-    return <div className="min-h-screen bg-[#050505] text-white">{children}</div>;
+    return <div className="admin-route-shell min-h-screen bg-[#f7f4ee] text-slate-900">{children}</div>;
   }
 
   return (

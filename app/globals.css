@@ -1133,3 +1133,95 @@ select:focus {
 html.dark .article-page .journal-prose > p:first-of-type::first-letter {
   color: #ffffff;
 }
+
+/* =========================
+   ADMIN LIGHT THEME RESET
+   Admin screens should stay readable even if a visitor enabled dark mode
+   on the public site. These rules intentionally override global dark-mode
+   Tailwind utility overrides inside /admin.
+========================= */
+
+body.admin-body {
+  background: #f7f4ee !important;
+  color: #0f172a !important;
+}
+
+.admin-route-shell,
+.admin-light {
+  color-scheme: light;
+  background: #f7f4ee !important;
+  color: #0f172a !important;
+}
+
+.admin-route-shell *,
+.admin-light * {
+  -webkit-text-fill-color: unset;
+}
+
+.admin-route-shell input,
+.admin-route-shell textarea,
+.admin-route-shell select,
+.admin-light input,
+.admin-light textarea,
+.admin-light select {
+  background: #fffdfa !important;
+  color: #0f172a !important;
+  -webkit-text-fill-color: #0f172a !important;
+  border-color: #d6cebf !important;
+}
+
+.admin-route-shell input::placeholder,
+.admin-route-shell textarea::placeholder,
+.admin-light input::placeholder,
+.admin-light textarea::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+html.dark .admin-route-shell,
+html.dark .admin-light,
+html.dark .admin-route-shell .bg-white,
+html.dark .admin-light .bg-white,
+html.dark .admin-route-shell .bg-stone-50,
+html.dark .admin-light .bg-stone-50 {
+  background-color: #f7f4ee !important;
+  color: #0f172a !important;
+}
+
+html.dark .admin-route-shell .text-slate-900,
+html.dark .admin-route-shell .text-slate-800,
+html.dark .admin-route-shell .text-slate-700,
+html.dark .admin-light .text-slate-900,
+html.dark .admin-light .text-slate-800,
+html.dark .admin-light .text-slate-700 {
+  color: #0f172a !important;
+}
+
+html.dark .admin-route-shell .text-slate-600,
+html.dark .admin-route-shell .text-slate-500,
+html.dark .admin-light .text-slate-600,
+html.dark .admin-light .text-slate-500 {
+  color: #475569 !important;
+}
+
+.admin-route-shell table,
+.admin-light table,
+.admin-route-shell td,
+.admin-light td,
+.admin-route-shell th,
+.admin-light th,
+.admin-route-shell p,
+.admin-light p,
+.admin-route-shell span,
+.admin-light span,
+.admin-route-shell label,
+.admin-light label,
+.admin-route-shell h1,
+.admin-light h1,
+.admin-route-shell h2,
+.admin-light h2,
+.admin-route-shell h3,
+.admin-light h3 {
+  opacity: 1;
+}
