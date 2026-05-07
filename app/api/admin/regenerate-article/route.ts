@@ -7,23 +7,57 @@ import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import type { ContentBriefRow, GeneratedBrief } from '@/lib/types';
 import { estimateReadingTime } from '@/lib/utils';
 
+function countWords(html: string) {
+  return String(html || '')
+    .replace(/<[^>]+>/g, ' ')
+    .trim()
+    .split(/\s+/)
+    .filter(Boolean).length;
+}
+
 function toGeneratedBrief(
-  brief: ContentBriefRow,
-  fallbackCategorySlug: string
+  brief: Partial<ContentBriefRow>,
+  fallbackCategorySlug: string,
+  fallbackPost?: any
 ): GeneratedBrief {
   return {
-    working_title: brief.working_title,
-    slug: brief.slug,
+    working_title:
+      brief.working_title ||
+      fallbackPost?.title ||
+      'Practical Education Guide',
+
+    slug:
+      brief.slug ||
+      fallbackPost?.slug ||
+      'education-guide',
+
     angle: brief.angle || '',
-    seo_title: brief.seo_title || brief.working_title,
-    seo_description: brief.seo_description || '',
-    target_word_count: brief.target_word_count || 1400,
+
+    seo_title:
+      brief.seo_title ||
+      fallbackPost?.title ||
+      brief.working_title ||
+      'Education Guide',
+
+    seo_description:
+      brief.seo_description ||
+      fallbackPost?.excerpt ||
+      '',
+
+    target_word_count: 2400,
+
     secondary_keywords: [],
-    outline: Array.isArray(brief.outline_json) ? brief.outline_json : [],
+
+    outline: Array.isArray(brief.outline_json)
+      ? brief.outline_json
+      : [],
+
     faq: [],
+
     internal_link_suggestions: Array.isArray(brief.internal_links_json)
       ? brief.internal_links_json
       : [],
+
     category_slug: fallbackCategorySlug || 'student-success'
   };
 }
@@ -32,15 +66,22 @@ export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
 
   if (!allowed) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Unauthorized' },
+      { status: 401 }
+    );
   }
 
   try {
     const body = await request.json().catch(() => null);
+
     const postId = String(body?.post_id || '').trim();
 
     if (!postId) {
-      return NextResponse.json({ error: 'post_id is required.' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'post_id is required.' },
+        { status: 400 }
+      );
     }
 
     const postResponse = await supabaseAdmin
@@ -50,22 +91,13 @@ export async function POST(request: Request) {
       .single();
 
     if (postResponse.error || !postResponse.data) {
-      return NextResponse.json({ error: 'Post not found.' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Post not found.' },
+        { status: 404 }
+      );
     }
 
-    const post = postResponse.data as {
-      id: string;
-      slug: string;
-      title: string;
-      excerpt: string | null;
-      content: string;
-      meta_title: string | null;
-      meta_description: string | null;
-      status: 'draft' | 'published';
-      faq_json?: Array<{ question: string; answer: string }> | null;
-      categories?: { slug?: string | null } | null;
-      featured_image_url?: string | null;
-    };
+    const post = postResponse.data as any;
 
     if (post.status !== 'draft') {
       return NextResponse.json(
@@ -73,6 +105,9 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    // IMPORTANT FIX:
+    // no longer fail if content brief does not exist
 
     const briefResponse = await supabaseAdmin
       .from('content_briefs')
@@ -82,93 +117,168 @@ export async function POST(request: Request) {
       .limit(1)
       .maybeSingle();
 
-    if (briefResponse.error || !briefResponse.data) {
-      return NextResponse.json(
-        { error: 'No matching content brief found for this draft.' },
-        { status: 404 }
-      );
-    }
+    const brief = briefResponse.data || null;
 
-    const brief = briefResponse.data as ContentBriefRow;
-    const categorySlug = post.categories?.slug || 'student-success';
+    const categorySlug =
+      post.categories?.slug || 'student-success';
 
-    const briefInput = toGeneratedBrief(brief, categorySlug);
+    const briefInput = toGeneratedBrief(
+      brief || {},
+      categorySlug,
+      post
+    );
+
     let article = await generateArticle(briefInput);
 
-    if ((article.content || '').replace(/<[^>]+>/g, ' ').trim().split(/\s+/).filter(Boolean).length < 850) {
+    // HARD ENFORCEMENT
+    // NEVER SAVE SHORT CONTENT
+
+    let attempts = 0;
+
+    while (
+      countWords(article.content) < 2000 &&
+      attempts < 2
+    ) {
       article = await generateArticle(briefInput);
+      attempts += 1;
     }
+
+    // deterministic repair pass
+    // no repeated AI credit burn
 
     const improved = await improveArticleToThreshold({
       article,
-      primaryKeyword: brief.working_title,
-      internalLinkSuggestions: briefInput.internal_link_suggestions,
-      minimumScore: 80,
-      maxPasses: 2
+      primaryKeyword:
+        brief?.working_title ||
+        post.title ||
+        post.slug.replace(/-/g, ' '),
+
+      internalLinkSuggestions:
+        briefInput.internal_link_suggestions,
+
+      minimumScore: 100,
+      maxPasses: 1
     });
+
     article = improved.article;
 
-    await supabaseAdmin.from('content_generation_runs').insert({
-      brief_id: brief.id,
-      post_id: post.id,
-      run_type: 'draft_regeneration',
-      status: 'success',
-      model_name: process.env.AI_MODEL || 'gpt-4.1-mini',
-      input_snapshot: {
+    const finalWordCount = countWords(article.content);
+
+    if (finalWordCount < 2000) {
+      return NextResponse.json(
+        {
+          error:
+            'Article generation failed minimum word requirement.',
+          wordCount: finalWordCount
+        },
+        { status: 500 }
+      );
+    }
+
+    await supabaseAdmin
+      .from('content_generation_runs')
+      .insert({
+        brief_id: brief?.id || null,
         post_id: post.id,
-        previous_title: post.title,
-        previous_excerpt: post.excerpt,
-        previous_content: post.content,
-        brief
-      },
-      output_snapshot: article
-    });
+        run_type: 'draft_regeneration',
+        status: 'success',
+        model_name:
+          process.env.AI_MODEL || 'gpt-4.1-mini',
+        input_snapshot: {
+          post_id: post.id,
+          brief: brief || null
+        },
+        output_snapshot: article
+      });
 
     const updateResponse = await supabaseAdmin
       .from('posts')
       .update({
-        title: article.title || post.title,
-        excerpt: article.excerpt || post.excerpt || '',
+        title: article.title,
+        excerpt: article.excerpt,
         content: article.content,
-        reading_time_minutes: estimateReadingTime(article.content),
-        meta_title: article.meta_title || post.meta_title || post.title,
+        reading_time_minutes:
+          estimateReadingTime(article.content),
+
+        meta_title: article.meta_title,
         meta_description:
-          article.meta_description || post.meta_description || post.excerpt || '',
-        faq_json: article.faq || post.faq_json || null,
-        generation_status: `ai_regenerated_${improved.after.score}`
+          article.meta_description,
+
+        faq_json: article.faq || [],
+
+        generation_status: 'ai_regenerated'
       })
       .eq('id', post.id)
-      .select('id, slug, title, excerpt, content, meta_title, meta_description, featured_image_url, status')
+      .select(`
+        id,
+        slug,
+        title,
+        excerpt,
+        content,
+        meta_title,
+        meta_description,
+        featured_image_url,
+        status
+      `)
       .single();
 
-    if (updateResponse.error || !updateResponse.data) {
+    if (
+      updateResponse.error ||
+      !updateResponse.data
+    ) {
       return NextResponse.json(
-        { error: updateResponse.error?.message || 'Unable to update post.' },
+        {
+          error:
+            updateResponse.error?.message ||
+            'Unable to update post.'
+        },
         { status: 500 }
       );
     }
 
     const rescored = evaluateEditorialScore({
       title: updateResponse.data.title,
-      excerpt: updateResponse.data.excerpt || '',
-      content: updateResponse.data.content || '',
-      metaTitle: updateResponse.data.meta_title || updateResponse.data.title,
-      metaDescription: updateResponse.data.meta_description || updateResponse.data.excerpt || '',
-      featuredImageUrl: updateResponse.data.featured_image_url,
-      primaryKeyword: brief.working_title
+      excerpt:
+        updateResponse.data.excerpt || '',
+
+      content:
+        updateResponse.data.content || '',
+
+      metaTitle:
+        updateResponse.data.meta_title ||
+        updateResponse.data.title,
+
+      metaDescription:
+        updateResponse.data.meta_description ||
+        updateResponse.data.excerpt ||
+        '',
+
+      featuredImageUrl:
+        updateResponse.data.featured_image_url,
+
+      primaryKeyword:
+        brief?.working_title ||
+        post.title
     });
 
     return NextResponse.json({
       success: true,
-      before: improved.before.score,
-      after: rescored.score,
-      remainingFailed: rescored.checks.filter((check) => !check.passed).map((check) => check.key),
+      score: rescored.score,
+      wordCount: rescored.stats.wordCount,
+      remainingFailed: rescored.checks
+        .filter((c) => !c.passed)
+        .map((c) => c.key),
       post: updateResponse.data
     });
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Unknown regeneration failure';
-
-    return NextResponse.json({ error: message }, { status: 500 });
+    return NextResponse.json(
+      {
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown regeneration failure'
+      },
+      { status: 500 }
+    );
   }
 }

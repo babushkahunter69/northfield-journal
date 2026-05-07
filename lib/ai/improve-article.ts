@@ -4,7 +4,7 @@ import type { GeneratedArticle } from '@/lib/types';
 import { repairInternalLinks, removeRepeatedParagraphs } from '@/lib/content/repairInternalLinks';
 
 const MIN_WORDS = 2000;
-const TARGET_WORDS = 2100;
+const TARGET_WORDS = 2150;
 
 const IMPROVABLE_KEYS = new Set([
   'title_length',
@@ -105,18 +105,23 @@ function titleFromKeyword(primaryKeyword?: string | null) {
   if (!keyword) return 'Practical Learning Strategies for Students';
 
   const lowered = keyword.toLowerCase();
+
   if (/thesis|essay|research|writing|paragraph|citation/.test(lowered)) {
     return keyword.length <= 60 ? keyword : 'How Students Can Write Stronger Essays';
   }
+
   if (/exam|test|final|sat|act|revision/.test(lowered)) {
     return keyword.length <= 60 ? keyword : 'Better Study Habits Before Exams';
   }
+
   if (/parent|homework|child|family/.test(lowered)) {
     return keyword.length <= 60 ? keyword : 'Practical Homework Support for Parents';
   }
+
   if (/adhd|dyslexia|iep|504|learning disabil|accommodation|inclusive/.test(lowered)) {
     return keyword.length <= 60 ? keyword : 'Classroom Support for Diverse Learners';
   }
+
   return keyword.length <= 60 ? keyword : 'Practical Learning Strategies for Students';
 }
 
@@ -128,6 +133,7 @@ function hasKeywordSignal(value: string, primaryKeyword?: string | null) {
 
 function makeBetterTitle(title: string, primaryKeyword?: string | null) {
   let clean = String(title || '').replace(/\s+/g, ' ').trim();
+
   clean = clean
     .replace(/\s*[:|]\s*A Practical Guide.*$/i, '')
     .replace(/\s*[:|]\s*Practical Tips.*$/i, '')
@@ -135,11 +141,29 @@ function makeBetterTitle(title: string, primaryKeyword?: string | null) {
     .replace(/\bUltimate Guide to\b/i, 'Guide to')
     .trim();
 
-  if (!hasKeywordSignal(clean, primaryKeyword)) clean = titleFromKeyword(primaryKeyword);
-  if (clean.length < 35) clean = `${clean}: Practical Student Guide`.replace(/\s+/g, ' ').trim();
-  if (clean.length > 70) clean = titleFromKeyword(primaryKeyword);
-  if (clean.length > 70) clean = clean.replace(/\bPractical\b\s*/i, '').replace(/\bStudents\b/i, 'Learners').trim();
-  if (clean.length > 70) clean = 'Practical Learning Strategies for Students';
+  if (!hasKeywordSignal(clean, primaryKeyword)) {
+    clean = titleFromKeyword(primaryKeyword);
+  }
+
+  if (clean.length < 35) {
+    clean = `${clean}: Practical Student Guide`.replace(/\s+/g, ' ').trim();
+  }
+
+  if (clean.length > 70) {
+    clean = titleFromKeyword(primaryKeyword);
+  }
+
+  if (clean.length > 70) {
+    clean = clean
+      .replace(/\bPractical\b\s*/i, '')
+      .replace(/\bStudents\b/i, 'Learners')
+      .trim();
+  }
+
+  if (clean.length > 70) {
+    clean = 'Practical Learning Strategies for Students';
+  }
+
   return clean;
 }
 
@@ -161,6 +185,7 @@ function makeMetaTitle(title: string, primaryKeyword?: string | null) {
 function makeMetaDescription(excerpt: string, primaryKeyword?: string | null) {
   const topic = sentenceCase(String(primaryKeyword || '').replace(/[-_]+/g, ' ')) || 'this education topic';
   const cleanExcerpt = String(excerpt || '').replace(/\s+/g, ' ').trim();
+
   const candidates = [
     cleanExcerpt,
     `Learn practical steps for ${topic.toLowerCase()}, with examples, common mistakes, FAQs, and clear next steps for students, parents, and teachers.`,
@@ -172,7 +197,9 @@ function makeMetaDescription(excerpt: string, primaryKeyword?: string | null) {
     if (clean.length >= 120 && clean.length <= 160) return clean;
   }
 
-  return `Learn practical steps for ${topic.toLowerCase()}, with examples, common mistakes, FAQs, and clear next steps for students, parents, and teachers.`.slice(0, 160).trim();
+  return `Learn practical steps for ${topic.toLowerCase()}, with examples, common mistakes, FAQs, and clear next steps for students, parents, and teachers.`
+    .slice(0, 160)
+    .trim();
 }
 
 function removeRoboticPhrases(text: string) {
@@ -223,9 +250,12 @@ function stripGeneratedRelatedText(content: string) {
 
 function ensureKeywordInOpening(content: string, primaryKeyword?: string | null) {
   if (!primaryKeyword) return content;
+
   const lower = stripHtml(content).toLowerCase().slice(0, 450);
   const words = keywordWords(primaryKeyword);
+
   if (words.some((word) => lower.includes(word))) return content;
+
   const topic = sentenceCase(String(primaryKeyword).replace(/[-_]+/g, ' '));
   return `<p>${topic} is easier to use when students have a clear process, practical examples, and a realistic way to apply the idea in school or at home.</p>\n${content}`;
 }
@@ -233,7 +263,11 @@ function ensureKeywordInOpening(content: string, primaryKeyword?: string | null)
 function countFaqItems(content: string) {
   const hasFaq = /<h[23][^>]*>\s*(frequently asked questions|faq|faqs)\s*<\/h[23]>/i.test(content);
   if (!hasFaq) return 0;
-  const faqSection = String(content || '').split(/<h[23][^>]*>\s*(?:frequently asked questions|faq|faqs)\s*<\/h[23]>/i).pop() || '';
+
+  const faqSection = String(content || '')
+    .split(/<h[23][^>]*>\s*(?:frequently asked questions|faq|faqs)\s*<\/h[23]>/i)
+    .pop() || '';
+
   const beforeNextMajorSection = faqSection.split(/<h2[^>]*>/i)[0] || faqSection;
   return (beforeNextMajorSection.match(/<h3[^>]*>.*?<\/h3>/gi) || []).length;
 }
@@ -247,21 +281,40 @@ function removeWeakFaq(content: string) {
 
 function ensureFaq(content: string, primaryKeyword?: string | null) {
   if (countFaqItems(content) >= 3) return content;
+
   const topic = sentenceCase(String(primaryKeyword || 'this topic').replace(/[-_]+/g, ' '));
   const withoutWeakFaq = removeWeakFaq(content);
 
-  return `${withoutWeakFaq}\n<h2>Frequently Asked Questions</h2>\n<h3>What is the first step for ${topic}?</h3>\n<p>Start by naming the exact task, the learner's current challenge, and one small action that can be completed today. A narrow first step keeps the work from feeling too broad.</p>\n<h3>How can students use this strategy consistently?</h3>\n<p>Students are more consistent when the strategy is connected to an existing routine, such as planning before homework, reviewing notes after class, or checking work before submitting it.</p>\n<h3>How can parents or teachers support progress?</h3>\n<p>Parents and teachers can model the process, give specific feedback, and ask reflective questions. The goal is to guide the learner without taking over the work.</p>`;
+  return `${withoutWeakFaq}
+<h2>Frequently Asked Questions</h2>
+<h3>What is the first step for ${topic}?</h3>
+<p>Start by naming the exact task, the learner's current challenge, and one small action that can be completed today. A narrow first step keeps the work from feeling too broad.</p>
+<h3>How can students use this strategy consistently?</h3>
+<p>Students are more consistent when the strategy is connected to an existing routine, such as planning before homework, reviewing notes after class, or checking work before submitting it.</p>
+<h3>How can parents or teachers support progress?</h3>
+<p>Parents and teachers can model the process, give specific feedback, and ask reflective questions. The goal is to guide the learner without taking over the work.</p>`;
 }
 
 function ensureConclusion(content: string) {
-  if (/<h2[^>]*>\s*(conclusion|final thoughts|next steps|what to do next|closing thoughts|what you should do next)\s*<\/h2>/i.test(content)) return content;
-  return `${content}\n<h2>What You Should Do Next</h2>\n<p>Choose one strategy from this guide and try it this week. Keep the first step small, watch what changes, and adjust the routine based on what the learner actually needs. Clear, repeatable practice usually works better than adding more pressure.</p>`;
+  if (/<h2[^>]*>\s*(conclusion|final thoughts|next steps|what to do next|closing thoughts|what you should do next)\s*<\/h2>/i.test(content)) {
+    return content;
+  }
+
+  return `${content}
+<h2>What You Should Do Next</h2>
+<p>Choose one strategy from this guide and try it this week. Keep the first step small, watch what changes, and adjust the routine based on what the learner actually needs. Clear, repeatable practice usually works better than adding more pressure.</p>`;
 }
 
 function ensureExamples(content: string, primaryKeyword?: string | null) {
-  if (/(for example|for instance|example:|scenario|consider this|imagine a student|suppose a student)/i.test(stripHtml(content))) return content;
+  if (/(for example|for instance|example:|scenario|consider this|imagine a student|suppose a student)/i.test(stripHtml(content))) {
+    return content;
+  }
+
   const topic = sentenceCase(String(primaryKeyword || 'this strategy').replace(/[-_]+/g, ' '));
-  return `${content}\n<h2>Example in Practice</h2>\n<p>For example, a student working on ${topic.toLowerCase()} might start with a short checklist before beginning the assignment. The checklist could ask what the task requires, what materials are needed, and what the first small step should be. This turns a vague goal into a repeatable routine.</p>`;
+
+  return `${content}
+<h2>Example in Practice</h2>
+<p>For example, a student working on ${topic.toLowerCase()} might start with a short checklist before beginning the assignment. The checklist could ask what the task requires, what materials are needed, and what the first small step should be. This turns a vague goal into a repeatable routine.</p>`;
 }
 
 function ensureInternalLinks(content: string, suggestions?: string[]) {
@@ -276,7 +329,9 @@ function ensureInternalLinks(content: string, suggestions?: string[]) {
     return `<a href="${link}">${label}</a>`;
   });
 
-  return `${content}\n<h2>Related Guides</h2>\n<p>Readers who want to keep building this skill may also find ${anchors.join(' and ')} useful.</p>`;
+  return `${content}
+<h2>Related Guides</h2>
+<p>Readers who want to keep building this skill may also find ${anchors.join(' and ')} useful.</p>`;
 }
 
 function headingText(headingHtml: string) {
@@ -291,21 +346,22 @@ function hasHeading(content: string, heading: string) {
 
 function removeDuplicateHeadingsAndSections(content: string) {
   const seen = new Set<string>();
-  let next = String(content || '');
 
-  next = next.replace(/(<h[23][^>]*>[\s\S]*?<\/h[23]>)([\s\S]*?)(?=<h[23][^>]*>|$)/gi, (full, heading, body) => {
-    const key = headingText(heading);
-    if (!key) return full;
-    if (seen.has(key)) return '';
-    seen.add(key);
-    return `${heading}${body}`;
-  });
-
-  return next;
+  return String(content || '').replace(
+    /(<h[23][^>]*>[\s\S]*?<\/h[23]>)([\s\S]*?)(?=<h[23][^>]*>|$)/gi,
+    (full, heading, body) => {
+      const key = headingText(heading);
+      if (!key) return full;
+      if (seen.has(key)) return '';
+      seen.add(key);
+      return `${heading}${body}`;
+    }
+  );
 }
 
 function ensureStructure(content: string) {
   let next = String(content || '');
+
   const needed = [
     {
       heading: 'Why This Matters',
@@ -318,7 +374,9 @@ function ensureStructure(content: string) {
   ];
 
   for (const item of needed) {
-    if (!hasHeading(next, item.heading)) next += `\n<h2>${item.heading}</h2>\n${item.body}`;
+    if (!hasHeading(next, item.heading)) {
+      next += `\n<h2>${item.heading}</h2>\n${item.body}`;
+    }
   }
 
   return next;
@@ -326,6 +384,7 @@ function ensureStructure(content: string) {
 
 function expansionSections(primaryKeyword?: string | null) {
   const topic = sentenceCase(String(primaryKeyword || 'this learning goal').replace(/[-_]+/g, ' '));
+
   return [
     {
       heading: 'Build the Skill Step by Step',
@@ -350,25 +409,66 @@ function expansionSections(primaryKeyword?: string | null) {
     {
       heading: 'Home Scenario',
       body: '<p>At home, a parent might help the student choose a regular place to work, set a short starting routine, and review the first task together. The parent does not need to take over. The goal is to make the beginning easier.</p><p>Once the student starts more independently, the parent can step back and use brief check-ins instead of constant reminders. That balance supports responsibility while still giving help when needed.</p>'
+    },
+    {
+      heading: 'Practice Plan for the First Week',
+      body: '<p>During the first week, keep the plan simple. Choose one routine, use it at the same time each day, and review whether it made the task easier to start or finish. A small plan that is actually used is better than a detailed plan that students abandon.</p><p>By the end of the week, the learner should be able to explain what helped, what still felt difficult, and what adjustment would make the next attempt more manageable.</p>'
+    },
+    {
+      heading: 'How Adults Can Support Without Taking Over',
+      body: '<p>Support works best when adults guide the process instead of doing the work for the student. That might mean asking a planning question, helping the learner choose a first step, or checking in after the task is complete.</p><p>The goal is gradual independence. When adults step back slowly, students have room to practice responsibility while still knowing help is available when they need it.</p>'
     }
   ];
 }
 
-function ensureLength(content: string, primaryKeyword?: string | null) {
+function enforceMinimumLength(content: string, primaryKeyword?: string | null) {
   let next = removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(String(content || '')));
   const sections = expansionSections(primaryKeyword);
 
   for (const section of sections) {
-    if (countWords(next) >= TARGET_WORDS) break;
-    if (hasHeading(next, section.heading)) continue;
-    next += `\n<h2>${section.heading}</h2>\n${section.body}`;
+    if (!hasHeading(next, section.heading)) {
+      next += `\n<h2>${section.heading}</h2>\n${section.body}`;
+    }
+
+    next = removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(next));
+
+    if (countWords(next) >= TARGET_WORDS) {
+      return next;
+    }
   }
 
   if (countWords(next) < MIN_WORDS && !hasHeading(next, 'Final Review')) {
-    next += '\n<h2>Final Review</h2>\n<p>Before treating the strategy as complete, review whether the learner can explain the process, use it with less prompting, and adjust it when the task changes. If the answer is yes, the routine is becoming dependable. If not, make the first step smaller and practice again with clearer support.</p>';
+    next += '\n<h2>Final Review</h2>\n<p>Before treating the strategy as complete, review whether the learner can explain the process, use it with less prompting, and adjust it when the task changes. If the answer is yes, the routine is becoming dependable. If not, make the first step smaller and practice again with clearer support.</p><p>This final review matters because students often need more than advice. They need a process that can be repeated, adjusted, and used when the next assignment, lesson, or challenge appears.</p>';
   }
 
   return removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(next));
+}
+
+function applyDeterministicSeoFixes(params: {
+  article: GeneratedArticle;
+  primaryKeyword?: string | null;
+  internalLinkSuggestions?: string[];
+}) {
+  const next = { ...params.article };
+
+  next.title = makeBetterTitle(removeRoboticPhrases(next.title), params.primaryKeyword);
+  next.excerpt = removeRoboticPhrases(next.excerpt);
+  next.meta_title = makeMetaTitle(removeRoboticPhrases(next.meta_title || next.title), params.primaryKeyword);
+  next.meta_description = makeMetaDescription(removeRoboticPhrases(next.meta_description || next.excerpt), params.primaryKeyword);
+
+  next.content = String(next.content || '').replace(/^\s*#{1,6}\s+/gm, '');
+  next.content = stripGeneratedRelatedText(next.content);
+  next.content = removeRoboticPhrases(next.content);
+  next.content = ensureKeywordInOpening(next.content, params.primaryKeyword);
+  next.content = ensureStructure(next.content);
+  next.content = ensureExamples(next.content, params.primaryKeyword);
+  next.content = ensureInternalLinks(next.content, params.internalLinkSuggestions);
+  next.content = ensureFaq(next.content, params.primaryKeyword);
+  next.content = ensureConclusion(next.content);
+  next.content = enforceMinimumLength(next.content, params.primaryKeyword);
+  next.content = stripGeneratedRelatedText(removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(next.content)));
+
+  return next;
 }
 
 async function rewriteTargetedFields(params: {
@@ -421,33 +521,6 @@ async function rewriteTargetedFields(params: {
   } satisfies GeneratedArticle;
 }
 
-function applyLocalFixes(params: {
-  article: GeneratedArticle;
-  primaryKeyword?: string | null;
-  internalLinkSuggestions?: string[];
-}) {
-  const next = { ...params.article };
-
-  next.title = makeBetterTitle(removeRoboticPhrases(next.title), params.primaryKeyword);
-  next.excerpt = removeRoboticPhrases(next.excerpt);
-  next.meta_title = makeMetaTitle(removeRoboticPhrases(next.meta_title || next.title), params.primaryKeyword);
-  next.meta_description = makeMetaDescription(removeRoboticPhrases(next.meta_description || next.excerpt), params.primaryKeyword);
-
-  next.content = String(next.content || '').replace(/^\s*#{1,6}\s+/gm, '');
-  next.content = stripGeneratedRelatedText(next.content);
-  next.content = removeRoboticPhrases(next.content);
-  next.content = ensureKeywordInOpening(next.content, params.primaryKeyword);
-  next.content = ensureStructure(next.content);
-  next.content = ensureExamples(next.content, params.primaryKeyword);
-  next.content = ensureInternalLinks(next.content, params.internalLinkSuggestions);
-  next.content = ensureFaq(next.content, params.primaryKeyword);
-  next.content = ensureConclusion(next.content);
-  next.content = ensureLength(next.content, params.primaryKeyword);
-  next.content = stripGeneratedRelatedText(removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(next.content)));
-
-  return next;
-}
-
 export async function improveArticlePass(params: {
   article: GeneratedArticle;
   failedChecks: EditorialCheck[];
@@ -465,7 +538,7 @@ export async function improveArticlePass(params: {
     }
   }
 
-  next = applyLocalFixes({
+  next = applyDeterministicSeoFixes({
     article: next,
     primaryKeyword: params.primaryKeyword,
     internalLinkSuggestions: params.internalLinkSuggestions
@@ -477,7 +550,14 @@ export async function improveArticlePass(params: {
     excerpt: next.excerpt,
     keywords: params.primaryKeyword ? [params.primaryKeyword] : []
   });
-  next.content = stripGeneratedRelatedText(removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(next.content)));
+
+  next.content = stripGeneratedRelatedText(
+    removeDuplicateHeadingsAndSections(
+      removeRepeatedParagraphs(
+        enforceMinimumLength(next.content, params.primaryKeyword)
+      )
+    )
+  );
 
   return next;
 }
@@ -497,10 +577,14 @@ export async function improveArticleToThreshold(input: ImproveInput) {
     useAi: true
   });
 
-  // Deterministic finishing passes do not call AI. They only enforce rules and clean output.
+  // No more AI calls after the first pass. These are local-only cleanup passes.
   for (let i = 0; i < 3; i += 1) {
     const latest = scoreCurrent({ article: current, primaryKeyword: input.primaryKeyword });
-    if (latest.score >= minimumScore && latest.stats.wordCount >= MIN_WORDS) break;
+
+    if (latest.score >= minimumScore && latest.stats.wordCount >= MIN_WORDS) {
+      break;
+    }
+
     current = await improveArticlePass({
       article: current,
       failedChecks: pickFailedChecks(latest.checks),
@@ -510,12 +594,26 @@ export async function improveArticleToThreshold(input: ImproveInput) {
     });
   }
 
+  current = applyDeterministicSeoFixes({
+    article: current,
+    primaryKeyword: input.primaryKeyword,
+    internalLinkSuggestions: input.internalLinkSuggestions
+  });
+
   current.content = await repairInternalLinks(current.content, {
+    excludeSlug: (current as any).slug || null,
     title: current.title,
     excerpt: current.excerpt,
     keywords: input.primaryKeyword ? [input.primaryKeyword] : []
   });
-  current.content = stripGeneratedRelatedText(removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(current.content)));
+
+  current.content = stripGeneratedRelatedText(
+    removeDuplicateHeadingsAndSections(
+      removeRepeatedParagraphs(
+        enforceMinimumLength(current.content, input.primaryKeyword)
+      )
+    )
+  );
 
   const after = scoreCurrent({ article: current, primaryKeyword: input.primaryKeyword });
 
