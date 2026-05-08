@@ -87,7 +87,7 @@ function hasExamples(text: string) {
 }
 
 function hasConclusion(html: string) {
-  return /<h[23][^>]*>\s*(conclusion|final thoughts|next steps|what to do next|closing thoughts)\s*<\/h[23]>/i.test(html);
+  return /<h[23][^>]*>\s*(conclusion|final thoughts|next steps|what to do next|closing thoughts|what you should do next)\s*<\/h[23]>/i.test(html);
 }
 
 function keywordAppearsNaturally(title: string, excerpt: string, html: string, primaryKeyword?: string | null) {

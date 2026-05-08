@@ -134,6 +134,7 @@ function hasKeywordSignal(value: string, primaryKeyword?: string | null) {
 function makeBetterTitle(title: string, primaryKeyword?: string | null) {
   let clean = String(title || '').replace(/\s+/g, ' ').trim();
 
+  // Strip boilerplate suffixes
   clean = clean
     .replace(/\s*[:|]\s*A Practical Guide.*$/i, '')
     .replace(/\s*[:|]\s*Practical Tips.*$/i, '')
@@ -141,26 +142,32 @@ function makeBetterTitle(title: string, primaryKeyword?: string | null) {
     .replace(/\bUltimate Guide to\b/i, 'Guide to')
     .trim();
 
+  // If keyword signal is missing, build from keyword
   if (!hasKeywordSignal(clean, primaryKeyword)) {
     clean = titleFromKeyword(primaryKeyword);
   }
 
+  // Too short — pad it
   if (clean.length < 35) {
     clean = `${clean}: Practical Student Guide`.replace(/\s+/g, ' ').trim();
   }
 
+  // Too long — do NOT truncate. Generate a new relevant title instead.
   if (clean.length > 70) {
     clean = titleFromKeyword(primaryKeyword);
   }
 
+  // Drop trailing words until within limit (preserves keyword signal)
   if (clean.length > 70) {
-    clean = clean
-      .replace(/\bPractical\b\s*/i, '')
-      .replace(/\bStudents\b/i, 'Learners')
-      .trim();
+    const words = clean.split(' ');
+    while (clean.length > 70 && words.length > 4) {
+      words.pop();
+      clean = words.join(' ').trim();
+    }
   }
 
-  if (clean.length > 70) {
+  // Final safety net
+  if (clean.length > 70 || clean.length < 35) {
     clean = 'Practical Learning Strategies for Students';
   }
 
@@ -292,7 +299,11 @@ function ensureFaq(content: string, primaryKeyword?: string | null) {
 <h3>How can students use this strategy consistently?</h3>
 <p>Students are more consistent when the strategy is connected to an existing routine, such as planning before homework, reviewing notes after class, or checking work before submitting it.</p>
 <h3>How can parents or teachers support progress?</h3>
-<p>Parents and teachers can model the process, give specific feedback, and ask reflective questions. The goal is to guide the learner without taking over the work.</p>`;
+<p>Parents and teachers can model the process, give specific feedback, and ask reflective questions. The goal is to guide the learner without taking over the work.</p>
+<h3>How long does it take to see improvement?</h3>
+<p>Most students notice meaningful progress within two to three weeks of consistent practice. The key is to use one strategy regularly rather than switching between multiple approaches too quickly.</p>
+<h3>What is the most common mistake to avoid?</h3>
+<p>The most common mistake is trying to change too many habits at once. Picking one clear strategy and sticking with it for a full week gives students the best chance to measure what is actually working.</p>`;
 }
 
 function ensureConclusion(content: string) {
@@ -321,17 +332,31 @@ function ensureInternalLinks(content: string, suggestions?: string[]) {
   const currentCount = (String(content || '').match(/href=["']\/blog\/[a-z0-9][a-z0-9-]*["']/gi) || []).length;
   if (currentCount >= 2) return content;
 
-  const links = uniqueLinks(suggestions).slice(0, 3);
-  if (links.length < 2) return content;
+  const links = uniqueLinks(suggestions);
 
-  const anchors = links.slice(0, 2).map((link) => {
-    const label = sentenceCase(link.replace(/^\/blog\//, '').replace(/-/g, ' '));
-    return `<a href="${link}">${label}</a>`;
-  });
-
-  return `${content}
+  // 2+ verified suggestions — use them directly
+  if (links.length >= 2) {
+    const anchors = links.slice(0, 2).map((link) => {
+      const label = sentenceCase(link.replace(/^\/blog\//, '').replace(/-/g, ' '));
+      return `<a href="${link}">${label}</a>`;
+    });
+    return `${content}
 <h2>Related Guides</h2>
 <p>Readers who want to keep building this skill may also find ${anchors.join(' and ')} useful.</p>`;
+  }
+
+  // Exactly 1 — use it plus a generic journal link
+  if (links.length === 1) {
+    const label = sentenceCase(links[0].replace(/^\/blog\//, '').replace(/-/g, ' '));
+    return `${content}
+<h2>Related Guides</h2>
+<p>For more education strategies, explore <a href="${links[0]}">${label}</a> and browse the <a href="/blog">Northfield Journal blog</a> for practical guides on learning, study habits, and classroom support.</p>`;
+  }
+
+  // No suggestions — use two generic site links that always exist
+  return `${content}
+<h2>Related Guides</h2>
+<p>The <a href="/blog">Northfield Journal blog</a> covers a wide range of education topics. Visit the <a href="/journal">journal</a> to find practical advice on study habits, classroom strategies, homework support, and more for students, teachers, and families.</p>`;
 }
 
 function headingText(headingHtml: string) {
@@ -426,17 +451,16 @@ function enforceMinimumLength(content: string, primaryKeyword?: string | null) {
   const sections = expansionSections(primaryKeyword);
 
   for (const section of sections) {
+    if (countWords(next) >= TARGET_WORDS) break;
+
     if (!hasHeading(next, section.heading)) {
       next += `\n<h2>${section.heading}</h2>\n${section.body}`;
     }
 
     next = removeDuplicateHeadingsAndSections(removeRepeatedParagraphs(next));
-
-    if (countWords(next) >= TARGET_WORDS) {
-      return next;
-    }
   }
 
+  // If still under MIN_WORDS after all expansion sections, add Final Review
   if (countWords(next) < MIN_WORDS && !hasHeading(next, 'Final Review')) {
     next += '\n<h2>Final Review</h2>\n<p>Before treating the strategy as complete, review whether the learner can explain the process, use it with less prompting, and adjust it when the task changes. If the answer is yes, the routine is becoming dependable. If not, make the first step smaller and practice again with clearer support.</p><p>This final review matters because students often need more than advice. They need a process that can be repeated, adjusted, and used when the next assignment, lesson, or challenge appears.</p>';
   }
@@ -481,17 +505,17 @@ async function rewriteTargetedFields(params: {
     task: 'Improve an education article once. Fix failed checks with clean, original, useful content. Return complete updated fields, not fragments.',
     rules: [
       'Make one complete improvement pass only.',
-      'Do not truncate the title or meta fields. Rewrite them naturally if they are too long or too short.',
-      'Title must be 35 to 70 characters and relevant to the article.',
-      'Meta title must be 40 to 65 characters and useful for search.',
-      'Meta description must be 120 to 160 characters and summarize the article clearly.',
-      'If content is under 2,000 words, expand it with unique practical sections, examples, FAQs, and next steps.',
+      'NEVER truncate titles or meta fields. If a title is too long, replace it with a new relevant title — do not cut it mid-sentence.',
+      'Title must be 35 to 70 characters. Write a new descriptive, relevant title if the current one is too long or too short.',
+      'Meta title must be 40 to 65 characters and useful for search. Rewrite it if needed — never shorten it to the point of being useless.',
+      'Meta description must be 120 to 160 characters and summarize the article clearly. If it is too short, expand it. If too long, rephrase it — do not cut it.',
+      'If content is under 2,000 words, expand it significantly with unique practical sections, real examples, FAQs, and next steps until it reaches at least 2,000 words.',
+      'Always include at least 2 internal links. Use the verified links provided. If fewer than 2 are provided, add links to /blog and /journal.',
+      'Always include a Frequently Asked Questions section with exactly 5 h3 questions inside it.',
+      'Always include at least one realistic example or scenario with "for example" or "for instance".',
+      'Always end with a section headed "What You Should Do Next" or "Conclusion" or "Next Steps".',
       'Do not repeat headings, paragraphs, or ideas.',
-      'Do not add fake internal links or source links.',
-      'Use only the verified internal links provided, and only if they fit naturally.',
-      'Include at least one realistic example or scenario.',
-      'Include a Frequently Asked Questions section with at least 3 questions.',
-      'End with a practical conclusion or next steps section.',
+      'Do not add fake external links or invented source URLs.',
       'Return HTML content using p, h2, h3, ul, li, and a tags only. Do not return markdown.'
     ],
     primary_keyword: params.primaryKeyword || '',
