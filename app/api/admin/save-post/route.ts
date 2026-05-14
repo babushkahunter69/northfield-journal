@@ -4,6 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { evaluatePublishGate } from '@/lib/admin/publish-gate';
 import { estimateReadingTime } from '@/lib/utils';
 import { getNorthfieldAuthorAssignment } from '@/lib/seo-authors';
+import { cleanSeoTitle, naturalMetaTitle, naturalMetaDescription, normalizeExistingArticleContent } from '@/lib/seo/finalize-article';
 
 function slugify(value: string) {
   return value
@@ -51,19 +52,31 @@ export async function POST(request: Request) {
     const body = await request.json().catch(() => null);
 
     const id = typeof body?.id === 'string' ? body.id.trim() : '';
-    const title = typeof body?.title === 'string' ? body.title.trim() : '';
+    const rawTitle = typeof body?.title === 'string' ? body.title.trim() : '';
+    const title = cleanSeoTitle(rawTitle);
     const excerpt = typeof body?.excerpt === 'string' ? body.excerpt.trim() : '';
-    const content = typeof body?.content === 'string' ? body.content.trim() : '';
+    const rawContent = typeof body?.content === 'string' ? body.content.trim() : '';
+    const primary_keyword =
+      typeof body?.primary_keyword === 'string' ? body.primary_keyword.trim() : '';
+    const content = normalizeExistingArticleContent({
+      title,
+      content: rawContent,
+      primaryKeyword: primary_keyword || title
+    });
     const status = body?.status === 'published' ? 'published' : 'draft';
-    const meta_title = typeof body?.meta_title === 'string' ? body.meta_title.trim() : '';
-    const meta_description = typeof body?.meta_description === 'string' ? body.meta_description.trim() : '';
+    const meta_title = naturalMetaTitle(
+      typeof body?.meta_title === 'string' ? body.meta_title.trim() : title,
+      primary_keyword || title
+    );
+    const meta_description = naturalMetaDescription(
+      typeof body?.meta_description === 'string' ? body.meta_description.trim() : excerpt,
+      title,
+      primary_keyword || title
+    );
     const featured_image_url =
       typeof body?.featured_image_url === 'string' && body.featured_image_url.trim()
         ? body.featured_image_url.trim()
         : null;
-    const primary_keyword =
-      typeof body?.primary_keyword === 'string' ? body.primary_keyword.trim() : '';
-
     if (!title) {
       return NextResponse.json({ error: 'Title is required.' }, { status: 400 });
     }

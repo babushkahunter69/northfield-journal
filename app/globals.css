@@ -202,7 +202,7 @@ body {
 }
 
 .paper:hover {
-  box-shadow: 0 18px 50px rgba(15, 23, 42, 0.08);
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
 }
 
 /* =========================
@@ -535,7 +535,7 @@ html.dark .paper {
 }
 
 html.dark .paper:hover {
-  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
 }
 
 html.dark .eyebrow {
@@ -700,16 +700,16 @@ html.dark .hero-shell::before {
 }
 
 .feature-panel {
-  transition: all 0.2s ease;
+  transition: none;
 }
 
 .feature-panel:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.06);
+  transform: none;
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
 }
 
 html.dark .feature-panel:hover {
-  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.34);
+  box-shadow: 0 14px 40px rgba(0, 0, 0, 0.28);
 }
 
 .featured-lead-story > article {

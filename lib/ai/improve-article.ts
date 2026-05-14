@@ -328,35 +328,42 @@ function ensureExamples(content: string, primaryKeyword?: string | null) {
 <p>For example, a student working on ${topic.toLowerCase()} might start with a short checklist before beginning the assignment. The checklist could ask what the task requires, what materials are needed, and what the first small step should be. This turns a vague goal into a repeatable routine.</p>`;
 }
 
+function shortAnchorLabel(path: string) {
+  const words = sentenceCase(path.replace(/^\/blog\//, '').replace(/-/g, ' '))
+    .split(/\s+/)
+    .filter(Boolean);
+  return words.slice(0, 8).join(' ');
+}
+
+function relatedGuideList(links: string[]) {
+  const unique = Array.from(new Set(links)).slice(0, 3);
+  const items = unique
+    .map((link) => `<li><a href="${link}">${shortAnchorLabel(link)}</a></li>`)
+    .join('');
+
+  return `<h2>Related Guides</h2>
+<p>Continue with these related Northfield Journal guides.</p>
+<ul>${items}</ul>`;
+}
+
 function ensureInternalLinks(content: string, suggestions?: string[]) {
   const currentCount = (String(content || '').match(/href=["']\/blog\/[a-z0-9][a-z0-9-]*["']/gi) || []).length;
   if (currentCount >= 2) return content;
 
   const links = uniqueLinks(suggestions);
 
-  // 2+ verified suggestions — use them directly
   if (links.length >= 2) {
-    const anchors = links.slice(0, 2).map((link) => {
-      const label = sentenceCase(link.replace(/^\/blog\//, '').replace(/-/g, ' '));
-      return `<a href="${link}">${label}</a>`;
-    });
     return `${content}
-<h2>Related Guides</h2>
-<p>Readers who want to keep building this skill may also find ${anchors.join(' and ')} useful.</p>`;
+${relatedGuideList(links)}`;
   }
 
-  // Exactly 1 — use it plus a generic journal link
   if (links.length === 1) {
-    const label = sentenceCase(links[0].replace(/^\/blog\//, '').replace(/-/g, ' '));
     return `${content}
-<h2>Related Guides</h2>
-<p>For more education strategies, explore <a href="${links[0]}">${label}</a> and browse the <a href="/blog">Northfield Journal blog</a> for practical guides on learning, study habits, and classroom support.</p>`;
+${relatedGuideList([links[0], '/blog'])}`;
   }
 
-  // No suggestions — use two generic site links that always exist
   return `${content}
-<h2>Related Guides</h2>
-<p>The <a href="/blog">Northfield Journal blog</a> covers a wide range of education topics. Visit the <a href="/journal">journal</a> to find practical advice on study habits, classroom strategies, homework support, and more for students, teachers, and families.</p>`;
+${relatedGuideList(['/blog', '/journal'])}`;
 }
 
 function headingText(headingHtml: string) {

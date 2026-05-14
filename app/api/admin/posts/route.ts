@@ -3,6 +3,7 @@ import { isCookieAdmin } from '@/lib/admin-auth';
 import { evaluatePublishGate } from '@/lib/admin/publish-gate';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { getNorthfieldAuthorAssignment } from '@/lib/seo-authors';
+import { cleanSeoTitle, naturalMetaTitle, naturalMetaDescription, normalizeExistingArticleContent } from '@/lib/seo/finalize-article';
 import {
   estimateReadingTime,
   excerptFromContent,
@@ -26,8 +27,16 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const title = String(body.title || '').trim();
-    const content = String(body.content || '').trim();
+    const rawTitle = String(body.title || '').trim();
+    const title = cleanSeoTitle(rawTitle);
+    const rawContent = String(body.content || '').trim();
+    const rawKeywords = splitKeywords(String(body.keywords || ''));
+    const primaryKeyword = rawKeywords.length > 0 ? String(rawKeywords[0]) : String(body.primary_keyword || '').trim();
+    const content = normalizeExistingArticleContent({
+      title,
+      content: rawContent,
+      primaryKeyword: primaryKeyword || title
+    });
 
     if (!title || !content) {
       return NextResponse.json(
@@ -38,10 +47,9 @@ export async function POST(request: Request) {
 
     const slug = String(body.slug || '').trim() || makeSlug(title);
     const requestedPublishedAt = String(body.published_at || '').trim();
-    const keywords = splitKeywords(String(body.keywords || ''));
+    const keywords = rawKeywords;
     const excerpt = String(body.excerpt || '').trim() || excerptFromContent(content, 180);
     const categoryHint = String(body.category || body.category_slug || '').trim();
-    const primaryKeyword = keywords.length > 0 ? String(keywords[0]) : String(body.primary_keyword || '').trim();
     const authorAssignment = getNorthfieldAuthorAssignment({
       primaryKeyword,
       keyword: primaryKeyword,
@@ -62,8 +70,8 @@ export async function POST(request: Request) {
       author_name: authorAssignment.author.name,
       author_bio: authorAssignment.author.bio,
       category_id: String(body.category_id || '').trim() || null,
-      meta_title: String(body.meta_title || '').trim() || title,
-      meta_description: String(body.meta_description || '').trim() || excerptFromContent(content, 155),
+      meta_title: naturalMetaTitle(String(body.meta_title || '').trim() || title, primaryKeyword || title),
+      meta_description: naturalMetaDescription(String(body.meta_description || '').trim() || excerpt, title, primaryKeyword || title),
       keywords,
       faq_json: Array.isArray(body.faq_json) ? body.faq_json : null,
       source_type: String(body.source_type || 'editorial').trim(),

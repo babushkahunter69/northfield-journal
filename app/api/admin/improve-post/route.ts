@@ -4,21 +4,8 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import { estimateReadingTime } from '@/lib/utils';
+import { normalizeArticleForSeo, countArticleWords } from '@/lib/seo/finalize-article';
 import { getPublishedInternalLinkSuggestions, repairInternalLinks } from '@/lib/content/internal-links';
-
-function stripHtml(html: string) {
-  return String(html || '')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-function countWords(html: string) {
-  const text = stripHtml(html);
-  return text ? text.split(/\s+/).filter(Boolean).length : 0;
-}
 
 export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
@@ -75,16 +62,18 @@ export async function POST(request: Request) {
           limit: 6
       }),
       minimumScore: 100,
-      maxPasses: 4
+      maxPasses: 1
     });
 
-    const improvedContent = await repairInternalLinks(improved.article.content || '', {
+    const finalizedArticle = normalizeArticleForSeo(improved.article, primaryKeyword);
+
+    const improvedContent = await repairInternalLinks(finalizedArticle.content || '', {
       excludeSlug: post.slug,
-      title: improved.article.title,
-      excerpt: improved.article.excerpt || '',
+      title: finalizedArticle.title,
+      excerpt: finalizedArticle.excerpt || '',
       keywords: Array.isArray(post.keywords) ? post.keywords : [],
     });
-    const improvedWordCount = countWords(improvedContent);
+    const improvedWordCount = countArticleWords(improvedContent);
 
     if (improvedWordCount < 2000) {
       return NextResponse.json(
@@ -99,12 +88,12 @@ export async function POST(request: Request) {
     }
 
     const updatePayload = {
-      title: improved.article.title,
-      excerpt: improved.article.excerpt,
+      title: finalizedArticle.title,
+      excerpt: finalizedArticle.excerpt,
       content: improvedContent,
       reading_time_minutes: estimateReadingTime(improvedContent),
-      meta_title: improved.article.meta_title,
-      meta_description: improved.article.meta_description,
+      meta_title: finalizedArticle.meta_title,
+      meta_description: finalizedArticle.meta_description,
       generation_status: 'improved_' + improved.after.score,
       updated_at: new Date().toISOString()
     };

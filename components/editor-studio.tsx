@@ -437,6 +437,41 @@ export function EditorStudio({
     window.location.reload();
   }
 
+
+  async function cleanupPost() {
+    if (!form.id) return;
+
+    setSaving(true);
+    setMessage('Cleaning saved article without AI...');
+
+    const res = await fetch('/api/admin/cleanup-post', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ post_id: form.id })
+    });
+
+    const data = await res.json().catch(() => null);
+    setSaving(false);
+
+    if (!res.ok) {
+      setMessage(data?.error || 'Cleanup failed.');
+      return;
+    }
+
+    if (data?.post) {
+      setForm((prev) => ({
+        ...prev,
+        title: data.post.title || prev.title,
+        excerpt: data.post.excerpt || prev.excerpt,
+        content: stripNofollowFromHtml(data.post.content || prev.content),
+        meta_title: data.post.meta_title || prev.meta_title,
+        meta_description: data.post.meta_description || prev.meta_description
+      }));
+    }
+
+    setMessage(`Cleaned saved article. Score: ${data?.score ?? 'updated'}.`);
+  }
+
   async function uploadImage(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -861,6 +896,17 @@ export function EditorStudio({
                 >
                   {saving ? 'Saving...' : form.id ? 'Save changes' : 'Create post'}
                 </button>
+
+                {form.id ? (
+                  <button
+                    type="button"
+                    onClick={cleanupPost}
+                    disabled={saving}
+                    className="rounded-2xl border border-slate-300 bg-white px-5 py-3 font-semibold text-slate-800 transition hover:bg-stone-50 disabled:opacity-70"
+                  >
+                    Clean saved article
+                  </button>
+                ) : null}
 
                 {form.id ? (
                   <button

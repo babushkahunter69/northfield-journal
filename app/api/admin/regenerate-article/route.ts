@@ -6,14 +6,7 @@ import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import type { ContentBriefRow, GeneratedBrief } from '@/lib/types';
 import { estimateReadingTime } from '@/lib/utils';
-
-function countWords(html: string) {
-  return String(html || '')
-    .replace(/<[^>]+>/g, ' ')
-    .trim()
-    .split(/\s+/)
-    .filter(Boolean).length;
-}
+import { normalizeArticleForSeo, countArticleWords } from '@/lib/seo/finalize-article';
 
 function toGeneratedBrief(
   brief: Partial<ContentBriefRow>,
@@ -130,21 +123,7 @@ export async function POST(request: Request) {
 
     let article = await generateArticle(briefInput);
 
-    // HARD ENFORCEMENT
-    // NEVER SAVE SHORT CONTENT
-
-    let attempts = 0;
-
-    while (
-      countWords(article.content) < 2000 &&
-      attempts < 2
-    ) {
-      article = await generateArticle(briefInput);
-      attempts += 1;
-    }
-
-    // deterministic repair pass
-    // no repeated AI credit burn
+    // One AI generation only. Deterministic repair handles length, structure, links, and SEO cleanup.
 
     const improved = await improveArticleToThreshold({
       article,
@@ -160,9 +139,12 @@ export async function POST(request: Request) {
       maxPasses: 1
     });
 
-    article = improved.article;
+    article = normalizeArticleForSeo(
+      improved.article,
+      brief?.working_title || post.title || post.slug.replace(/-/g, ' ')
+    );
 
-    const finalWordCount = countWords(article.content);
+    const finalWordCount = countArticleWords(article.content);
 
     if (finalWordCount < 2000) {
       return NextResponse.json(

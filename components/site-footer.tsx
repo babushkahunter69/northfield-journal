@@ -31,11 +31,13 @@ export function SiteFooter() {
           <div>
             <p className="site-footer__heading">Explore</p>
             <div className="site-footer__links">
-              {siteConfig.nav.map((item) => (
-                <Link key={item.href} href={item.href}>
-                  {item.label}
-                </Link>
-              ))}
+              {siteConfig.nav
+                .filter((item) => item.href !== '/guest-post')
+                .map((item) => (
+                  <Link key={item.href} href={item.href}>
+                    {item.label}
+                  </Link>
+                ))}
             </div>
           </div>
 
@@ -46,6 +48,7 @@ export function SiteFooter() {
               <Link href="/about">About</Link>
               <Link href="/contact">Contact</Link>
               <Link href="/privacy-policy">Privacy policy</Link>
+              <Link href="/admin/login" rel="nofollow">Editor login</Link>
             </div>
           </div>
         </div>

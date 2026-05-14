@@ -5,6 +5,7 @@ import { improveArticleToThreshold } from '@/lib/ai/improve-article';
 import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import { estimateReadingTime } from '@/lib/utils';
 import { getPublishedInternalLinkSuggestions, repairInternalLinks } from '@/lib/content/internal-links';
+import { normalizeArticleForSeo } from '@/lib/seo/finalize-article';
 
 export async function POST(
   _request: Request,
@@ -68,25 +69,27 @@ export async function POST(
           limit: 6
       }),
       minimumScore: 90,
-      maxPasses: 2
+      maxPasses: 1
     });
 
-    const repairedContent = await repairInternalLinks(improved.article.content, {
+    const finalizedArticle = normalizeArticleForSeo(improved.article, primaryKeyword);
+
+    const repairedContent = await repairInternalLinks(finalizedArticle.content, {
       excludeSlug: post.slug,
-      title: improved.article.title,
-      excerpt: improved.article.excerpt || '',
+      title: finalizedArticle.title,
+      excerpt: finalizedArticle.excerpt || '',
       keywords: Array.isArray(post.keywords) ? post.keywords : [],
     });
 
     const updateResponse = await supabaseAdmin
       .from('posts')
       .update({
-        title: improved.article.title,
-        excerpt: improved.article.excerpt,
+        title: finalizedArticle.title,
+        excerpt: finalizedArticle.excerpt,
         content: repairedContent,
         reading_time_minutes: estimateReadingTime(repairedContent),
-        meta_title: improved.article.meta_title,
-        meta_description: improved.article.meta_description,
+        meta_title: finalizedArticle.meta_title,
+        meta_description: finalizedArticle.meta_description,
         generation_status: `seo_fixed_${improved.after.score}`,
         updated_at: new Date().toISOString()
       })

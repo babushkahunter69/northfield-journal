@@ -18,6 +18,9 @@ export type EditorialScoreResult = {
     titleLength: number;
     metaTitleLength: number;
     metaDescriptionLength: number;
+    quickSummarySections: number;
+    genericImageHost: boolean;
+    fakeSourceSections: number;
   };
 };
 
@@ -86,6 +89,31 @@ function hasExamples(text: string) {
   return /(for example|for instance|example:|scenario|consider this|imagine a student|suppose a student)/i.test(text);
 }
 
+function countQuickSummarySections(html: string) {
+  const matches = String(html || '').match(/<h[23][^>]*>\s*(quick summary|quick answer|key takeaways|key insights|important notes|what to know)\s*<\/h[23]>/gi);
+  return matches ? matches.length : 0;
+}
+
+function countFakeSourceSections(html: string) {
+  const matches = String(html || '').match(/<h[23][^>]*>\s*(sources|related resources|additional resources|references)\s*<\/h[23]>/gi);
+  return matches ? matches.length : 0;
+}
+
+function hasGenericImageHost(url?: string | null) {
+  const value = String(url || '').trim();
+  if (!value) return false;
+  try {
+    const host = new URL(value).hostname.replace(/^www\./, '');
+    return ['pexels.com', 'images.pexels.com', 'unsplash.com', 'images.unsplash.com', 'pixabay.com'].some((blocked) => host === blocked || host.endsWith(`.${blocked}`));
+  } catch {
+    return false;
+  }
+}
+
+function hasBadTitleDelimiter(value: string) {
+  return /\s[|–—]\s/.test(String(value || ''));
+}
+
 function hasConclusion(html: string) {
   return /<h[23][^>]*>\s*(conclusion|final thoughts|next steps|what to do next|closing thoughts|what you should do next)\s*<\/h[23]>/i.test(html);
 }
@@ -119,7 +147,10 @@ export function evaluateEditorialScore(input: Input): EditorialScoreResult {
     faqHeadings: countFaqHeadings(content),
     titleLength: title.length,
     metaTitleLength: metaTitle.length,
-    metaDescriptionLength: metaDescription.length
+    metaDescriptionLength: metaDescription.length,
+    quickSummarySections: countQuickSummarySections(content),
+    genericImageHost: hasGenericImageHost(input.featuredImageUrl),
+    fakeSourceSections: countFakeSourceSections(content)
   };
 
   const keywordCheck = keywordAppearsNaturally(title, excerpt, content, input.primaryKeyword);
@@ -128,10 +159,18 @@ export function evaluateEditorialScore(input: Input): EditorialScoreResult {
   const checks: EditorialCheck[] = [
     { key: 'title_exists', label: 'Title exists', passed: Boolean(title), weight: 8 },
     {
+      key: 'title_clean_delimiters', label: 'Title has no pipe or em dash separator', passed: !hasBadTitleDelimiter(title),
+      hint: 'Remove brand suffixes, pipe delimiters, and em dash separators from article titles.', weight: 8
+    },
+    {
       key: 'title_length', label: 'Title length looks healthy', passed: stats.titleLength >= 35 && stats.titleLength <= 70,
       hint: 'Aim for 35–70 characters.', detail: `${stats.titleLength} characters`, weight: 8
     },
     { key: 'excerpt_exists', label: 'Excerpt exists', passed: Boolean(excerpt), weight: 6 },
+    {
+      key: 'meta_title_clean_delimiters', label: 'Meta title has no brand-style separator', passed: !hasBadTitleDelimiter(metaTitle) && !/northfield journal$/i.test(metaTitle),
+      hint: 'Do not append Northfield Journal or use pipe/em dash separators in meta titles.', weight: 6
+    },
     {
       key: 'meta_title_length', label: 'Meta title length looks healthy', passed: stats.metaTitleLength >= 40 && stats.metaTitleLength <= 65,
       hint: 'Aim for 40–65 characters.', detail: `${stats.metaTitleLength} characters`, weight: 6
@@ -156,8 +195,20 @@ export function evaluateEditorialScore(input: Input): EditorialScoreResult {
       key: 'featured_image', label: 'Has featured image', passed: Boolean(input.featuredImageUrl), weight: 6
     },
     {
+      key: 'local_featured_image', label: 'Featured image avoids generic stock hosts', passed: Boolean(input.featuredImageUrl) && !stats.genericImageHost,
+      hint: 'Host article images locally under /images or another owned CDN path.', weight: 6
+    },
+    {
       key: 'keyword', label: 'Keyword appears naturally', passed: keywordCheck.passed,
       hint: 'Include the keyword in the title and first paragraph.', detail: keywordCheck.detail, weight: 10
+    },
+    {
+      key: 'single_quick_summary', label: 'Uses one skim-friendly summary section', passed: stats.quickSummarySections === 1,
+      hint: 'Use one Quick Summary section only. Remove duplicate takeaway-style blocks.', detail: `${stats.quickSummarySections} summary-style sections`, weight: 8
+    },
+    {
+      key: 'no_fake_sources', label: 'No fake sources or generic resource section', passed: stats.fakeSourceSections === 0,
+      hint: 'Remove Sources, References, Related Resources, or Additional Resources unless links are verified.', detail: `${stats.fakeSourceSections} source-style sections`, weight: 8
     },
     {
       key: 'structure', label: 'Has clear section structure', passed: stats.headings >= 4,

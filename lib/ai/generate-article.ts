@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { GeneratedArticle, GeneratedBrief } from '@/lib/types';
+import { normalizeArticleForSeo } from '@/lib/seo/finalize-article';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -157,12 +158,8 @@ function ensureRequiredHeadings(article: GeneratedArticle, brief: EducationBrief
 
   const sections: Array<{ heading: string; html: string }> = [
     {
-      heading: 'Quick Answer',
-      html: `<h2>Quick Answer</h2><p>The best way to approach ${topic} is to start with a clear purpose, use a simple repeatable process, and review progress regularly. Students usually improve faster when the strategy is specific, realistic, and easy to practice consistently.</p>`
-    },
-    {
-      heading: 'Key Takeaways',
-      html: `<h2>Key Takeaways</h2><ul><li>Focus on one practical strategy before adding more.</li><li>Use examples, feedback, and short practice cycles to improve.</li><li>Measure progress by confidence, consistency, and quality of work, not only grades.</li></ul>`
+      heading: 'Quick Summary',
+      html: `<h2>Quick Summary</h2><p>The best way to approach ${topic} is to start with a clear purpose, use a simple repeatable process, and review progress regularly. Students usually improve faster when the strategy is specific, realistic, and easy to practice consistently.</p><ul><li>Focus on one practical strategy before adding more.</li><li>Use examples, feedback, and short practice cycles to improve.</li><li>Measure progress by confidence, consistency, and quality of work, not only grades.</li></ul>`
     },
     {
       heading: 'Why This Matters',
@@ -404,13 +401,15 @@ Mandatory rules:
 - Do not add external source links unless exact URLs are provided by the system. Do not invent Sources, Related Resources, or Additional Resources sections.
 - Use the exact heading <h2>What You Should Do Next</h2>.
 - Do not use the heading "Next Steps".
+- Do not use Key Takeaways, Key Insights, Important Notes, or What to Know headings. Use one Quick Summary section only.
+- Do not use em dashes or pipe delimiters in titles or meta titles.
+- Do not append Northfield Journal to article titles or meta titles.
 - Do not awkwardly force the exact keyword phrase.
 - Use natural variations of the topic instead of keyword stuffing.
 - Avoid generic filler and hype. Use concrete classroom, student, and parent examples to create depth.
 
 Required sections:
-<h2>Quick Answer</h2>
-<h2>Key Takeaways</h2>
+<h2>Quick Summary</h2>
 <h2>Why This Matters</h2>
 <h2>Step-by-Step Explanation</h2>
 <h2>Real Examples</h2>
@@ -435,5 +434,5 @@ async function callModel(prompt: string) {
 export async function generateArticle(brief: EducationBrief): Promise<GeneratedArticle> {
   const text = await callModel(buildPrompt(brief));
   const parsed = safeParse(text);
-  return normalizeArticle(parsed, brief);
+  return normalizeArticleForSeo(normalizeArticle(parsed, brief), brief.working_title || brief.slug);
 }

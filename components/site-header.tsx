@@ -59,10 +59,6 @@ export function SiteHeader() {
             <Link href="/guest-post" className="button-secondary site-header__submit-link">
               Submit a piece
             </Link>
-
-            <Link href="/admin/login" className="button-primary site-header__login-link">
-              Editor login
-            </Link>
           </div>
         </div>
       </div>
