@@ -55,10 +55,6 @@ export function SiteHeader() {
 
           <div className="site-header__actions">
             <ThemeToggler />
-
-            <Link href="/guest-post" className="button-secondary site-header__submit-link">
-              Submit a piece
-            </Link>
           </div>
         </div>
       </div>
