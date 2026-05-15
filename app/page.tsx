@@ -19,14 +19,14 @@ const siteUrl = 'https://northfieldjournal.com';
 const socialImage = '/opengraph-image';
 
 export const metadata: Metadata = {
-  title: 'Northfield Journal',
+  title: 'Northfield Journal | Learning, Teaching & Academic Guidance',
   description:
     'Thoughtful, practical writing on education, teaching, learning, and school life for students, educators, and academic readers.',
   alternates: {
     canonical: '/'
   },
   openGraph: {
-    title: 'Northfield Journal',
+    title: 'Northfield Journal | Learning, Teaching & Academic Guidance',
     description:
       'Thoughtful, practical writing on education, teaching, learning, and school life for students, educators, and academic readers.',
     url: siteUrl,
@@ -42,7 +42,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Northfield Journal',
+    title: 'Northfield Journal | Learning, Teaching & Academic Guidance',
     description:
       'Thoughtful, practical writing on education, teaching, learning, and school life for students, educators, and academic readers.',
     images: [socialImage]
@@ -192,7 +192,7 @@ export default async function HomePage() {
                     {normalizeLabel(item.title)}
                   </span>
                 </div>
-                <h2 className="mt-4 text-xl font-bold text-slate-900">{item.title}</h2>
+                <p className="mt-4 text-xl font-bold text-slate-900">{item.title}</p>
                 <p className="mt-3 text-sm leading-7 text-slate-600">{item.description}</p>
               </div>
             );
@@ -235,9 +235,9 @@ export default async function HomePage() {
               <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
                 From the editor
               </p>
-              <h3 className="display-font mt-4 text-3xl font-semibold tracking-tight text-slate-900">
+              <p className="display-font mt-4 text-3xl font-semibold tracking-tight text-slate-900">
                 Writing that rewards attention.
-              </h3>
+              </p>
               <p className="mt-4 text-sm leading-7 text-slate-600">
                 We publish work meant to be useful, revisited, and shared — not just scanned and forgotten.
               </p>
@@ -260,7 +260,7 @@ export default async function HomePage() {
                         {normalizeLabel(pillar.title)}
                       </span>
                     </div>
-                    <h3 className="font-semibold text-slate-900">{pillar.title}</h3>
+                    <p className="font-semibold text-slate-900">{pillar.title}</p>
                     <p className="mt-2 text-sm leading-7 text-slate-600">{pillar.description}</p>
                   </div>
                 ))}
@@ -304,9 +304,9 @@ export default async function HomePage() {
         <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
           <div className="paper p-7 sm:p-8">
             <span className="eyebrow">About the journal</span>
-            <h2 className="display-font mt-5 text-4xl font-semibold text-slate-900">
+            <p className="display-font mt-5 text-4xl font-semibold text-slate-900">
               Writing that values clarity and substance.
-            </h2>
+            </p>
             <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
               Northfield Journal focuses on ideas that are thoughtful, practical, and grounded in
               real experience. We prioritize work that readers can return to, not just scroll past.
@@ -315,9 +315,9 @@ export default async function HomePage() {
 
           <div className="paper p-7 sm:p-8">
             <span className="eyebrow">Contribute</span>
-            <h2 className="display-font mt-5 text-4xl font-semibold text-slate-900">
+            <p className="display-font mt-5 text-4xl font-semibold text-slate-900">
               Share ideas that help readers think better.
-            </h2>
+            </p>
             <p className="mt-4 text-base leading-8 text-slate-600">
               We welcome clear, grounded writing from educators, tutors, researchers, and thoughtful
               contributors with something real to say.
