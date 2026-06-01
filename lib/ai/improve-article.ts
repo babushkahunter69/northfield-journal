@@ -598,19 +598,37 @@ export async function improveArticleToThreshold(input: ImproveInput) {
   const minimumScore = input.minimumScore ?? 100;
 
   const before = scoreCurrent({ article: current, primaryKeyword: input.primaryKeyword });
-  const failed = pickFailedChecks(before.checks);
+  let aiUsed = false;
 
+  // First try the local fixer. This costs no AI tokens and handles most checklist items:
+  // title/meta length, keyword placement, structure, FAQ, internal links, conclusion,
+  // robotic wording, duplicate sections, and minimum article length.
   current = await improveArticlePass({
     article: current,
-    failedChecks: failed,
+    failedChecks: pickFailedChecks(before.checks),
     primaryKeyword: input.primaryKeyword,
     internalLinkSuggestions: input.internalLinkSuggestions,
-    useAi: true
+    useAi: false
   });
 
-  // No more AI calls after the first pass. These are local-only cleanup passes.
+  let latest = scoreCurrent({ article: current, primaryKeyword: input.primaryKeyword });
+
+  // Use AI at most once, and only if local fixes did not fully pass the editorial checks.
+  // This prevents repeated token/credit spend when the button is clicked again.
+  if (latest.score < minimumScore || latest.stats.wordCount < MIN_WORDS) {
+    current = await improveArticlePass({
+      article: current,
+      failedChecks: pickFailedChecks(latest.checks),
+      primaryKeyword: input.primaryKeyword,
+      internalLinkSuggestions: input.internalLinkSuggestions,
+      useAi: true
+    });
+    aiUsed = true;
+  }
+
+  // No more AI calls after the optional single AI pass. These are local-only cleanup passes.
   for (let i = 0; i < 3; i += 1) {
-    const latest = scoreCurrent({ article: current, primaryKeyword: input.primaryKeyword });
+    latest = scoreCurrent({ article: current, primaryKeyword: input.primaryKeyword });
 
     if (latest.score >= minimumScore && latest.stats.wordCount >= MIN_WORDS) {
       break;
@@ -653,6 +671,7 @@ export async function improveArticleToThreshold(input: ImproveInput) {
     before,
     after,
     improved: after.score > before.score || after.stats.wordCount > before.stats.wordCount,
-    passes: 1
+    passes: 1,
+    aiUsed
   };
 }

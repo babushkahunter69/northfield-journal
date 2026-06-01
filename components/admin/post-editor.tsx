@@ -368,7 +368,7 @@ export function PostEditor({ post }: { post: Post }) {
         title: 'Article improved',
         description:
           typeof data?.after === 'number'
-            ? `The article was improved. Updated score: ${data.after}.`
+            ? `Updated score: ${data.after}. ${data?.aiUsed ? 'Used one AI pass.' : 'Fixed with local checks only.'}${data?.generatedCover ? ' Cover image added.' : ''}`
             : 'The article was improved successfully.'
       });
       router.refresh();

@@ -6,6 +6,7 @@ import { evaluateEditorialScore } from '@/lib/admin/editorial-score';
 import { estimateReadingTime } from '@/lib/utils';
 import { normalizeArticleForSeo, countArticleWords } from '@/lib/seo/finalize-article';
 import { getPublishedInternalLinkSuggestions, repairInternalLinks } from '@/lib/content/internal-links';
+import { createCoverForPost } from '@/lib/cover/create-cover';
 
 export async function POST(request: Request) {
   const allowed = await isCookieAdmin();
@@ -31,6 +32,21 @@ export async function POST(request: Request) {
     }
 
     const post = postResponse.data as any;
+
+    const imageUrl = String(post.featured_image_url || '').trim();
+    let generatedCoverUrl: string | null = null;
+    const needsOwnedCover = !imageUrl || /(^|\.)pexels\.com$|(^|\.)unsplash\.com$|(^|\.)pixabay\.com$/i.test((() => {
+      try { return new URL(imageUrl).hostname.replace(/^www\./, ''); } catch { return ''; }
+    })());
+
+    if (needsOwnedCover) {
+      generatedCoverUrl = await createCoverForPost({
+        title: post.title || post.slug.replace(/-/g, ' '),
+        categorySlug: 'student-success',
+        slug: post.slug
+      });
+    }
+
     const briefResponse = await supabaseAdmin
       .from('content_briefs')
       .select('working_title, slug, internal_links_json')
@@ -95,6 +111,7 @@ export async function POST(request: Request) {
       meta_title: finalizedArticle.meta_title,
       meta_description: finalizedArticle.meta_description,
       generation_status: 'improved_' + improved.after.score,
+      featured_image_url: generatedCoverUrl || post.featured_image_url,
       updated_at: new Date().toISOString()
     };
 
@@ -125,6 +142,8 @@ export async function POST(request: Request) {
       after: rescored.score,
       wordCount: rescored.stats.wordCount,
       remainingFailed: rescored.checks.filter((check) => !check.passed).map((check) => check.key),
+      aiUsed: Boolean((improved as any).aiUsed),
+      generatedCover: Boolean(generatedCoverUrl),
       post: updateResponse.data
     });
   } catch (error) {
