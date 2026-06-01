@@ -4,7 +4,11 @@ import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
 import { logAutomationEvent } from '@/lib/logging/automation';
 
 function isAuthorized(request: Request) {
-  return request.headers.get('authorization') === `Bearer ${process.env.CRON_SECRET}`;
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) return false;
+
+  const auth = request.headers.get('authorization')?.trim();
+  return auth === `Bearer ${secret}`;
 }
 
 export async function GET(request: Request) {
@@ -49,8 +53,9 @@ export async function GET(request: Request) {
       });
     }
 
+    const needed = Math.max(refillAmount, minQueueSize - queuedCount);
     const generated = await generateKeywordIdeas({
-      count: refillAmount,
+      count: Math.max(needed * 4, 80),
       focus: 'education',
       audience: 'mixed',
       grade_band: 'mixed'
@@ -71,6 +76,7 @@ export async function GET(request: Request) {
 
     const rows = generated
       .filter((item) => !existingSet.has(item.keyword.toLowerCase()))
+      .slice(0, needed)
       .map((item) => ({
         keyword: item.keyword,
         status: 'queued',

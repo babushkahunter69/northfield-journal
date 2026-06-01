@@ -33,6 +33,8 @@ type KeywordIdeaResponse = {
   ideas: GeneratedKeywordIdea[];
 };
 
+const MAX_KEYWORD_IDEAS = 120;
+
 const STRONG_KEYWORD_PATTERNS = [
   /^how to /i,
   /^why /i,
@@ -187,7 +189,7 @@ function deterministicKeywordIdeas(input: {
   audience?: string;
   grade_band?: string;
 }): GeneratedKeywordIdea[] {
-  const count = Math.max(1, Math.min(input.count ?? 20, 50));
+  const count = Math.max(1, Math.min(input.count ?? 20, MAX_KEYWORD_IDEAS));
   const rawFocus = String(input.focus || '').trim();
   const focusParts = rawFocus
     .split(/[,\n]/)
@@ -220,7 +222,16 @@ function deterministicKeywordIdeas(input: {
     { make: (t) => `how parents can help with ${t} without taking over`, audience: 'parents', grade_band: 'general', content_type: 'parent-guide', subject_area: 'parent support', priority: 91 },
     { make: (t) => `what is the best way to practice ${t} at home`, audience: 'students', grade_band: 'general', content_type: 'concept-explainer', subject_area: 'student success', priority: 90 },
     { make: (t) => `common ${t} mistakes students make and how to fix them`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'student success', priority: 89 },
-    { make: (t) => `guide to using ${t} for better classroom engagement`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'classroom teaching', priority: 88 }
+    { make: (t) => `guide to using ${t} for better classroom engagement`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'classroom teaching', priority: 88 },
+    { make: (t) => `step by step ${t} plan for independent learners`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'study skills', priority: 87 },
+    { make: (t) => `weekly ${t} checklist for students and parents`, audience: 'parents', grade_band: 'general', content_type: 'parent-guide', subject_area: 'parent support', priority: 86 },
+    { make: (t) => `simple ${t} activities teachers can use tomorrow`, audience: 'teachers', grade_band: 'general', content_type: 'resource-roundup', subject_area: 'teaching strategies', priority: 86 },
+    { make: (t) => `how to measure progress in ${t} without extra testing`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'instructional strategies', priority: 85 },
+    { make: (t) => `beginner friendly guide to ${t} for busy families`, audience: 'parents', grade_band: 'general', content_type: 'parent-guide', subject_area: 'parent support', priority: 84 },
+    { make: (t) => `classroom examples for improving ${t} in small groups`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'classroom teaching', priority: 83 },
+    { make: (t) => `home practice routine for better ${t} results`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'student success', priority: 82 },
+    { make: (t) => `questions students should ask when practicing ${t}`, audience: 'students', grade_band: 'general', content_type: 'concept-explainer', subject_area: 'student success', priority: 81 },
+    { make: (t) => `teacher checklist for planning ${t} lessons`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'lesson planning', priority: 80 }
   ];
 
   const candidates: Partial<GeneratedKeywordIdea>[] = [];
@@ -271,14 +282,14 @@ export async function generateKeywordIdeas(input: {
   audience?: string;
   grade_band?: string;
 }) {
-  const count = Math.max(1, Math.min(input.count ?? 20, 50));
+  const count = Math.max(1, Math.min(input.count ?? 20, MAX_KEYWORD_IDEAS));
   const useAi = process.env.KEYWORD_AI_MODE === 'true';
 
   if (!useAi) {
     return deterministicKeywordIdeas({ ...input, count });
   }
 
-  const requestCount = Math.min(count * 2, 80);
+  const requestCount = Math.min(count * 2, MAX_KEYWORD_IDEAS);
   const focus = String(input.focus || 'education').trim();
   const audience = String(input.audience || 'mixed').trim();
   const gradeBand = String(input.grade_band || 'mixed').trim();

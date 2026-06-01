@@ -25,6 +25,8 @@ Copy `.env.example` to `.env.local` and set:
 - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 - `SUPABASE_SERVICE_ROLE_KEY`
 - `ADMIN_EMAIL`
+- `CRON_SECRET` - required for Vercel Cron authorization
+- `OPENAI_API_KEY` - required for automated article generation
 - `NEXT_PUBLIC_STORAGE_BUCKET` (optional, defaults to `post-media`)
 - `NEXT_PUBLIC_ADSENSE_CLIENT` (optional until monetization)
 
@@ -49,6 +51,7 @@ npm run dev
 4. Add your custom domain in Vercel.
 5. Update `NEXT_PUBLIC_SITE_URL` to your final production URL.
 6. Redeploy so canonical tags, sitemap, and metadata point to the right domain.
+7. Confirm Vercel Cron Jobs shows both `/api/cron/refill-keywords` and `/api/cron/daily-draft`. The refill runs at 08:45 UTC, then drafting runs at 09:00 UTC.
 
 ## 6) Go-live checklist
 - Replace placeholder policy pages with final legal text

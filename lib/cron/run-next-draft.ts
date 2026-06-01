@@ -2,8 +2,11 @@ import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateDraftFromKeywordId } from '@/lib/content/queue';
 
 function isCronSecretValid(request: Request) {
-  const auth = request.headers.get('authorization');
-  return auth === `Bearer ${process.env.CRON_SECRET}`;
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) return false;
+
+  const auth = request.headers.get('authorization')?.trim();
+  return auth === `Bearer ${secret}`;
 }
 
 export function isCronAuthorized(request: Request) {

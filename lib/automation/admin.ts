@@ -14,9 +14,10 @@ export async function generateAutomationKeywords(input: {
   audience?: string;
   grade_band?: string;
 }) {
-  const count = Math.max(1, Math.min(Number(input.count || 20), 50));
+  const requestedCount = Math.max(1, Math.min(Number(input.count || 20), 50));
+  const generationCount = Math.max(requestedCount * 4, 60);
   const generated = await generateKeywordIdeas({
-    count,
+    count: generationCount,
     focus: clean(input.focus) || 'education',
     audience: clean(input.audience) || 'mixed',
     grade_band: clean(input.grade_band) || 'mixed'
@@ -59,7 +60,7 @@ export async function generateAutomationKeywords(input: {
     freshIdeas.push(item);
   }
 
-  const rows = freshIdeas.map((item) => ({
+  const rows = freshIdeas.slice(0, requestedCount).map((item) => ({
     keyword: item.keyword,
     status: 'review',
     priority: item.priority,
@@ -78,7 +79,7 @@ export async function generateAutomationKeywords(input: {
     return {
       success: true,
       inserted: 0,
-      skipped: skippedExistingKeyword + skippedExistingPost,
+      skipped: generated.length,
       duplicatePosts: skippedExistingPost,
       ideas: [],
       message: 'All generated keywords already exist or match existing posts.'
@@ -94,7 +95,7 @@ export async function generateAutomationKeywords(input: {
   return {
     success: true,
     inserted: insertedRows.length,
-    skipped: skippedExistingKeyword + skippedExistingPost,
+    skipped: generated.length - insertedRows.length,
     duplicatePosts: skippedExistingPost,
     ideas: insertedRows,
     message:

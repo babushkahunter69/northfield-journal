@@ -38,7 +38,7 @@ export function AutomationControls() {
         showAdminToast({
           type: 'success',
           title: 'Keywords generated',
-          description: `${data?.inserted ?? 0} new keyword ideas are ready for review.`
+          description: data?.message || `${data?.inserted ?? 0} new keyword ideas are ready for review. Skipped ${data?.skipped ?? 0}.`
         });
         router.push('/admin/keywords?generated=1');
         router.refresh();

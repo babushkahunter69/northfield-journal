@@ -19,7 +19,8 @@ export async function POST(request: Request) {
     const audience = normalizeText(body?.audience) || 'mixed';
     const gradeBand = normalizeText(body?.grade_band) || 'mixed';
 
-    const generated = await generateKeywordIdeas({ count, focus, audience, grade_band: gradeBand });
+    const requestedCount = count;
+    const generated = await generateKeywordIdeas({ count: Math.max(requestedCount * 4, 60), focus, audience, grade_band: gradeBand });
 
     if (generated.length === 0) {
       return NextResponse.json({ error: 'No keyword ideas were generated.' }, { status: 500 });
@@ -36,6 +37,7 @@ export async function POST(request: Request) {
     const existingSet = new Set((existing || []).map((row) => String(row.keyword || '').toLowerCase()));
     const rows = generated
       .filter((item) => !existingSet.has(item.keyword.toLowerCase()))
+      .slice(0, requestedCount)
       .map((item) => ({
         keyword: item.keyword,
         status: 'review',

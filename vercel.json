@@ -1,6 +1,10 @@
 {
   "crons": [
     {
+      "path": "/api/cron/refill-keywords",
+      "schedule": "45 8 * * *"
+    },
+    {
       "path": "/api/cron/daily-draft",
       "schedule": "0 9 * * *"
     }
