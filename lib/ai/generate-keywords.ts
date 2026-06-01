@@ -1,4 +1,5 @@
 import { generateJson } from './client';
+import { diversifyKeywordIdeas } from './keyword-diversity';
 
 export type GeneratedKeywordIdea = {
   keyword: string;
@@ -59,23 +60,50 @@ const WEAK_KEYWORDS = [
 ];
 
 const EDUCATION_SEED_KEYWORDS: Array<Partial<GeneratedKeywordIdea>> = [
-  { keyword: 'how to support students with learning disabilities in the classroom', audience: 'teachers', grade_band: 'general', subject_area: 'special education', content_type: 'teaching-strategy', cluster: 'teaching-strategies', priority: 96 },
-  { keyword: 'examples of classroom accommodations for students with adhd', audience: 'teachers', grade_band: 'general', subject_area: 'special education', content_type: 'teaching-strategy', cluster: 'teaching-strategies', priority: 95 },
-  { keyword: 'how parents can help with homework without taking over', audience: 'parents', grade_band: 'general', subject_area: 'homework support', content_type: 'parent-guide', cluster: 'parent-guides', priority: 94 },
-  { keyword: 'checklist for preparing for final exams in high school', audience: 'students', grade_band: 'high-school', subject_area: 'exam preparation', content_type: 'exam-prep', cluster: 'exam-prep', priority: 94 },
-  { keyword: 'how to improve reading comprehension in middle school', audience: 'students', grade_band: 'middle-school', subject_area: 'reading', content_type: 'study-guide', cluster: 'reading-skills', priority: 93 },
-  { keyword: 'strategies for helping struggling readers in elementary school', audience: 'teachers', grade_band: 'elementary', subject_area: 'reading intervention', content_type: 'teaching-strategy', cluster: 'reading-skills', priority: 93 },
-  { keyword: 'how to write a thesis statement for an argumentative essay', audience: 'students', grade_band: 'high-school', subject_area: 'writing', content_type: 'study-guide', cluster: 'academic-writing', priority: 92 },
-  { keyword: 'examples of good essay introductions for college students', audience: 'students', grade_band: 'college', subject_area: 'writing', content_type: 'concept-explainer', cluster: 'academic-writing', priority: 91 },
-  { keyword: 'best study schedule for high school students with busy activities', audience: 'students', grade_band: 'high-school', subject_area: 'study skills', content_type: 'study-guide', cluster: 'student-success', priority: 91 },
-  { keyword: 'how to use active recall for exam preparation', audience: 'students', grade_band: 'general', subject_area: 'study skills', content_type: 'exam-prep', cluster: 'exam-prep', priority: 90 },
-  { keyword: 'what is scaffolding in teaching with classroom examples', audience: 'teachers', grade_band: 'general', subject_area: 'instructional strategies', content_type: 'concept-explainer', cluster: 'teaching-strategies', priority: 90 },
-  { keyword: 'how to help a child who is falling behind in school', audience: 'parents', grade_band: 'elementary', subject_area: 'parent support', content_type: 'parent-guide', cluster: 'parent-guides', priority: 90 },
-  { keyword: 'strategies for teaching math word problems to struggling students', audience: 'teachers', grade_band: 'middle-school', subject_area: 'math', content_type: 'teaching-strategy', cluster: 'math-learning', priority: 89 },
-  { keyword: 'how to take better notes in college lectures', audience: 'students', grade_band: 'college', subject_area: 'study skills', content_type: 'study-guide', cluster: 'student-success', priority: 89 },
-  { keyword: 'examples of iep goals for reading comprehension', audience: 'teachers', grade_band: 'general', subject_area: 'special education', content_type: 'resource-roundup', cluster: 'reading-skills', priority: 88 },
-  { keyword: 'how to reduce test anxiety before final exams', audience: 'students', grade_band: 'general', subject_area: 'exam preparation', content_type: 'exam-prep', cluster: 'exam-prep', priority: 88 }
+  { keyword: 'how to support students with learning disabilities in the classroom', audience: 'teachers', grade_band: 'general', subject_area: 'special education', content_type: 'teaching-strategy', cluster: 'teaching-strategies', priority: 99 },
+  { keyword: 'examples of classroom accommodations for students with adhd', audience: 'teachers', grade_band: 'general', subject_area: 'special education', content_type: 'teaching-strategy', cluster: 'teaching-strategies', priority: 98 },
+  { keyword: 'how parents can help with homework without taking over', audience: 'parents', grade_band: 'general', subject_area: 'homework support', content_type: 'parent-guide', cluster: 'parent-guides', priority: 97 },
+  { keyword: 'checklist for preparing for final exams in high school', audience: 'students', grade_band: 'high-school', subject_area: 'exam preparation', content_type: 'exam-prep', cluster: 'exam-prep', priority: 96 },
+  { keyword: 'how to improve reading comprehension in middle school', audience: 'students', grade_band: 'middle-school', subject_area: 'reading', content_type: 'study-guide', cluster: 'reading-skills', priority: 95 },
+  { keyword: 'strategies for helping struggling readers in elementary school', audience: 'teachers', grade_band: 'elementary', subject_area: 'reading intervention', content_type: 'teaching-strategy', cluster: 'reading-skills', priority: 95 },
+  { keyword: 'how to write a thesis statement for an argumentative essay', audience: 'students', grade_band: 'high-school', subject_area: 'writing', content_type: 'study-guide', cluster: 'academic-writing', priority: 94 },
+  { keyword: 'examples of good essay introductions for college students', audience: 'students', grade_band: 'college', subject_area: 'writing', content_type: 'concept-explainer', cluster: 'academic-writing', priority: 93 },
+  { keyword: 'best study schedule for high school students with busy activities', audience: 'students', grade_band: 'high-school', subject_area: 'study skills', content_type: 'study-guide', cluster: 'student-success', priority: 92 },
+  { keyword: 'how to use active recall for exam preparation', audience: 'students', grade_band: 'general', subject_area: 'study skills', content_type: 'exam-prep', cluster: 'exam-prep', priority: 92 },
+  { keyword: 'what is scaffolding in teaching with classroom examples', audience: 'teachers', grade_band: 'general', subject_area: 'instructional strategies', content_type: 'concept-explainer', cluster: 'teaching-strategies', priority: 91 },
+  { keyword: 'how to help a child who is falling behind in school', audience: 'parents', grade_band: 'elementary', subject_area: 'parent support', content_type: 'parent-guide', cluster: 'parent-guides', priority: 91 },
+  { keyword: 'strategies for teaching math word problems to struggling students', audience: 'teachers', grade_band: 'middle-school', subject_area: 'math', content_type: 'teaching-strategy', cluster: 'math-learning', priority: 90 },
+  { keyword: 'how to take better notes in college lectures', audience: 'students', grade_band: 'college', subject_area: 'study skills', content_type: 'study-guide', cluster: 'student-success', priority: 90 },
+  { keyword: 'examples of iep goals for reading comprehension', audience: 'teachers', grade_band: 'general', subject_area: 'special education', content_type: 'resource-roundup', cluster: 'reading-skills', priority: 89 },
+  { keyword: 'how to reduce test anxiety before final exams', audience: 'students', grade_band: 'general', subject_area: 'exam preparation', content_type: 'exam-prep', cluster: 'exam-prep', priority: 89 },
+  { keyword: 'best apps for students to organize assignments', audience: 'students', grade_band: 'high-school', subject_area: 'edtech', content_type: 'edtech', cluster: 'edtech', priority: 88 },
+  { keyword: 'how to teach digital citizenship to middle school students', audience: 'teachers', grade_band: 'middle-school', subject_area: 'digital literacy', content_type: 'teaching-strategy', cluster: 'edtech', priority: 88 },
+  { keyword: 'what is differentiated instruction with examples for teachers', audience: 'teachers', grade_band: 'general', subject_area: 'instructional strategies', content_type: 'concept-explainer', cluster: 'teaching-strategies', priority: 87 },
+  { keyword: 'how to choose a college major when you are undecided', audience: 'students', grade_band: 'college', subject_area: 'career planning', content_type: 'career-guidance', cluster: 'career-guidance', priority: 87 },
+  { keyword: 'examples of formative assessment activities for quick feedback', audience: 'teachers', grade_band: 'general', subject_area: 'assessment', content_type: 'resource-roundup', cluster: 'teaching-strategies', priority: 86 },
+  { keyword: 'how to build vocabulary skills for better reading', audience: 'students', grade_band: 'middle-school', subject_area: 'reading', content_type: 'study-guide', cluster: 'reading-skills', priority: 86 },
+  { keyword: 'how to prepare for a parent teacher conference', audience: 'parents', grade_band: 'general', subject_area: 'school communication', content_type: 'parent-guide', cluster: 'parent-guides', priority: 85 },
+  { keyword: 'best note taking methods for online classes', audience: 'students', grade_band: 'college', subject_area: 'study skills', content_type: 'study-guide', cluster: 'student-success', priority: 85 },
+  { keyword: 'how to teach fractions to students who struggle with math', audience: 'teachers', grade_band: 'elementary', subject_area: 'math', content_type: 'teaching-strategy', cluster: 'math-learning', priority: 84 },
+  { keyword: 'examples of science fair project questions for middle school', audience: 'students', grade_band: 'middle-school', subject_area: 'science', content_type: 'resource-roundup', cluster: 'science-learning', priority: 84 },
+  { keyword: 'how to prevent plagiarism when using ai tools for school', audience: 'students', grade_band: 'college', subject_area: 'academic integrity', content_type: 'concept-explainer', cluster: 'academic-writing', priority: 83 },
+  { keyword: 'ways to improve classroom participation for quiet students', audience: 'teachers', grade_band: 'general', subject_area: 'classroom engagement', content_type: 'teaching-strategy', cluster: 'teaching-strategies', priority: 83 },
+  { keyword: 'how to create a simple homeschool schedule', audience: 'parents', grade_band: 'general', subject_area: 'homeschooling', content_type: 'parent-guide', cluster: 'parent-guides', priority: 82 },
+  { keyword: 'what is phonemic awareness and why does it matter', audience: 'parents', grade_band: 'elementary', subject_area: 'reading foundation', content_type: 'concept-explainer', cluster: 'reading-skills', priority: 82 },
+  { keyword: 'how to study for math tests without memorizing everything', audience: 'students', grade_band: 'high-school', subject_area: 'math', content_type: 'exam-prep', cluster: 'math-learning', priority: 81 },
+  { keyword: 'guide to career readiness activities for high school students', audience: 'teachers', grade_band: 'high-school', subject_area: 'career readiness', content_type: 'career-guidance', cluster: 'career-guidance', priority: 81 }
 ];
+
+const DEFAULT_FOCUS_PLACEHOLDERS = new Set([
+  '',
+  'education',
+  'study skills, exam prep, classroom teaching',
+  'exam prep, study skills, classroom teaching'
+]);
+
+function isDefaultFocus(value?: string) {
+  return DEFAULT_FOCUS_PLACEHOLDERS.has(String(value || '').toLowerCase().trim());
+}
 
 function inferCluster(input: {
   subject_area?: string;
@@ -191,19 +219,28 @@ function deterministicKeywordIdeas(input: {
 }): GeneratedKeywordIdea[] {
   const count = Math.max(1, Math.min(input.count ?? 20, MAX_KEYWORD_IDEAS));
   const rawFocus = String(input.focus || '').trim();
-  const focusParts = rawFocus
-    .split(/[,\n]/)
-    .map((part) => titleCaseWords(part.toLowerCase()))
-    .filter(Boolean);
+  const focusParts = isDefaultFocus(rawFocus)
+    ? []
+    : rawFocus
+        .split(/[,\n]/)
+        .map((part) => titleCaseWords(part.toLowerCase()))
+        .filter(Boolean);
 
-  const topics = (focusParts.length ? focusParts : ['study skills', 'exam prep', 'classroom teaching'])
-    .flatMap((topic) => {
-      const lower = topic.toLowerCase();
-      if (lower.includes('exam')) return [topic, 'final exam preparation', 'test anxiety strategies'];
-      if (lower.includes('classroom') || lower.includes('teaching')) return [topic, 'classroom management strategies', 'supporting struggling students'];
-      if (lower.includes('study')) return [topic, 'active recall study methods', 'student time management'];
-      return [topic];
-    });
+  const curated = EDUCATION_SEED_KEYWORDS.map(normalizeIdea).filter(
+    (item): item is GeneratedKeywordIdea => Boolean(item)
+  );
+
+  if (focusParts.length === 0) {
+    return diversifyKeywordIdeas(curated, { max: count, maxPerCluster: 3 });
+  }
+
+  const topics = focusParts.flatMap((topic) => {
+    const lower = topic.toLowerCase();
+    if (lower.includes('exam')) return [topic, 'test anxiety', 'active recall'];
+    if (lower.includes('classroom') || lower.includes('teaching')) return [topic, 'classroom participation', 'differentiated instruction'];
+    if (lower.includes('study')) return [topic, 'student time management', 'note taking'];
+    return [topic];
+  });
 
   const templates: Array<{
     make: (topic: string) => string;
@@ -213,25 +250,10 @@ function deterministicKeywordIdeas(input: {
     subject_area: string;
     priority: number;
   }> = [
-    { make: (t) => `how to improve ${t} for high school students`, audience: 'students', grade_band: 'high-school', content_type: 'study-guide', subject_area: 'study skills', priority: 96 },
-    { make: (t) => `best ${t} strategies for students who feel overwhelmed`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'student success', priority: 95 },
-    { make: (t) => `examples of ${t} routines students can actually follow`, audience: 'students', grade_band: 'general', content_type: 'resource-roundup', subject_area: 'study skills', priority: 94 },
-    { make: (t) => `checklist for building better ${t} habits before exams`, audience: 'students', grade_band: 'high-school', content_type: 'exam-prep', subject_area: 'exam preparation', priority: 94 },
-    { make: (t) => `how teachers can support students with weak ${t}`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'instructional strategies', priority: 93 },
-    { make: (t) => `strategies for teaching ${t} to struggling learners`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'teaching strategies', priority: 92 },
-    { make: (t) => `how parents can help with ${t} without taking over`, audience: 'parents', grade_band: 'general', content_type: 'parent-guide', subject_area: 'parent support', priority: 91 },
-    { make: (t) => `what is the best way to practice ${t} at home`, audience: 'students', grade_band: 'general', content_type: 'concept-explainer', subject_area: 'student success', priority: 90 },
-    { make: (t) => `common ${t} mistakes students make and how to fix them`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'student success', priority: 89 },
-    { make: (t) => `guide to using ${t} for better classroom engagement`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'classroom teaching', priority: 88 },
-    { make: (t) => `step by step ${t} plan for independent learners`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'study skills', priority: 87 },
-    { make: (t) => `weekly ${t} checklist for students and parents`, audience: 'parents', grade_band: 'general', content_type: 'parent-guide', subject_area: 'parent support', priority: 86 },
-    { make: (t) => `simple ${t} activities teachers can use tomorrow`, audience: 'teachers', grade_band: 'general', content_type: 'resource-roundup', subject_area: 'teaching strategies', priority: 86 },
-    { make: (t) => `how to measure progress in ${t} without extra testing`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'instructional strategies', priority: 85 },
-    { make: (t) => `beginner friendly guide to ${t} for busy families`, audience: 'parents', grade_band: 'general', content_type: 'parent-guide', subject_area: 'parent support', priority: 84 },
-    { make: (t) => `classroom examples for improving ${t} in small groups`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'classroom teaching', priority: 83 },
-    { make: (t) => `home practice routine for better ${t} results`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'student success', priority: 82 },
-    { make: (t) => `questions students should ask when practicing ${t}`, audience: 'students', grade_band: 'general', content_type: 'concept-explainer', subject_area: 'student success', priority: 81 },
-    { make: (t) => `teacher checklist for planning ${t} lessons`, audience: 'teachers', grade_band: 'general', content_type: 'teaching-strategy', subject_area: 'lesson planning', priority: 80 }
+    { make: (t) => `how to improve ${t} for students who need structure`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'study skills', priority: 91 },
+    { make: (t) => `examples of ${t} activities teachers can use tomorrow`, audience: 'teachers', grade_band: 'general', content_type: 'resource-roundup', subject_area: 'teaching strategies', priority: 89 },
+    { make: (t) => `how parents can support ${t} at home`, audience: 'parents', grade_band: 'general', content_type: 'parent-guide', subject_area: 'parent support', priority: 88 },
+    { make: (t) => `checklist for building better ${t} habits`, audience: 'students', grade_band: 'general', content_type: 'study-guide', subject_area: 'student success', priority: 87 }
   ];
 
   const candidates: Partial<GeneratedKeywordIdea>[] = [];
@@ -258,17 +280,11 @@ function deterministicKeywordIdeas(input: {
     }
   }
 
-  const seen = new Set<string>();
-  return [...candidates, ...EDUCATION_SEED_KEYWORDS]
+  const normalized = [...candidates, ...EDUCATION_SEED_KEYWORDS]
     .map(normalizeIdea)
-    .filter((item): item is GeneratedKeywordIdea => Boolean(item))
-    .filter((item) => {
-      const key = item.keyword.toLowerCase();
-      if (seen.has(key)) return false;
-      seen.add(key);
-      return true;
-    })
-    .slice(0, count);
+    .filter((item): item is GeneratedKeywordIdea => Boolean(item));
+
+  return diversifyKeywordIdeas(normalized, { max: count, maxPerCluster: 3 });
 }
 
 function isAbortLikeError(error: unknown) {
@@ -290,7 +306,7 @@ export async function generateKeywordIdeas(input: {
   }
 
   const requestCount = Math.min(count * 2, MAX_KEYWORD_IDEAS);
-  const focus = String(input.focus || 'education').trim();
+  const focus = isDefaultFocus(input.focus) ? 'broad education topics across students, teachers, parents, reading, writing, math, special education, edtech, career guidance, study skills, and classroom strategies' : String(input.focus || 'education').trim();
   const audience = String(input.audience || 'mixed').trim();
   const gradeBand = String(input.grade_band || 'mixed').trim();
 
@@ -317,6 +333,8 @@ Keyword requirements:
 - Avoid generic phrases like "education tips", "student success", "study better", or "learning advice".
 - Avoid awkward robotic phrases.
 - Avoid duplicate or near-duplicate ideas.
+- Do not create multiple keywords with the same search intent. One article idea per intent cluster only.
+- Keep the set diverse across audience, grade band, subject area, and content type.
 - Priority should be 70 to 100 based on SEO usefulness.
 
 Return JSON with exactly this shape:
@@ -341,17 +359,12 @@ Return JSON with exactly this shape:
 
   try {
     const result = await generateJson<KeywordIdeaResponse>(prompt);
-    const seen = new Set<string>();
-    const ideas = [...(result.ideas || []), ...EDUCATION_SEED_KEYWORDS]
-      .map(normalizeIdea)
-      .filter((item): item is GeneratedKeywordIdea => Boolean(item))
-      .filter((item) => {
-        const key = item.keyword.toLowerCase();
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-      })
-      .slice(0, count);
+    const ideas = diversifyKeywordIdeas(
+      [...(result.ideas || []), ...EDUCATION_SEED_KEYWORDS]
+        .map(normalizeIdea)
+        .filter((item): item is GeneratedKeywordIdea => Boolean(item)),
+      { max: count, maxPerCluster: 3 }
+    );
 
     return ideas.length > 0 ? ideas : deterministicKeywordIdeas({ ...input, count });
   } catch (error) {

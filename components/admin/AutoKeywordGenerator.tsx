@@ -15,7 +15,7 @@ type ResponseData = {
 export default function AutoKeywordGenerator() {
   const router = useRouter();
   const [count, setCount] = useState(20);
-  const [focus, setFocus] = useState('study skills, exam prep, classroom teaching');
+  const [focus, setFocus] = useState('');
   const [audience, setAudience] = useState('mixed');
   const [gradeBand, setGradeBand] = useState('mixed');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -70,7 +70,7 @@ export default function AutoKeywordGenerator() {
 
         <label className="grid gap-2">
           <span className="text-sm font-medium text-slate-700">Editorial focus</span>
-          <input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="exam prep, study skills, classroom teaching" className="rounded-[16px] border border-stone-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-slate-500" />
+          <input value={focus} onChange={(e) => setFocus(e.target.value)} placeholder="Leave blank for automatic diverse education topics" className="rounded-[16px] border border-stone-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-slate-500" />
         </label>
 
         <label className="grid gap-2">

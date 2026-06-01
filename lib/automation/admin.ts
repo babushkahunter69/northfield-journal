@@ -1,5 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
+import { diversifyKeywordIdeas, isNearDuplicateKeyword } from '@/lib/ai/keyword-diversity';
 import { generateDraftFromKeywordId } from '@/lib/content/queue';
 import { runDraftBatch } from '@/lib/cron/run-next-draft';
 import { findExistingPostForTopic } from '@/lib/content/duplicate-guard';
@@ -15,29 +16,34 @@ export async function generateAutomationKeywords(input: {
   grade_band?: string;
 }) {
   const requestedCount = Math.max(1, Math.min(Number(input.count || 20), 50));
-  const generationCount = Math.max(requestedCount * 4, 60);
-  const generated = await generateKeywordIdeas({
+  const generationCount = Math.max(requestedCount * 8, 120);
+  const generatedPool = await generateKeywordIdeas({
     count: generationCount,
-    focus: clean(input.focus) || 'education',
+    focus: clean(input.focus),
     audience: clean(input.audience) || 'mixed',
     grade_band: clean(input.grade_band) || 'mixed'
   });
 
-  if (generated.length === 0) {
+  if (generatedPool.length === 0) {
     return { success: true, inserted: 0, skipped: 0, duplicatePosts: 0, ideas: [], message: 'No keyword ideas were generated.' };
   }
 
-  const keywords = generated.map((item) => item.keyword.toLowerCase());
   const existingResponse = await supabaseAdmin
     .from('content_keywords')
     .select('keyword')
-    .in('keyword', keywords);
+    .neq('status', 'rejected')
+    .limit(2000);
 
   if (existingResponse.error) {
     throw new Error(existingResponse.error.message || 'Failed to check existing keywords.');
   }
 
-  const existingKeywords = new Set((existingResponse.data || []).map((row) => String(row.keyword || '').toLowerCase()));
+  const existingKeywordList = (existingResponse.data || []).map((row) => String(row.keyword || '').toLowerCase().trim()).filter(Boolean);
+  const generated = diversifyKeywordIdeas(generatedPool, {
+    max: requestedCount * 3,
+    existingKeywords: existingKeywordList,
+    maxPerCluster: 3
+  });
 
   const freshIdeas = [];
   let skippedExistingKeyword = 0;
@@ -46,7 +52,7 @@ export async function generateAutomationKeywords(input: {
   for (const item of generated) {
     const normalized = item.keyword.toLowerCase().trim();
 
-    if (existingKeywords.has(normalized)) {
+    if (existingKeywordList.some((keyword) => isNearDuplicateKeyword(keyword, normalized))) {
       skippedExistingKeyword += 1;
       continue;
     }
@@ -175,23 +181,32 @@ export async function cleanupDuplicateKeywords() {
   const response = await supabaseAdmin
     .from('content_keywords')
     .select('id, keyword, status, priority, created_at')
+    .in('status', ['review', 'queued'])
+    .order('priority', { ascending: false })
     .order('created_at', { ascending: true });
 
   if (response.error) {
     throw new Error(response.error.message || 'Failed to load keywords.');
   }
 
-  const seen = new Set<string>();
+  const kept: Array<{ keyword: string }> = [];
   const duplicateIds: string[] = [];
 
   for (const row of response.data || []) {
-    const key = String(row.keyword || '').toLowerCase().trim();
-    if (!key) continue;
-    if (seen.has(key)) duplicateIds.push(row.id);
-    else seen.add(key);
+    const keyword = String(row.keyword || '').toLowerCase().trim();
+    if (!keyword) continue;
+
+    if (kept.some((item) => isNearDuplicateKeyword(item.keyword, keyword))) {
+      duplicateIds.push(row.id);
+      continue;
+    }
+
+    kept.push({ keyword });
   }
 
-  if (duplicateIds.length === 0) return { success: true, deleted: 0 };
+  if (duplicateIds.length === 0) {
+    return { success: true, deleted: 0, message: 'No exact or near-duplicate keyword intents found.' };
+  }
 
   const deleteResponse = await supabaseAdmin
     .from('content_keywords')
@@ -202,5 +217,9 @@ export async function cleanupDuplicateKeywords() {
     throw new Error(deleteResponse.error.message || 'Failed to delete duplicate keywords.');
   }
 
-  return { success: true, deleted: duplicateIds.length };
+  return {
+    success: true,
+    deleted: duplicateIds.length,
+    message: `Deleted ${duplicateIds.length} duplicate keyword intent(s).`
+  };
 }

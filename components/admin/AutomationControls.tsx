@@ -17,7 +17,7 @@ async function safeJson(response: Response) {
 export function AutomationControls() {
   const router = useRouter();
   const [busy, setBusy] = useState<string | null>(null);
-  const [focus, setFocus] = useState('study skills, exam prep, classroom teaching');
+  const [focus, setFocus] = useState('');
   const [count, setCount] = useState(20);
 
   async function runAction(name: string, url: string, body: Record<string, unknown> = {}) {
@@ -94,7 +94,7 @@ export function AutomationControls() {
             value={focus}
             onChange={(event) => setFocus(event.target.value)}
             className="rounded-[16px] border border-stone-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none focus:border-slate-500"
-            placeholder="study skills, exam prep, classroom teaching"
+            placeholder="Leave blank for automatic diverse education topics"
           />
         </label>
         <label className="grid gap-2">
