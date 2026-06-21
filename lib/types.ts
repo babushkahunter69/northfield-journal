@@ -91,7 +91,7 @@ export type EditorPayload = {
   status: PostStatus;
 };
 
-export type ContentKeywordStatus = 'queued' | 'in_progress' | 'done' | 'skipped';
+export type ContentKeywordStatus = 'review' | 'queued' | 'in_progress' | 'done' | 'skipped' | 'rejected';
 
 export type ContentKeyword = {
   id: string;

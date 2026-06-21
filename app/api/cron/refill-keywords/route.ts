@@ -1,7 +1,5 @@
 import { NextResponse } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabase-admin';
-import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
-import { diversifyKeywordIdeas } from '@/lib/ai/keyword-diversity';
+import { refillQueuedKeywordBacklog } from '@/lib/automation/admin';
 import { logAutomationEvent } from '@/lib/logging/automation';
 
 function isAuthorized(request: Request) {
@@ -25,105 +23,25 @@ export async function GET(request: Request) {
   }
 
   try {
-    const minQueueSize = 30;
-    const refillAmount = 20;
-
-    const { count, error: countError } = await supabaseAdmin
-      .from('content_keywords')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'queued');
-
-    if (countError) throw countError;
-
-    const queuedCount = count ?? 0;
-
-    if (queuedCount >= minQueueSize) {
-      await logAutomationEvent({
-        source: 'cron:refill-keywords',
-        event_type: 'refill',
-        status: 'info',
-        message: 'Queue healthy, no refill needed',
-        meta: { queued_count: queuedCount, min_queue_size: minQueueSize }
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: 'Queue is healthy. No refill needed.',
-        queued_count: queuedCount,
-        inserted: 0
-      });
-    }
-
-    const needed = Math.max(refillAmount, minQueueSize - queuedCount);
-    const generatedPool = await generateKeywordIdeas({
-      count: Math.max(needed * 8, 120),
+    const result = await refillQueuedKeywordBacklog({
+      minQueueSize: 45,
+      refillAmount: 50,
       focus: '',
       audience: 'mixed',
       grade_band: 'mixed'
     });
 
-    const { data: existing, error: existingError } = await supabaseAdmin
-      .from('content_keywords')
-      .select('keyword')
-      .neq('status', 'rejected')
-      .limit(2000);
-
-    if (existingError) throw existingError;
-
-    const existingKeywords = (existing || [])
-      .map((row) => String(row.keyword || '').toLowerCase().trim())
-      .filter(Boolean);
-
-    const generated = diversifyKeywordIdeas(generatedPool, {
-      max: needed,
-      existingKeywords,
-      maxPerCluster: 3
-    });
-
-    const rows = generated.map((item) => ({
-      keyword: item.keyword,
-      status: 'queued',
-      priority: item.priority,
-      audience: item.audience,
-      grade_band: item.grade_band,
-      subject_area: item.subject_area,
-      content_type: item.content_type,
-      cluster: item.cluster,
-      target_country: item.target_country,
-      curriculum: item.curriculum,
-      learning_objective: item.learning_objective,
-      tone: item.tone
-    }));
-
-    if (rows.length > 0) {
-      const { error: insertError } = await supabaseAdmin
-        .from('content_keywords')
-        .insert(rows);
-
-      if (insertError) throw insertError;
-    }
-
     await logAutomationEvent({
       source: 'cron:refill-keywords',
       event_type: 'refill',
-      status: 'success',
-      message: `Keyword refill inserted ${rows.length} diverse keyword intents`,
-      meta: {
-        queued_count_before: queuedCount,
-        inserted: rows.length,
-        skipped: generatedPool.length - rows.length
-      }
+      status: result.inserted > 0 ? 'success' : 'info',
+      message: result.message,
+      meta: result
     });
 
-    return NextResponse.json({
-      success: true,
-      queued_count_before: queuedCount,
-      inserted: rows.length,
-      skipped: generatedPool.length - rows.length
-    });
+    return NextResponse.json(result);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'Keyword refill failed.';
+    const message = error instanceof Error ? error.message : 'Keyword refill failed.';
 
     await logAutomationEvent({
       source: 'cron:refill-keywords',

@@ -2,7 +2,9 @@ import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateKeywordIdeas } from '@/lib/ai/generate-keywords';
-import { diversifyKeywordIdeas } from '@/lib/ai/keyword-diversity';
+import { diversifyKeywordIdeas, isNearDuplicateKeyword } from '@/lib/ai/keyword-diversity';
+import { getBlockedKeywordTexts } from '@/lib/automation/keyword-blocklist';
+import { findExistingPostForTopic } from '@/lib/content/duplicate-guard';
 
 function normalizeText(value: unknown) {
   return String(value || '').trim();
@@ -40,17 +42,38 @@ export async function POST(request: Request) {
 
     if (existingError) throw existingError;
 
-    const existingKeywords = (existing || [])
-      .map((row) => String(row.keyword || '').toLowerCase().trim())
-      .filter(Boolean);
+    const blockedKeywords = await getBlockedKeywordTexts();
+    const existingKeywords = [
+      ...(existing || [])
+        .map((row) => String(row.keyword || '').toLowerCase().trim())
+        .filter(Boolean),
+      ...blockedKeywords
+    ];
 
     const ideas = diversifyKeywordIdeas(generatedPool, {
-      max: requestedCount,
+      max: requestedCount * 3,
       existingKeywords,
       maxPerCluster: 3
     });
 
-    const rows = ideas.map((item) => ({
+    const freshIdeas = [];
+    let duplicatePosts = 0;
+
+    for (const item of ideas) {
+      if (existingKeywords.some((keyword) => isNearDuplicateKeyword(keyword, item.keyword))) continue;
+
+      const duplicatePost = await findExistingPostForTopic(item.keyword);
+      if (duplicatePost) {
+        duplicatePosts += 1;
+        continue;
+      }
+
+      freshIdeas.push(item);
+      existingKeywords.push(item.keyword.toLowerCase().trim());
+      if (freshIdeas.length >= requestedCount) break;
+    }
+
+    const rows = freshIdeas.map((item) => ({
       keyword: item.keyword,
       status: 'review',
       priority: item.priority,
@@ -71,7 +94,7 @@ export async function POST(request: Request) {
         inserted: 0,
         skipped: generatedPool.length,
         ideas: [],
-        message: 'All generated keyword intents already exist. Clean duplicates or approve existing keywords before generating more.'
+        message: 'All generated keyword intents already exist, were rejected before, or already match existing posts. The generator blocked them before showing results.'
       });
     }
 
@@ -86,8 +109,9 @@ export async function POST(request: Request) {
       success: true,
       inserted: insertedRows?.length ?? rows.length,
       skipped: generatedPool.length - rows.length,
+      duplicatePosts,
       ideas: insertedRows ?? rows,
-      message: 'Generated diverse keyword ideas are ready for review.'
+      message: duplicatePosts > 0 ? `Generated diverse keyword ideas are ready for review. Skipped ${duplicatePosts} topic(s) that already have posts.` : 'Generated diverse keyword ideas are ready for review.'
     });
   } catch (error) {
     return NextResponse.json({ error: error instanceof Error ? error.message : 'Auto keyword generation failed.' }, { status: 500 });

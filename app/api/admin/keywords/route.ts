@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { isCookieAdmin } from '@/lib/admin-auth';
 import { supabaseAdmin } from '@/lib/supabase-admin';
+import { blockKeywordIdeas } from '@/lib/automation/keyword-blocklist';
 
 export async function GET() {
   const allowed = await isCookieAdmin();
@@ -52,6 +53,29 @@ export async function PATCH(request: Request) {
   if (!id) return NextResponse.json({ error: 'Keyword id is required.' }, { status: 400 });
   if (!['review', 'queued', 'skipped'].includes(status)) {
     return NextResponse.json({ error: 'Unsupported keyword status.' }, { status: 400 });
+  }
+
+  if (status === 'skipped') {
+    const existing = await supabaseAdmin
+      .from('content_keywords')
+      .select('*')
+      .eq('id', id)
+      .single();
+
+    if (existing.error) return NextResponse.json({ error: existing.error.message }, { status: 500 });
+
+    const blockResponse = await blockKeywordIdeas([{ keyword: existing.data.keyword, reason: 'manual_reject', original_status: existing.data.status }]);
+    if (!blockResponse.success) {
+      return NextResponse.json({ error: blockResponse.error || 'Run the keyword blocklist migration before deleting rejected keywords.' }, { status: 500 });
+    }
+
+    const deletion = await supabaseAdmin
+      .from('content_keywords')
+      .delete()
+      .eq('id', id);
+
+    if (deletion.error) return NextResponse.json({ error: deletion.error.message }, { status: 500 });
+    return NextResponse.json({ success: true, deleted: true, keyword: { ...existing.data, status: 'skipped' } });
   }
 
   const update = await supabaseAdmin

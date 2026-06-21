@@ -595,11 +595,14 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
     const message =
       error instanceof Error ? error.message : 'Draft generation failed.';
 
+    const isDuplicateSkip = /skipped duplicate/i.test(message);
+
     await supabaseAdmin
       .from('content_keywords')
       .update({
-        status: 'queued',
-        last_error: message
+        status: isDuplicateSkip ? 'skipped' : 'queued',
+        last_error: message,
+        last_attempted_at: new Date().toISOString()
       })
       .eq('id', keyword.id);
 

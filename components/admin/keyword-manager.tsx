@@ -68,7 +68,7 @@ function statusLabel(status: KeywordStatus) {
   if (status === 'review') return 'Needs review';
   if (status === 'queued') return 'Approved';
   if (status === 'done') return 'Drafted';
-  if (status === 'skipped') return 'Rejected';
+  if (status === 'skipped') return 'Rejected / blocked';
   return 'Drafting';
 }
 
@@ -207,11 +207,11 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
       const data = await response.json();
       if (!response.ok) throw new Error(data?.error || `${action} failed.`);
 
-      setKeywords((prev) => prev.map((keyword) => (keyword.id === item.id ? { ...keyword, status } : keyword)));
+      setKeywords((prev) => status === 'skipped' ? prev.filter((keyword) => keyword.id !== item.id) : prev.map((keyword) => (keyword.id === item.id ? { ...keyword, status } : keyword)));
       showAdminToast({
         type: 'success',
         title: status === 'queued' ? 'Keyword approved' : 'Keyword rejected',
-        description: status === 'queued' ? 'This keyword can now be drafted.' : 'This keyword will be skipped.'
+        description: status === 'queued' ? 'This keyword can now be drafted.' : 'This keyword was archived, deleted, and blocked from future generation.'
       });
     } catch (error) {
       showAdminToast({ type: 'error', title: `${action} failed`, description: error instanceof Error ? error.message : `${action} failed.` });
@@ -295,7 +295,7 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
             <p className="mt-2 text-3xl font-semibold text-[#0f172a]">{stats.done}</p>
           </button>
           <button type="button" onClick={() => setStatusFilter('skipped')} className="rounded-[22px] border border-[#e6dccd] bg-white p-4 text-left">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Rejected</p>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">Rejected / blocked</p>
             <p className="mt-2 text-3xl font-semibold text-[#0f172a]">{stats.skipped}</p>
           </button>
         </div>
@@ -307,7 +307,7 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
             <div>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-sky-800">Just generated</p>
               <h2 className="mt-2 font-serif text-3xl font-semibold text-[#0f172a]">Review these new keyword ideas</h2>
-              <p className="mt-2 text-sm leading-7 text-slate-600">Approved keywords move into Draft Next. Rejected keywords stay out of the article pipeline.</p>
+              <p className="mt-2 text-sm leading-7 text-slate-600">Approved keywords move into Draft Next. Rejected / blocked keywords stay out of the article pipeline.</p>
             </div>
             <div className="flex gap-2">
               <button type="button" onClick={() => bulkUpdateRecent('queued')} className="rounded-full bg-[#0f1b3d] px-4 py-2 text-sm font-semibold text-white">Approve all new</button>
@@ -330,7 +330,7 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
               <option value="review">Needs review</option>
               <option value="queued">Approved for drafting</option>
               <option value="done">Drafted</option>
-              <option value="skipped">Rejected</option>
+              <option value="skipped">Rejected / blocked</option>
               <option value="all">All keywords</option>
             </select>
           </label>
