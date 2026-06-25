@@ -10,8 +10,8 @@ export async function GET() {
   const response = await supabaseAdmin
     .from('content_keywords')
     .select('*')
-    .order('created_at', { ascending: false })
-    .order('priority', { ascending: false });
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: false });
 
   return NextResponse.json({ keywords: response.data ?? [] });
 }

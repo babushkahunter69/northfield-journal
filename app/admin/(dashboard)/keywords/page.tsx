@@ -8,8 +8,8 @@ export default async function AdminKeywordsPage() {
   const keywordsResponse = await supabaseAdmin
     .from('content_keywords')
     .select('*')
-    .order('created_at', { ascending: false })
-    .order('priority', { ascending: false });
+    .order('priority', { ascending: false })
+    .order('created_at', { ascending: false });
 
   return (
     <div className="space-y-8">
