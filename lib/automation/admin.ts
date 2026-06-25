@@ -34,31 +34,51 @@ async function getBlockedKeywordList() {
 async function addKeywordsToBlocklist(rows: Array<{ keyword: string; reason?: string }>) {
   if (rows.length === 0) return 0;
 
-  const payload = rows
-    .map((row) => {
-      const keyword = clean(row.keyword).toLowerCase();
-      return keyword
-        ? {
-            keyword,
-            intent_key: keywordIntentKey(keyword),
-            reason: clean(row.reason) || 'rejected'
-          }
-        : null;
-    })
-    .filter((row): row is { keyword: string; intent_key: string; reason: string } => Boolean(row));
+  const uniquePayload = new Map<string, { keyword: string; intent_key: string; reason: string }>();
 
+  for (const row of rows) {
+    const keyword = clean(row.keyword).toLowerCase();
+    if (!keyword) continue;
+
+    uniquePayload.set(keyword, {
+      keyword,
+      intent_key: keywordIntentKey(keyword),
+      reason: clean(row.reason) || 'rejected'
+    });
+  }
+
+  const payload = Array.from(uniquePayload.values());
   if (payload.length === 0) return 0;
+
+  const existingResponse = await supabaseAdmin
+    .from('content_keyword_blocks')
+    .select('keyword')
+    .in('keyword', payload.map((row) => row.keyword));
+
+  if (existingResponse.error) {
+    if (isMissingBlockTableError(existingResponse.error)) return 0;
+    throw new Error(existingResponse.error.message || 'Failed to check rejected keyword blocklist.');
+  }
+
+  const existing = new Set(
+    (existingResponse.data || [])
+      .map((row: { keyword?: string | null }) => clean(row.keyword).toLowerCase())
+      .filter(Boolean)
+  );
+
+  const rowsToInsert = payload.filter((row) => !existing.has(row.keyword));
+  if (rowsToInsert.length === 0) return 0;
 
   const response = await supabaseAdmin
     .from('content_keyword_blocks')
-    .upsert(payload, { onConflict: 'keyword' });
+    .insert(rowsToInsert);
 
   if (response.error) {
     if (isMissingBlockTableError(response.error)) return 0;
     throw new Error(response.error.message || 'Failed to update rejected keyword blocklist.');
   }
 
-  return payload.length;
+  return rowsToInsert.length;
 }
 
 export async function archiveAndDeleteRejectedKeywords() {
