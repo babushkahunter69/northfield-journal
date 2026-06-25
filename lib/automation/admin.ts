@@ -34,7 +34,7 @@ async function getBlockedKeywordList() {
 async function addKeywordsToBlocklist(rows: Array<{ keyword: string; reason?: string }>) {
   if (rows.length === 0) return 0;
 
-  const uniquePayload = new Map<string, { keyword: string; intent_key: string; reason: string }>();
+  const uniquePayload = new Map<string, { keyword: string; normalized_keyword: string; intent_key: string; reason: string }>();
 
   for (const row of rows) {
     const keyword = clean(row.keyword).toLowerCase();
@@ -42,6 +42,7 @@ async function addKeywordsToBlocklist(rows: Array<{ keyword: string; reason?: st
 
     uniquePayload.set(keyword, {
       keyword,
+      normalized_keyword: keyword,
       intent_key: keywordIntentKey(keyword),
       reason: clean(row.reason) || 'rejected'
     });
@@ -52,8 +53,8 @@ async function addKeywordsToBlocklist(rows: Array<{ keyword: string; reason?: st
 
   const existingResponse = await supabaseAdmin
     .from('content_keyword_blocks')
-    .select('keyword')
-    .in('keyword', payload.map((row) => row.keyword));
+    .select('normalized_keyword')
+    .in('normalized_keyword', payload.map((row) => row.normalized_keyword));
 
   if (existingResponse.error) {
     if (isMissingBlockTableError(existingResponse.error)) return 0;
@@ -62,11 +63,11 @@ async function addKeywordsToBlocklist(rows: Array<{ keyword: string; reason?: st
 
   const existing = new Set(
     (existingResponse.data || [])
-      .map((row: { keyword?: string | null }) => clean(row.keyword).toLowerCase())
+      .map((row: { normalized_keyword?: string | null }) => clean(row.normalized_keyword).toLowerCase())
       .filter(Boolean)
   );
 
-  const rowsToInsert = payload.filter((row) => !existing.has(row.keyword));
+  const rowsToInsert = payload.filter((row) => !existing.has(row.normalized_keyword));
   if (rowsToInsert.length === 0) return 0;
 
   const response = await supabaseAdmin
