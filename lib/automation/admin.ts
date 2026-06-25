@@ -77,10 +77,12 @@ export async function archiveAndDeleteRejectedKeywords() {
   }
 
   await addKeywordsToBlocklist(
-    rejected.map((row: { keyword?: string | null; status?: string | null }) => ({
-      keyword: row.keyword,
-      reason: row.status || 'rejected'
-    }))
+    rejected
+      .map((row: { keyword?: string | null; status?: string | null }) => ({
+        keyword: clean(row.keyword),
+        reason: row.status || 'rejected'
+      }))
+      .filter((row: { keyword: string; reason: string }): row is { keyword: string; reason: string } => Boolean(row.keyword))
   );
 
   const deleteResponse = await supabaseAdmin
