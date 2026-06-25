@@ -1,44 +1,26 @@
--- Stores deleted/rejected keyword intents so the generator does not bring them back.
+-- Keeps rejected and duplicate keyword intents out of future generation.
 create table if not exists public.content_keyword_blocks (
   id uuid primary key default gen_random_uuid(),
-  keyword text not null,
-  normalized_keyword text not null,
-  intent_key text not null,
+  keyword text not null unique,
+  intent_key text,
   reason text not null default 'rejected',
-  original_status text,
-  created_at timestamptz not null default now(),
-  last_seen_at timestamptz not null default now()
+  created_at timestamptz not null default now()
 );
 
-create unique index if not exists content_keyword_blocks_intent_key_uidx
-  on public.content_keyword_blocks (intent_key);
+create index if not exists content_keyword_blocks_intent_key_idx
+  on public.content_keyword_blocks(intent_key);
 
-create index if not exists content_keyword_blocks_normalized_keyword_idx
-  on public.content_keyword_blocks (normalized_keyword);
-
--- One-time cleanup: archive rejected/skipped keywords, then remove them from the active keyword table.
-insert into public.content_keyword_blocks (
-  keyword,
-  normalized_keyword,
-  intent_key,
-  reason,
-  original_status,
-  last_seen_at
-)
-select distinct on (lower(trim(keyword)))
-  keyword,
-  lower(regexp_replace(trim(keyword), '[^a-zA-Z0-9]+', ' ', 'g')),
-  lower(regexp_replace(trim(keyword), '[^a-zA-Z0-9]+', ' ', 'g')),
-  'rejected',
-  status,
-  now()
+-- Archive currently rejected/skipped keywords before removing them from the active queue.
+insert into public.content_keyword_blocks (keyword, intent_key, reason)
+select distinct
+  lower(trim(keyword)) as keyword,
+  null as intent_key,
+  coalesce(status, 'rejected') as reason
 from public.content_keywords
 where status in ('skipped', 'rejected')
-  and coalesce(trim(keyword), '') <> ''
-on conflict (intent_key) do update set
-  last_seen_at = excluded.last_seen_at,
-  reason = excluded.reason,
-  original_status = excluded.original_status;
+  and keyword is not null
+  and trim(keyword) <> ''
+on conflict (keyword) do nothing;
 
 delete from public.content_keywords
 where status in ('skipped', 'rejected');

@@ -184,7 +184,7 @@ async function getUniqueSlug(baseSlug: string) {
     throw new Error(error.message || 'Failed to check existing slugs.');
   }
 
-  const existing = new Set((data || []).map((row) => String(row.slug)));
+  const existing = new Set((data || []).map((row: { slug: string }) => String(row.slug)));
 
   if (!existing.has(cleanBase)) {
     return cleanBase;
@@ -595,14 +595,15 @@ export async function generateDraftFromKeyword(keyword: EducationKeyword) {
     const message =
       error instanceof Error ? error.message : 'Draft generation failed.';
 
-    const isDuplicateSkip = /skipped duplicate/i.test(message);
+    const duplicateOrBlocked = /duplicate|already exists|existing post|skipped duplicate/i.test(message);
+    const nextAttemptCount = (keyword.attempt_count ?? 0) + 1;
+    const nextStatus = duplicateOrBlocked || nextAttemptCount >= 2 ? 'skipped' : 'queued';
 
     await supabaseAdmin
       .from('content_keywords')
       .update({
-        status: isDuplicateSkip ? 'skipped' : 'queued',
-        last_error: message,
-        last_attempted_at: new Date().toISOString()
+        status: nextStatus,
+        last_error: message
       })
       .eq('id', keyword.id);
 

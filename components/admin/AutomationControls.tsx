@@ -38,9 +38,9 @@ export function AutomationControls() {
         showAdminToast({
           type: 'success',
           title: 'Keywords generated',
-          description: data?.message || `${data?.inserted ?? 0} new keyword ideas are ready for review. Skipped ${data?.skipped ?? 0}.`
+          description: data?.message || `${data?.inserted ?? 0} fresh keyword intents were added to the draft queue. Skipped ${data?.skipped ?? 0}.`
         });
-        router.push('/admin/keywords?generated=1');
+        router.push('/admin/keywords');
         router.refresh();
         return;
       }
@@ -83,7 +83,7 @@ export function AutomationControls() {
         <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#9a6730]">Automation</p>
         <h1 className="mt-3 font-serif text-4xl font-semibold tracking-tight text-[#0f172a]">Northfield Keyword to Draft Workflow</h1>
         <p className="mt-3 max-w-3xl text-base leading-8 text-slate-600">
-          Generate education keyword ideas, review them, approve the strongest topics, then draft from the approved queue.
+          Generate fresh education keyword ideas, refill the approved queue, and draft automatically.
         </p>
       </div>
 

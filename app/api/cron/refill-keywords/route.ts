@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { refillQueuedKeywordBacklog } from '@/lib/automation/admin';
+import { refillQueuedKeywords } from '@/lib/automation/admin';
 import { logAutomationEvent } from '@/lib/logging/automation';
 
 function isAuthorized(request: Request) {
@@ -23,19 +23,13 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await refillQueuedKeywordBacklog({
-      minQueueSize: 45,
-      refillAmount: 50,
-      focus: '',
-      audience: 'mixed',
-      grade_band: 'mixed'
-    });
+    const result = await refillQueuedKeywords({ minQueueSize: 45, refillAmount: 45 });
 
     await logAutomationEvent({
       source: 'cron:refill-keywords',
       event_type: 'refill',
-      status: result.inserted > 0 ? 'success' : 'info',
-      message: result.message,
+      status: 'success',
+      message: result.message || `Keyword refill inserted ${result.inserted || 0} keyword intents`,
       meta: result
     });
 
