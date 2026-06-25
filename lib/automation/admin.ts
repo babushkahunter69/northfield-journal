@@ -420,38 +420,48 @@ export async function cleanupDuplicateKeywords() {
   }
 
   const kept: Array<{ keyword: string }> = [];
-  const duplicateIds: string[] = [];
+  const duplicateIds = new Set<string>();
+  const duplicateReasons = new Map<string, string>();
 
   for (const row of (response.data || []) as Array<{ id: string; keyword?: string | null }>) {
     const keyword = String(row.keyword || '').toLowerCase().trim();
     if (!keyword) continue;
 
+    const duplicatePost = await findExistingPostForTopic(keyword);
+    if (duplicatePost) {
+      duplicateIds.add(row.id);
+      duplicateReasons.set(row.id, `existing_post:${duplicatePost.slug || duplicatePost.title}`);
+      continue;
+    }
+
     if (kept.some((item) => isNearDuplicateKeyword(item.keyword, keyword))) {
-      duplicateIds.push(row.id);
+      duplicateIds.add(row.id);
+      duplicateReasons.set(row.id, 'duplicate_intent');
       continue;
     }
 
     kept.push({ keyword });
   }
 
-  if (duplicateIds.length > 0) {
+  const duplicateIdList = Array.from(duplicateIds);
+  if (duplicateIdList.length > 0) {
     await addKeywordsToBlocklist(
       ((response.data || []) as Array<{ id: string; keyword?: string | null }>)
-        .filter((row) => duplicateIds.includes(row.id))
-        .map((row) => ({ keyword: row.keyword || '', reason: 'duplicate_intent' }))
+        .filter((row) => duplicateIds.has(row.id))
+        .map((row) => ({ keyword: row.keyword || '', reason: duplicateReasons.get(row.id) || 'duplicate_intent' }))
     );
 
     const deleteResponse = await supabaseAdmin
       .from('content_keywords')
       .delete()
-      .in('id', duplicateIds);
+      .in('id', duplicateIdList);
 
     if (deleteResponse.error) {
       throw new Error(deleteResponse.error.message || 'Failed to delete duplicate keywords.');
     }
   }
 
-  const totalDeleted = rejectedCleanup.deleted + duplicateIds.length;
+  const totalDeleted = rejectedCleanup.deleted + duplicateIdList.length;
   if (totalDeleted === 0) {
     return { success: true, deleted: 0, archived: 0, message: 'No rejected or duplicate keyword intents found.' };
   }
@@ -459,7 +469,7 @@ export async function cleanupDuplicateKeywords() {
   return {
     success: true,
     deleted: totalDeleted,
-    archived: rejectedCleanup.archived + duplicateIds.length,
+    archived: rejectedCleanup.archived + duplicateIdList.length,
     message: `Archived and deleted ${totalDeleted} rejected or duplicate keyword intent(s).`
   };
 }
