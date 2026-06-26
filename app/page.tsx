@@ -8,7 +8,6 @@ import {
   Sparkles
 } from 'lucide-react';
 import { PostCard } from '@/components/post-card';
-import { AdSenseSlot } from '@/components/adsense-slot';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { editorialPillars, siteConfig } from '@/lib/constants';
 import { getLatestPosts, getPublishedPosts } from '@/lib/data';
@@ -107,8 +106,8 @@ export default async function HomePage() {
 
   return (
     <div className="homepage-editorial">
-      <section className="container-shell pt-10 sm:pt-14">
-        <div className="paper hero-shell overflow-hidden px-6 py-10 sm:px-10 sm:py-14">
+      <section className="container-shell pt-4 sm:pt-6">
+        <div className="paper hero-shell overflow-hidden px-6 py-8 sm:px-10 sm:py-10">
           <div className="grid gap-10 lg:grid-cols-[1.15fr_0.85fr] lg:items-end">
             <div>
               <span className="eyebrow">Independent education publication</span>
@@ -156,7 +155,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="container-shell py-14">
+      <section className="container-shell py-8">
         <div className="grid gap-6 lg:grid-cols-4">
           {highlights.map((item) => {
             const Icon = item.icon;
@@ -176,11 +175,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      <section className="container-shell py-6">
-        <AdSenseSlot className="min-h-[120px]" />
-      </section>
-
-      <section className="container-shell py-14">
+      <section className="container-shell pt-4 pb-12">
         <div className="section-header-row flex flex-wrap items-end justify-between gap-4">
           <div>
             <span className="eyebrow">From the journal</span>
