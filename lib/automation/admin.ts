@@ -6,6 +6,8 @@ import { generateDraftFromKeywordId } from '@/lib/content/queue';
 import { runDraftBatch } from '@/lib/cron/run-next-draft';
 import { findExistingPostForTopic } from '@/lib/content/duplicate-guard';
 
+const DRAFTABLE_KEYWORD_STATUSES = ['queued', 'approved'];
+
 function clean(value: unknown) {
   return String(value || '').trim();
 }
@@ -282,7 +284,7 @@ export async function refillQueuedKeywords(input: {
   const { count, error: countError } = await supabaseAdmin
     .from('content_keywords')
     .select('*', { count: 'exact', head: true })
-    .eq('status', 'queued');
+    .in('status', DRAFTABLE_KEYWORD_STATUSES);
 
   if (countError) throw countError;
 
@@ -293,7 +295,7 @@ export async function refillQueuedKeywords(input: {
       queued_count_before: queuedCount,
       inserted: 0,
       skipped: 0,
-      message: 'Queue is healthy. No refill needed.'
+      message: 'Draft queue is healthy. No refill needed.'
     };
   }
 
@@ -320,7 +322,7 @@ export async function draftNextQueuedKeyword() {
   let nextResponse = await supabaseAdmin
     .from('content_keywords')
     .select('id, keyword')
-    .eq('status', 'queued')
+    .in('status', DRAFTABLE_KEYWORD_STATUSES)
     .order('priority', { ascending: false })
     .order('created_at', { ascending: true })
     .limit(10);
@@ -334,7 +336,7 @@ export async function draftNextQueuedKeyword() {
     nextResponse = await supabaseAdmin
       .from('content_keywords')
       .select('id, keyword')
-      .eq('status', 'queued')
+      .in('status', DRAFTABLE_KEYWORD_STATUSES)
       .order('priority', { ascending: false })
       .order('created_at', { ascending: true })
       .limit(10);

@@ -51,13 +51,13 @@ export async function PATCH(request: Request) {
   const status = String(body?.status || '').trim();
 
   if (!id) return NextResponse.json({ error: 'Keyword id is required.' }, { status: 400 });
-  if (!['review', 'queued', 'skipped'].includes(status)) {
+  if (!['review', 'queued', 'approved', 'skipped'].includes(status)) {
     return NextResponse.json({ error: 'Unsupported keyword status.' }, { status: 400 });
   }
 
   const update = await supabaseAdmin
     .from('content_keywords')
-    .update({ status })
+    .update({ status: status === 'approved' ? 'queued' : status })
     .eq('id', id)
     .select('*')
     .single();

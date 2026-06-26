@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { showAdminToast } from '@/lib/admin/toast';
 
-type KeywordStatus = 'review' | 'queued' | 'in_progress' | 'done' | 'skipped';
+type KeywordStatus = 'review' | 'queued' | 'approved' | 'in_progress' | 'done' | 'skipped';
 
 type ContentKeyword = {
   id: string;
@@ -52,6 +52,7 @@ function statusPill(status: KeywordStatus) {
     case 'review':
       return 'bg-sky-50 text-sky-800 border border-sky-200';
     case 'queued':
+    case 'approved':
       return 'bg-emerald-50 text-emerald-800 border border-emerald-200';
     case 'done':
       return 'bg-slate-100 text-slate-700 border border-slate-200';
@@ -66,7 +67,7 @@ function statusPill(status: KeywordStatus) {
 
 function statusLabel(status: KeywordStatus) {
   if (status === 'review') return 'Needs review';
-  if (status === 'queued') return 'Approved';
+  if (status === 'queued' || status === 'approved') return 'Approved';
   if (status === 'done') return 'Drafted';
   if (status === 'skipped') return 'Rejected';
   return 'Drafting';
@@ -112,7 +113,7 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
   const stats = useMemo(() => {
     return {
       review: keywords.filter((item) => item.status === 'review').length,
-      queued: keywords.filter((item) => item.status === 'queued').length,
+      queued: keywords.filter((item) => item.status === 'queued' || item.status === 'approved').length,
       done: keywords.filter((item) => item.status === 'done').length,
       skipped: keywords.filter((item) => item.status === 'skipped').length
     };
@@ -131,7 +132,11 @@ export function KeywordManager({ initialKeywords }: { initialKeywords: ContentKe
   const filteredKeywords = useMemo(() => {
     const term = search.trim().toLowerCase();
     return keywords
-      .filter((item) => (statusFilter === 'all' ? true : item.status === statusFilter))
+      .filter((item) => {
+        if (statusFilter === 'all') return true;
+        if (statusFilter === 'queued') return item.status === 'queued' || item.status === 'approved';
+        return item.status === statusFilter;
+      })
       .filter((item) => (clusterFilter === 'all' ? true : item.cluster === clusterFilter))
       .filter((item) => {
         if (!term) return true;

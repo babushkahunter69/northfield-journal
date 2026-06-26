@@ -1,6 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase-admin';
 import { generateDraftFromKeywordId } from '@/lib/content/queue';
 
+const DRAFTABLE_KEYWORD_STATUSES = ['queued', 'approved'];
+
 function isCronSecretValid(request: Request) {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) return false;
@@ -97,7 +99,7 @@ export async function runDraftBatch(limit = 3) {
       priority,
       created_at
     `)
-    .eq('status', 'queued')
+    .in('status', DRAFTABLE_KEYWORD_STATUSES)
     .order('priority', { ascending: false })
     .order('created_at', { ascending: true })
     .limit(safeLimit * 10);
@@ -109,7 +111,7 @@ export async function runDraftBatch(limit = 3) {
   if (!keywords || keywords.length === 0) {
     return {
       success: true,
-      message: 'No queued keywords found.',
+      message: 'No queued or approved keywords found.',
       processed: 0,
       succeeded: 0,
       failed: 0,
