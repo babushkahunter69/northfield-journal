@@ -11,7 +11,7 @@ import { PostCard } from '@/components/post-card';
 import { AdSenseSlot } from '@/components/adsense-slot';
 import { NewsletterForm } from '@/components/newsletter-form';
 import { editorialPillars, siteConfig } from '@/lib/constants';
-import { getFeaturedPosts, getLatestPosts, getPublishedPosts } from '@/lib/data';
+import { getLatestPosts, getPublishedPosts } from '@/lib/data';
 
 import type { Metadata } from 'next';
 
@@ -94,36 +94,16 @@ function normalizeLabel(title: string) {
     return 'Guides';
   }
 
-  return 'Subjects';
+  return 'Education';
 }
 
 export default async function HomePage() {
-  // 🔥 NEW: pull featured post directly from DB
-  const { supabaseAdmin } = await import('@/lib/supabase-admin');
-
-  const featuredResponse = await supabaseAdmin
-    .from('posts')
-    .select('*')
-    .eq('status', 'published')
-    .eq('is_featured_homepage', true)
-    .order('published_at', { ascending: false })
-    .limit(3);
-
-  const featuredPosts = featuredResponse.data || [];
-
-  // keep your existing queries
   const [latestPosts, allPosts] = await Promise.all([
-    getLatestPosts(4),
+    getLatestPosts(6),
     getPublishedPosts()
   ]);
 
-  // fallback logic (KEEP THIS — it's good)
-  const featuredCollection =
-    featuredPosts.length > 0 ? featuredPosts : latestPosts.slice(0, 3);
-
-  const leadPost = featuredCollection[0];
-  const supportPosts = featuredCollection.slice(1, 3);
-  const latestGridPosts = latestPosts.slice(0, 4);
+  const latestGridPosts = latestPosts.slice(0, 6);
 
   return (
     <div className="homepage-editorial">
@@ -140,18 +120,14 @@ export default async function HomePage() {
                 academic thinkers. Each piece is meant to be clear, useful, and worth returning to.
               </p>
 
-              <div className="mt-8 flex flex-wrap gap-4">
+              <NewsletterForm variant="hero" />
+
+              <div className="mt-5 flex flex-wrap gap-4">
                 <Link
                   href="/blog"
-                  className="rounded-full bg-slate-900 px-6 py-3 font-semibold text-white transition hover:bg-slate-700"
+                  className="button-secondary"
                 >
-                  Read the journal
-                </Link>
-                <Link
-                  href="/guest-post"
-                  className="rounded-full border border-slate-300 bg-white px-6 py-3 font-semibold text-slate-900 transition hover:border-slate-400"
-                >
-                  Share your perspective
+                  Browse articles
                 </Link>
               </div>
             </div>
@@ -197,76 +173,6 @@ export default async function HomePage() {
               </div>
             );
           })}
-        </div>
-      </section>
-
-      <section className="container-shell py-4 sm:py-6">
-        <div className="grid gap-10 lg:grid-cols-[1.25fr_0.75fr] lg:items-start">
-          <div>
-            <div className="section-intro">
-              <span className="eyebrow">Editor’s picks</span>
-              <h2 className="display-font mt-5 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
-                Featured stories
-              </h2>
-              <p className="mt-4 max-w-2xl text-base leading-8 text-slate-600">
-                A curated selection of pieces chosen for clarity, substance, and lasting relevance.
-              </p>
-            </div>
-
-            {leadPost ? (
-              <div className="mt-8">
-                <div className="featured-lead-story">
-                  <PostCard post={leadPost} />
-                </div>
-              </div>
-            ) : null}
-
-            {supportPosts.length > 0 ? (
-              <div className="mt-6 grid gap-6 lg:grid-cols-2">
-                {supportPosts.map((post) => (
-                  <PostCard key={post.id} post={post} />
-                ))}
-              </div>
-            ) : null}
-          </div>
-
-          <div className="space-y-6">
-            <div className="paper premium-panel p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
-                From the editor
-              </p>
-              <p className="display-font mt-4 text-3xl font-semibold tracking-tight text-slate-900">
-                Writing that rewards attention.
-              </p>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                We publish work meant to be useful, revisited, and shared — not just scanned and forgotten.
-              </p>
-            </div>
-
-            <NewsletterForm />
-
-            <div className="paper p-6">
-              <p className="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">
-                Coverage areas
-              </p>
-              <div className="mt-5 grid gap-4">
-                {editorialPillars.map((pillar) => (
-                  <div
-                    key={pillar.title}
-                    className="rounded-2xl border border-slate-200 bg-stone-50 p-4 transition hover:border-slate-300"
-                  >
-                    <div className="mb-3">
-                      <span className="rounded-full bg-brand-50 px-3 py-1 text-[10px] font-semibold uppercase tracking-[0.18em] text-brand-700">
-                        {normalizeLabel(pillar.title)}
-                      </span>
-                    </div>
-                    <p className="font-semibold text-slate-900">{pillar.title}</p>
-                    <p className="mt-2 text-sm leading-7 text-slate-600">{pillar.description}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
