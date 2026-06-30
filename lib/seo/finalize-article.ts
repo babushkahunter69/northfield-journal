@@ -160,6 +160,86 @@ function titleLeadReplacement(remainder: string) {
   return 'Students make better progress when the next step is clear, manageable, and easy to practice consistently.';
 }
 
+
+function escapeHtml(value: string) {
+  return String(value || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function firstSentence(value: string) {
+  const clean = plainText(value).replace(/\s+/g, ' ').trim();
+  const match = clean.match(/^(.{80,240}?[.!?])\s/);
+  if (match?.[1]) return match[1].trim();
+  return clean.slice(0, 220).replace(/\s+\S*$/, '').trim();
+}
+
+function hasHtmlHeading(content: string, heading: string) {
+  const escaped = escapeRegExp(heading);
+  return new RegExp(`<h[23][^>]*>\\s*${escaped}\\s*<\\/h[23]>`, 'i').test(String(content || ''));
+}
+
+function headingId(value: string) {
+  return normalizeLooseText(value).replace(/\s+/g, '-').slice(0, 80) || 'section';
+}
+
+function ensureQuickAnswer(content: string, title: string, primaryKeyword?: string | null) {
+  let next = String(content || '');
+  if (hasHtmlHeading(next, 'Quick Answer')) return next;
+
+  const topic = sentenceCase(primaryKeyword || title || 'this topic');
+  const body = firstSentence(next) || `This guide explains ${topic.toLowerCase()} in a practical way for students, teachers, and families.`;
+  return `<h2>Quick Answer</h2><p>${escapeHtml(body)}</p>\n${next}`.trim();
+}
+
+function ensureTableOfContents(content: string) {
+  let next = String(content || '');
+  if (hasHtmlHeading(next, 'Table of Contents')) return next;
+
+  const headings = Array.from(next.matchAll(/<h2[^>]*>\s*([\s\S]*?)\s*<\/h2>/gi))
+    .map((match) => plainText(match[1] || ''))
+    .filter((heading) => heading && !/^(table of contents)$/i.test(heading))
+    .slice(0, 8);
+
+  if (headings.length < 3) return next;
+
+  const used = new Set<string>();
+  next = next.replace(/<h2([^>]*)>\s*([\s\S]*?)\s*<\/h2>/gi, (match, attrs, inner) => {
+    const label = plainText(inner);
+    if (!headings.includes(label)) return match;
+    let id = headingId(label);
+    let counter = 2;
+    while (used.has(id)) id = `${headingId(label)}-${counter++}`;
+    used.add(id);
+    const cleanAttrs = String(attrs || '').replace(/\s+id=["'][^"']*["']/i, '');
+    return `<h2${cleanAttrs} id="${id}">${inner}</h2>`;
+  });
+
+  const items = headings
+    .map((heading) => `<li><a href="#${headingId(heading)}">${escapeHtml(heading)}</a></li>`)
+    .join('');
+
+  const toc = `<h2>Table of Contents</h2><ul>${items}</ul>`;
+  const quickAnswerPattern = /(<h2[^>]*>\s*Quick Answer\s*<\/h2>[\s\S]*?)(?=<h2[^>]*>|$)/i;
+
+  if (quickAnswerPattern.test(next)) {
+    return next.replace(quickAnswerPattern, (section) => `${section}\n${toc}\n`).trim();
+  }
+
+  return `${toc}\n${next}`.trim();
+}
+
+function ensureClassroomApplication(content: string, title: string, primaryKeyword?: string | null) {
+  let next = String(content || '');
+  if (hasHtmlHeading(next, 'Classroom Application')) return next;
+  const topic = topicFromTitle(title, primaryKeyword);
+  const block = `<h2>Classroom Application</h2><p>Teachers can use this guide by turning ${escapeHtml(topic)} into a short lesson, a guided practice activity, or a reflection task. Students can apply the same idea through examples, checklists, peer feedback, and short practice cycles.</p>`;
+  return next.replace(/<h2[^>]*>\s*Frequently Asked Questions\s*<\/h2>/i, `${block}\n<h2>Frequently Asked Questions</h2>`);
+}
+
 export function cleanSeoTitle(title: string, fallback = 'Practical Education Guide') {
   let clean = String(title || fallback)
     .replace(/\s+[|–—]\s+Northfield Journal\s*$/i, '')
@@ -355,8 +435,7 @@ export function removeFakeSourcesSection(content: string) {
 
 export function ensureSingleQuickSummary(content: string) {
   let next = String(content || '')
-    .replace(/<h2[^>]*>\s*(Key Takeaways|Key Insights|Important Notes|What to Know)\s*<\/h2>/gi, '<h2>Quick Summary</h2>')
-    .replace(/<h2[^>]*>\s*Quick Answer\s*<\/h2>/gi, '<h2>Quick Summary</h2>');
+    .replace(/<h2[^>]*>\s*(Key Takeaways|Key Insights|Important Notes|What to Know)\s*<\/h2>/gi, '<h2>Quick Summary</h2>');
 
   let seen = false;
   next = next.replace(/<h2[^>]*>\s*Quick Summary\s*<\/h2>[\s\S]*?(?=<h2[^>]*>|$)/gi, (section) => {
@@ -380,8 +459,11 @@ export function normalizeExistingArticleContent(params: {
   const title = cleanSeoTitle(params.title);
   let content = String(params.content || '');
   content = removeFakeSourcesSection(content);
+  content = ensureQuickAnswer(content, title, params.primaryKeyword);
   content = ensureSingleQuickSummary(content);
+  content = ensureClassroomApplication(content, title, params.primaryKeyword);
   content = normalizeGenericHeadings(content, title, params.primaryKeyword);
+  content = ensureTableOfContents(content);
   content = removeTitleLeadsFromParagraphs(content, title, params.primaryKeyword);
   content = removeDuplicateEndingSections(content, title);
   content = cleanRelatedGuidesSection(content);

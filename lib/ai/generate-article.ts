@@ -174,6 +174,10 @@ function ensureRequiredHeadings(article: GeneratedArticle, brief: EducationBrief
       html: `<h2>Real Examples</h2><p>For example, a student who struggles with a large assignment might begin by writing a short plan, completing one section, and asking for feedback before moving on. A teacher might model the process first, then let students practice independently with a checklist.</p>`
     },
     {
+      heading: 'Classroom Application',
+      html: `<h2>Classroom Application</h2><p>Teachers can use ${topic} as a short lesson, guided practice task, reflection activity, or student checklist. Students can apply it through examples, peer feedback, and short practice cycles that make progress easier to observe.</p>`
+    },
+    {
       heading: 'Common Mistakes',
       html: `<h2>Common Mistakes</h2><ul><li>Trying to do too much at once.</li><li>Skipping feedback or reflection.</li><li>Using a strategy once and giving up too quickly.</li><li>Focusing only on grades instead of habits and process.</li></ul>`
     },
@@ -401,7 +405,9 @@ Mandatory rules:
 - Do not add external source links unless exact URLs are provided by the system. Do not invent Sources, Related Resources, or Additional Resources sections.
 - Use the exact heading <h2>What You Should Do Next</h2>.
 - Do not use the heading "Next Steps".
-- Do not use Key Takeaways, Key Insights, Important Notes, or What to Know headings. Use one Quick Summary section only.
+- Use one <h2>Quick Answer</h2> section with a direct 1-paragraph answer near the top.
+- Use one <h2>Quick Summary</h2> section with practical bullet points.
+- Do not use Key Takeaways, Key Insights, Important Notes, or What to Know headings.
 - Do not use em dashes or pipe delimiters in titles or meta titles.
 - Do not append Northfield Journal to article titles or meta titles.
 - Do not awkwardly force the exact keyword phrase.
@@ -409,10 +415,12 @@ Mandatory rules:
 - Avoid generic filler and hype. Use concrete classroom, student, and parent examples to create depth.
 
 Required sections:
+<h2>Quick Answer</h2>
 <h2>Quick Summary</h2>
 <h2>Why This Matters</h2>
 <h2>Step-by-Step Explanation</h2>
 <h2>Real Examples</h2>
+<h2>Classroom Application</h2>
 <h2>Common Mistakes</h2>
 <h2>What You Should Do Next</h2>
 <h2>Frequently Asked Questions</h2>

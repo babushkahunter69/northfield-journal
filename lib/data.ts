@@ -233,6 +233,34 @@ export const getRelatedPostsBySlug = cache(async (slug: string, limit = 3) => {
   return [...sameCategory, ...sameAuthor, ...fallback].slice(0, limit);
 });
 
+
+function educationLevelFromPost(post: Pick<Post, 'title' | 'excerpt' | 'content' | 'keywords' | 'categories'>) {
+  const source = [post.title, post.excerpt, post.content, post.categories?.name, Array.isArray(post.keywords) ? post.keywords.join(' ') : '']
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (/grade\s*12|senior high|humss|shs/.test(source)) return 'Senior high school';
+  if (/grade\s*11/.test(source)) return 'Senior high school';
+  if (/junior high|grade\s*(7|8|9|10)/.test(source)) return 'Junior high school';
+  if (/elementary|grade\s*(1|2|3|4|5|6)/.test(source)) return 'Elementary school';
+  if (/teacher|lesson plan|classroom|assessment|rubric|melc|curriculum/.test(source)) return 'Teacher professional resource';
+  return 'General education';
+}
+
+function learningResourceTypeFromPost(post: Pick<Post, 'title' | 'excerpt' | 'content' | 'keywords' | 'categories'>) {
+  const source = [post.title, post.excerpt, post.content, post.categories?.name, Array.isArray(post.keywords) ? post.keywords.join(' ') : '']
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  if (/lesson plan|daily lesson|dll|cot/.test(source)) return 'Lesson plan';
+  if (/worksheet|activity sheet|test|quiz|summative|formative/.test(source)) return 'Assessment or worksheet';
+  if (/rubric|scoring guide/.test(source)) return 'Rubric';
+  if (/guide|how to|tips|strategy|strategies/.test(source)) return 'Instructional guide';
+  return 'Learning resource';
+}
+
 export async function getStructuredDataForPost(slug: string) {
   const post = await getPostBySlug(slug);
   if (!post) return null;
@@ -268,6 +296,20 @@ export async function getStructuredDataForPost(slug: string) {
         name: siteConfig.name,
         url: siteUrl,
         description: siteConfig.description,
+      },
+      {
+        '@type': 'WebSite',
+        '@id': `${siteUrl}/#website`,
+        name: siteConfig.name,
+        url: siteUrl,
+        publisher: {
+          '@id': `${siteUrl}/#organization`,
+        },
+        potentialAction: {
+          '@type': 'SearchAction',
+          target: `${siteUrl}/blog?search={search_term_string}`,
+          'query-input': 'required name=search_term_string',
+        },
       },
       {
         '@type': 'Person',
@@ -317,6 +359,40 @@ export async function getStructuredDataForPost(slug: string) {
         },
         articleSection: post.categories?.name || siteConfig.primaryTopic,
         keywords: post.keywords || siteConfig.defaultKeywords,
+      },
+      {
+        '@type': 'LearningResource',
+        '@id': `${articleUrl}#learning-resource`,
+        name: post.title,
+        description: post.meta_description || post.excerpt,
+        url: articleUrl,
+        image: post.featured_image_url || undefined,
+        author: {
+          '@id': `${siteUrl}/authors/${author.slug}#person`,
+        },
+        publisher: {
+          '@id': `${siteUrl}/#organization`,
+        },
+        learningResourceType: learningResourceTypeFromPost(post),
+        educationalLevel: educationLevelFromPost(post),
+        educationalUse: ['Reading', 'Lesson support', 'Independent study'],
+        audience: [
+          {
+            '@type': 'EducationalAudience',
+            educationalRole: 'student',
+          },
+          {
+            '@type': 'EducationalAudience',
+            educationalRole: 'teacher',
+          },
+          {
+            '@type': 'Audience',
+            audienceType: 'parents and families',
+          },
+        ],
+        isPartOf: {
+          '@id': `${siteUrl}/#website`,
+        },
       },
       {
         '@type': 'FAQPage',
